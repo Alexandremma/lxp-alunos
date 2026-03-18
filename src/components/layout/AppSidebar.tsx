@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { NavLink } from "@/components/NavLink"
 import { Separator } from "@/components/ui/separator"
+import { useLogout } from "@/hooks/use-logout"
 
 interface NavItem {
   title: string
@@ -73,6 +74,7 @@ const AppSidebar = ({
   className,
 }: AppSidebarProps) => {
   const location = useLocation()
+  const { logout } = useLogout()
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -175,6 +177,9 @@ const AppSidebar = ({
             "text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10",
             collapsed && "justify-center px-2"
           )}
+          onClick={() => {
+            void logout()
+          }}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           {!collapsed && <span>Sair</span>}

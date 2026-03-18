@@ -41,6 +41,7 @@ export default function Login() {
 
     const currentUser = session.user;
 
+    // Tenta buscar / criar perfil, mas não bloqueia o login se der erro.
     const { data: existingProfile, error: profileError } = await supabase
       .from("lxp_profiles")
       .select("*")
@@ -48,12 +49,8 @@ export default function Login() {
       .maybeSingle();
 
     if (profileError) {
-      setError("Erro ao carregar seu perfil. Tente novamente em instantes.");
-      setLoading(false);
-      return;
-    }
-
-    if (!existingProfile) {
+      console.warn("[Login] Erro ao carregar perfil:", profileError.message);
+    } else if (!existingProfile) {
       const { error: insertError } = await supabase.from("lxp_profiles").insert({
         user_id: currentUser.id,
         email: currentUser.email,
@@ -62,9 +59,7 @@ export default function Login() {
       });
 
       if (insertError) {
-        setError("Erro ao criar seu perfil. Entre em contato com o suporte.");
-        setLoading(false);
-        return;
+        console.warn("[Login] Erro ao criar perfil:", insertError.message);
       }
     }
 

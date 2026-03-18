@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabaseClient";
 
 const statusConfig = {
   completed: { label: "Concluído", color: "bg-success/10 text-success border-success/20", icon: CheckCircle },
@@ -140,6 +142,77 @@ const MyCourse = () => {
   const courseProgress = getCourseProgress();
   const completedPeriods = mainCourse.periods.filter((p) => p.status === "completed").length;
 
+  const { profile } = useAuth();
+
+  type EnrolledCourse = {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    created_at: string;
+  };
+
+  const [currentCourse, setCurrentCourse] = useState<EnrolledCourse | null>(null);
+  const [loadingCourse, setLoadingCourse] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const run = async () => {
+      if (!profile?.id) return;
+
+      setLoadingCourse(true);
+
+      const { data: enrollments, error: enrollmentsError } = await supabase
+        .from("lxp_enrollments")
+        .select("course_id")
+        .eq("student_profile_id", profile.id)
+        .eq("status", "active")
+        .limit(1);
+
+      if (enrollmentsError) {
+        console.warn("[MyCourse] Erro ao buscar matrículas:", enrollmentsError.message);
+        setLoadingCourse(false);
+        return;
+      }
+
+      const first = (enrollments ?? [])[0];
+      if (!first?.course_id) {
+        if (isMounted) setCurrentCourse(null);
+        setLoadingCourse(false);
+        return;
+      }
+
+      const { data: courseData, error: courseError } = await supabase
+        .from("lxp_courses")
+        .select("id,name,description,status,created_at")
+        .eq("id", first.course_id)
+        .maybeSingle();
+
+      if (courseError) {
+        console.warn("[MyCourse] Erro ao buscar curso:", courseError.message);
+        setLoadingCourse(false);
+        return;
+      }
+
+      if (isMounted) {
+        setCurrentCourse((courseData as EnrolledCourse) ?? null);
+      }
+      setLoadingCourse(false);
+    };
+
+    void run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.id]);
+
+  const courseName = useMemo(
+    () => currentCourse?.name ?? mainCourse.name,
+    [currentCourse?.name],
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
@@ -157,15 +230,31 @@ const MyCourse = () => {
                   <GraduationCap className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold">{mainCourse.name}</h2>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {mainCourse.totalPeriods} períodos
-                    </span>
-                    <span>•</span>
-                    <span>{mainCourse.currentPeriod}º período atual</span>
-                  </div>
+                  <h2 className="text-xl font-semibold">
+                    {courseName}
+                  </h2>
+                  {loadingCourse ? (
+                    <p className="mt-1 text-sm text-muted-foreground">Carregando informações do curso...</p>
+                  ) : currentCourse ? (
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Criado em{" "}
+                        {new Date(currentCourse.created_at).toLocaleDateString("pt-BR")}
+                      </span>
+                      <span>•</span>
+                      <span>Status: {currentCourse.status}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {mainCourse.totalPeriods} períodos
+                      </span>
+                      <span>•</span>
+                      <span>{mainCourse.currentPeriod}º período atual</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1 max-w-md">

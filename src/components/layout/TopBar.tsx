@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
+import { useLogout } from "@/hooks/use-logout"
 
 interface TopBarProps {
   onMenuClick?: () => void
@@ -22,6 +23,7 @@ interface TopBarProps {
 const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const { logout } = useLogout()
 
   useEffect(() => {
     setMounted(true)
@@ -122,7 +124,13 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
             <DropdownMenuItem>Configurações</DropdownMenuItem>
             <DropdownMenuItem>Meus Certificados</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem
+              className="text-destructive"
+              onSelect={(e) => {
+                e.preventDefault()
+                void logout()
+              }}
+            >
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
