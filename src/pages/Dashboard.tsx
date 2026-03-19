@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Zap, BookOpen, Clock, ChevronRight, Trophy, Sparkles, BookOpenCheck, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -8,13 +9,82 @@ import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
 import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
 import { TrailCard } from "@/components/learning/TrailCard";
 import { currentStudent, trails, upcomingActivities, getStudentStats, freeCourses } from "@/data/mockData";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabaseClient";
 
 const Dashboard = () => {
   const stats = getStudentStats();
   const inProgressTrails = trails.filter((t) => t.status === "in_progress").slice(0, 2);
   const continueTrail = inProgressTrails[0];
-  const hasNoCourses = trails.length === 0;
+  const hasNoMockCourses = trails.length === 0;
   const suggestedCourses = freeCourses.slice(0, 3);
+
+  const { profile } = useAuth();
+
+  type EnrolledCourse = {
+    id: string;
+    name: string;
+    description: string | null;
+    status: "active" | "draft" | "archived";
+    created_at: string;
+  };
+
+  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const run = async () => {
+      if (!profile?.id) return;
+
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from("lxp_enrollments")
+        .select("course_id")
+        .eq("student_profile_id", profile.id);
+
+      if (enrollmentsError) {
+        console.warn("[Dashboard] Erro ao buscar matrículas:", enrollmentsError.message);
+        return;
+      }
+
+      const courseIds = Array.from(
+        new Set((enrollmentsData ?? []).map((e) => e.course_id)),
+      );
+
+      if (courseIds.length === 0) {
+        if (isMounted) setEnrolledCourses([]);
+        return;
+      }
+
+      const { data: coursesData, error: coursesError } = await supabase
+        .from("lxp_courses")
+        .select("id,name,description,status,created_at")
+        .in("id", courseIds);
+
+      if (coursesError) {
+        console.warn("[Dashboard] Erro ao buscar cursos:", coursesError.message);
+        return;
+      }
+
+      if (isMounted) setEnrolledCourses((coursesData ?? []) as EnrolledCourse[]);
+    };
+
+    void run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.id]);
+
+  const displayName = useMemo(() => {
+    const fallback = currentStudent.name.split(" ")[0];
+    const candidate = profile?.name ?? "";
+    if (!candidate.trim()) return fallback;
+    return candidate.split(" ")[0];
+  }, [profile?.name]);
+
+  const currentCourse = enrolledCourses[0];
+  const hasNoEnrolledCourses = enrolledCourses.length === 0;
 
   return (
     <DashboardLayout>
@@ -23,10 +93,10 @@ const Dashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-              Olá, {currentStudent.name.split(" ")[0]}! <Sparkles className="inline w-6 h-6 text-warning" />
+              Olá, {displayName}! <Sparkles className="inline w-6 h-6 text-warning" />
             </h1>
             <p className="text-muted-foreground mt-1">
-              {hasNoCourses
+              {hasNoEnrolledCourses
                 ? "Bem-vindo ao LXP! Comece explorando nossos cursos disponíveis."
                 : "Continue sua jornada de aprendizado. Você está indo muito bem!"}
             </p>
@@ -36,6 +106,34 @@ const Dashboard = () => {
             <FeedbackBadge type="level" value={`Nível ${stats.level}`} label={`${stats.totalXp} XP`} />
           </div>
         </div>
+
+        {/* Curso matriculado (fonte real do Supabase) */}
+        {currentCourse && (
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+            <CardContent className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Seu curso atual
+                  </p>
+                  <h3 className="text-lg font-semibold text-foreground">{currentCourse.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-1">
+                    {currentCourse.description ?? "Sem descrição"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Link to="/meu-curso">
+                  <Button className="glow-sm">Ver no Meu Curso</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -86,7 +184,7 @@ const Dashboard = () => {
         </div>
 
         {/* Empty State - No Courses */}
-        {hasNoCourses ? (
+        {hasNoEnrolledCourses ? (
           <>
             {/* Welcome Message for New Users */}
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">

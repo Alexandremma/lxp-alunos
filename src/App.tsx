@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import MyCourse from "./pages/MyCourse";
 import FreeCourses from "./pages/FreeCourses";
@@ -30,45 +32,108 @@ const queryClient = new QueryClient();
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Autenticação */}
-            <Route path="/login" element={<Login />} />
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Autenticação */}
+              <Route path="/login" element={<Login />} />
 
-            {/* Ensino */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/meu-curso" element={<MyCourse />} />
-            <Route path="/cursos-livres" element={<FreeCourses />} />
-            <Route path="/trails/:id" element={<TrailDetail />} />
-            <Route path="/trails/:trailId/lesson/:lessonId" element={<Lesson />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/projeto-integrador" element={<IntegratorProjects />} />
-            <Route path="/projeto-integrador/:id" element={<IntegratorProject />} />
+              {/* Ensino (aluno autenticado) */}
+              <Route
+                path="/"
+                element={<ProtectedRoute element={<Dashboard />} requiredRole="student" />}
+              />
+              <Route
+                path="/meu-curso"
+                element={<ProtectedRoute element={<MyCourse />} requiredRole="student" />}
+              />
+              <Route
+                path="/cursos-livres"
+                element={<ProtectedRoute element={<FreeCourses />} requiredRole="student" />}
+              />
+              <Route
+                path="/trails/:id"
+                element={<ProtectedRoute element={<TrailDetail />} requiredRole="student" />}
+              />
+              <Route
+                path="/trails/:trailId/lesson/:lessonId"
+                element={<ProtectedRoute element={<Lesson />} requiredRole="student" />}
+              />
+              <Route
+                path="/progress"
+                element={<ProtectedRoute element={<Progress />} requiredRole="student" />}
+              />
+              <Route
+                path="/portfolio"
+                element={<ProtectedRoute element={<Portfolio />} requiredRole="student" />}
+              />
+              <Route
+                path="/projeto-integrador"
+                element={
+                  <ProtectedRoute
+                    element={<IntegratorProjects />}
+                    requiredRole="student"
+                  />
+                }
+              />
+              <Route
+                path="/projeto-integrador/:id"
+                element={
+                  <ProtectedRoute
+                    element={<IntegratorProject />}
+                    requiredRole="student"
+                  />
+                }
+              />
 
-            {/* Novas páginas */}
-            <Route path="/certificado/:courseId" element={<Certificate />} />
-            <Route path="/trails/:trailId/project/:lessonId" element={<ProjectUpload />} />
+              {/* Novas páginas */}
+              <Route
+                path="/certificado/:courseId"
+                element={<ProtectedRoute element={<Certificate />} requiredRole="student" />}
+              />
+              <Route
+                path="/trails/:trailId/project/:lessonId"
+                element={<ProtectedRoute element={<ProjectUpload />} requiredRole="student" />}
+              />
 
-            {/* Secretaria */}
-            <Route path="/secretaria/documentos" element={<Documents />} />
-            <Route path="/secretaria/financeiro" element={<Financial />} />
-            <Route path="/secretaria/matricula" element={<Enrollment />} />
-            <Route path="/secretaria/atendimento" element={<Support />} />
+              {/* Secretaria */}
+              <Route
+                path="/secretaria/documentos"
+                element={<ProtectedRoute element={<Documents />} requiredRole="student" />}
+              />
+              <Route
+                path="/secretaria/financeiro"
+                element={<ProtectedRoute element={<Financial />} requiredRole="student" />}
+              />
+              <Route
+                path="/secretaria/matricula"
+                element={<ProtectedRoute element={<Enrollment />} requiredRole="student" />}
+              />
+              <Route
+                path="/secretaria/atendimento"
+                element={<ProtectedRoute element={<Support />} requiredRole="student" />}
+              />
 
-            {/* Back Office / Admin */}
-            <Route path="/admin/cursos" element={<CoursesManagement />} />
-            <Route path="/admin/alunos" element={<StudentsManagement />} />
+              {/* Back Office / Admin dentro do mesmo app (acesso admin) */}
+              <Route
+                path="/admin/cursos"
+                element={<ProtectedRoute element={<CoursesManagement />} requiredRole="admin" />}
+              />
+              <Route
+                path="/admin/alunos"
+                element={<ProtectedRoute element={<StudentsManagement />} requiredRole="admin" />}
+              />
 
-            {/* Utils */}
-            <Route path="/kitchen-sink" element={<KitchenSink />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              {/* Utils (pode manter livre ou proteger, aqui vou deixar livre para dev) */}
+              <Route path="/kitchen-sink" element={<KitchenSink />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </ThemeProvider>
 );
