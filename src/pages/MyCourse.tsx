@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,14 +15,14 @@ import {
   Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mainCourse, getCourseProgress, type Period, type Subject } from "@/data/mockData";
+import { mainCourse, type Period, type Subject } from "@/data/mockData";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabaseClient";
+import { useGetMyCourseOverview } from "@/hooks/queries/useGetMyCourseOverview";
 
 const statusConfig = {
   completed: { label: "Concluído", color: "bg-success/10 text-success border-success/20", icon: CheckCircle },
@@ -139,79 +139,61 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
 };
 
 const MyCourse = () => {
-  const courseProgress = getCourseProgress();
-  const completedPeriods = mainCourse.periods.filter((p) => p.status === "completed").length;
-
   const { profile } = useAuth();
+  const { data: currentCourse, isLoading: loadingCourse } = useGetMyCourseOverview(profile?.id);
 
-  type EnrolledCourse = {
-    id: string;
-    name: string;
-    description: string | null;
-    status: string;
-    created_at: string;
-  };
-
-  const [currentCourse, setCurrentCourse] = useState<EnrolledCourse | null>(null);
-  const [loadingCourse, setLoadingCourse] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const run = async () => {
-      if (!profile?.id) return;
-
-      setLoadingCourse(true);
-
-      const { data: enrollments, error: enrollmentsError } = await supabase
-        .from("lxp_enrollments")
-        .select("course_id")
-        .eq("student_profile_id", profile.id)
-        .eq("status", "active")
-        .limit(1);
-
-      if (enrollmentsError) {
-        console.warn("[MyCourse] Erro ao buscar matrículas:", enrollmentsError.message);
-        setLoadingCourse(false);
-        return;
-      }
-
-      const first = (enrollments ?? [])[0];
-      if (!first?.course_id) {
-        if (isMounted) setCurrentCourse(null);
-        setLoadingCourse(false);
-        return;
-      }
-
-      const { data: courseData, error: courseError } = await supabase
-        .from("lxp_courses")
-        .select("id,name,description,status,created_at")
-        .eq("id", first.course_id)
-        .maybeSingle();
-
-      if (courseError) {
-        console.warn("[MyCourse] Erro ao buscar curso:", courseError.message);
-        setLoadingCourse(false);
-        return;
-      }
-
-      if (isMounted) {
-        setCurrentCourse((courseData as EnrolledCourse) ?? null);
-      }
-      setLoadingCourse(false);
-    };
-
-    void run();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [profile?.id]);
-
-  const courseName = useMemo(
-    () => currentCourse?.name ?? mainCourse.name,
-    [currentCourse?.name],
+  const periods = useMemo<Period[]>(
+    () =>
+      currentCourse?.periods?.map((period) => ({
+        id: period.id,
+        number: period.number,
+        name: period.name,
+        status: period.status,
+        subjects: period.subjects.map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+          code: subject.code,
+          credits: subject.credits,
+          workload: subject.workload,
+          status: subject.status,
+          grade: subject.grade,
+          professor: subject.professor,
+        })),
+      })) ?? mainCourse.periods,
+    [currentCourse?.periods],
   );
+
+  const courseName = useMemo(() => currentCourse?.name ?? mainCourse.name, [currentCourse?.name]);
+  const completedPeriods = useMemo(() => periods.filter((p) => p.status === "completed").length, [periods]);
+  const totalPeriods = periods.length || 1;
+  const courseProgress = Math.round((completedPeriods / totalPeriods) * 100);
+  const totalCredits = useMemo(
+    () => periods.reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0),
+    [periods],
+  );
+  const completedCredits = useMemo(
+    () =>
+      periods
+        .filter((p) => p.status === "completed")
+        .reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0),
+    [periods],
+  );
+  const approvedSubjects = useMemo(
+    () => periods.reduce((acc, p) => acc + p.subjects.filter((s) => s.status === "approved").length, 0),
+    [periods],
+  );
+  const totalSubjects = useMemo(() => periods.reduce((acc, p) => acc + p.subjects.length, 0), [periods]);
+  const approvedWithGrades = useMemo(
+    () =>
+      periods
+        .flatMap((p) => p.subjects)
+        .filter((s) => s.status === "approved" && s.grade !== undefined),
+    [periods],
+  );
+  const averageGrade = useMemo(() => {
+    if (approvedWithGrades.length === 0) return 0;
+    return approvedWithGrades.reduce((acc, s) => acc + (s.grade ?? 0), 0) / approvedWithGrades.length;
+  }, [approvedWithGrades]);
 
   return (
     <DashboardLayout>
@@ -249,10 +231,10 @@ const MyCourse = () => {
                     <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {mainCourse.totalPeriods} períodos
+                        {totalPeriods} períodos
                       </span>
                       <span>•</span>
-                      <span>{mainCourse.currentPeriod}º período atual</span>
+                      <span>Curso em andamento</span>
                     </div>
                   )}
                 </div>
@@ -261,7 +243,7 @@ const MyCourse = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Progresso do Curso</span>
                   <span className="text-sm text-muted-foreground">
-                    {completedPeriods} de {mainCourse.totalPeriods} períodos
+                    {completedPeriods} de {totalPeriods} períodos
                   </span>
                 </div>
                 <Progress value={courseProgress} className="h-3" />
@@ -279,7 +261,7 @@ const MyCourse = () => {
           </TabsList>
 
           <TabsContent value="grade" className="space-y-4">
-            {mainCourse.periods.map((period) => (
+            {periods.map((period) => (
               <PeriodCard key={period.id} period={period} />
             ))}
           </TabsContent>
@@ -292,12 +274,10 @@ const MyCourse = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {mainCourse.periods
-                      .filter((p) => p.status === "completed")
-                      .reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0)}
+                    {completedCredits}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    de {mainCourse.periods.reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0)} totais
+                    de {totalCredits} totais
                   </p>
                 </CardContent>
               </Card>
@@ -308,13 +288,10 @@ const MyCourse = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-success">
-                    {mainCourse.periods.reduce(
-                      (acc, p) => acc + p.subjects.filter((s) => s.status === "approved").length,
-                      0
-                    )}
+                    {approvedSubjects}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    de {mainCourse.periods.reduce((acc, p) => acc + p.subjects.length, 0)} no curso
+                    de {totalSubjects} no curso
                   </p>
                 </CardContent>
               </Card>
@@ -325,13 +302,7 @@ const MyCourse = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-primary">
-                    {(
-                      mainCourse.periods
-                        .filter((p) => p.status === "completed")
-                        .flatMap((p) => p.subjects)
-                        .filter((s) => s.grade !== undefined)
-                        .reduce((acc, s, _, arr) => acc + (s.grade || 0) / arr.length, 0)
-                    ).toFixed(1)}
+                    {averageGrade.toFixed(1)}
                   </div>
                   <p className="text-sm text-muted-foreground">coeficiente de rendimento</p>
                 </CardContent>

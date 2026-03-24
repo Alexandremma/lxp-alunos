@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Zap, BookOpen, Clock, ChevronRight, Trophy, Sparkles, BookOpenCheck, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -10,7 +10,7 @@ import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
 import { TrailCard } from "@/components/learning/TrailCard";
 import { currentStudent, trails, upcomingActivities, getStudentStats, freeCourses } from "@/data/mockData";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabaseClient";
+import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 
 const Dashboard = () => {
   const stats = getStudentStats();
@@ -21,60 +21,8 @@ const Dashboard = () => {
 
   const { profile } = useAuth();
 
-  type EnrolledCourse = {
-    id: string;
-    name: string;
-    description: string | null;
-    status: "active" | "draft" | "archived";
-    created_at: string;
-  };
-
-  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const run = async () => {
-      if (!profile?.id) return;
-
-      const { data: enrollmentsData, error: enrollmentsError } = await supabase
-        .from("lxp_enrollments")
-        .select("course_id")
-        .eq("student_profile_id", profile.id);
-
-      if (enrollmentsError) {
-        console.warn("[Dashboard] Erro ao buscar matrículas:", enrollmentsError.message);
-        return;
-      }
-
-      const courseIds = Array.from(
-        new Set((enrollmentsData ?? []).map((e) => e.course_id)),
-      );
-
-      if (courseIds.length === 0) {
-        if (isMounted) setEnrolledCourses([]);
-        return;
-      }
-
-      const { data: coursesData, error: coursesError } = await supabase
-        .from("lxp_courses")
-        .select("id,name,description,status,created_at")
-        .in("id", courseIds);
-
-      if (coursesError) {
-        console.warn("[Dashboard] Erro ao buscar cursos:", coursesError.message);
-        return;
-      }
-
-      if (isMounted) setEnrolledCourses((coursesData ?? []) as EnrolledCourse[]);
-    };
-
-    void run();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [profile?.id]);
+  const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
+  const enrolledCourses = useMemo(() => enrolledCoursesData ?? [], [enrolledCoursesData]);
 
   const displayName = useMemo(() => {
     const fallback = currentStudent.name.split(" ")[0];

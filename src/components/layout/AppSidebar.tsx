@@ -46,15 +46,15 @@ const navSections: NavSection[] = [
       { title: "Portfólio", url: "/portfolio", icon: Trophy },
     ],
   },
-  {
-    label: "Secretaria",
-    items: [
-      { title: "Documentos", url: "/secretaria/documentos", icon: FileText },
-      { title: "Financeiro", url: "/secretaria/financeiro", icon: CreditCard },
-      { title: "Matrícula", url: "/secretaria/matricula", icon: ClipboardList },
-      { title: "Atendimento", url: "/secretaria/atendimento", icon: HeadphonesIcon },
-    ],
-  },
+  // {
+  //   label: "Secretaria",
+  //   items: [
+  //     { title: "Documentos", url: "/secretaria/documentos", icon: FileText },
+  //     { title: "Financeiro", url: "/secretaria/financeiro", icon: CreditCard },
+  //     { title: "Matrícula", url: "/secretaria/matricula", icon: ClipboardList },
+  //     { title: "Atendimento", url: "/secretaria/atendimento", icon: HeadphonesIcon },
+  //   ],
+  // },
 ]
 
 const bottomNavItems: NavItem[] = [
