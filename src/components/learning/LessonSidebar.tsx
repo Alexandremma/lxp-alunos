@@ -18,7 +18,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-import type { Trail, Module, Lesson } from "@/data/mockData";
+import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
 
 interface LessonSidebarProps {
   trail: Trail;

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Trail, Module, Lesson } from "@/data/mockData";
+import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
 
 // Mock comments data
 const mockComments = [

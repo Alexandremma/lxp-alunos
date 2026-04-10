@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 
 export function useStudentCatalog(params: {
   q?: string
-  type?: "trail" | "module" | "all"
+  type?: "discipline" | "all"
   page?: number
   pageSize?: number
   category?: "course" | "language" | "workshop" | "certification" | "extension" | "all"
@@ -13,11 +13,11 @@ export function useStudentCatalog(params: {
   const { profile } = useAuth()
   const { q = "", type = "all", page = 1, pageSize = 24, category = "all" } = params
 
-  const query = useQuery<SearchLibraryResponse>({
+  const query = useQuery<SearchLibraryResponse, Error>({
     queryKey: ["lxp", "catalog", { q, type, page, pageSize, category, profileId: profile?.id }],
     queryFn: () => getLibraryCatalog({ q, type, page, pageSize }),
     enabled: !!profile?.id, // require student session
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   })
 
   const items = useMemo(() => {

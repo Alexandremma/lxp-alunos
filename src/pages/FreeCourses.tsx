@@ -154,8 +154,8 @@ const FreeCourses = () => {
   };
 
   const handleEnroll = (id: string) => {
-    // Stub: wire to real mutation when enrollment contract is defined
-    // For now, no-op
+    void id;
+    // TODO: Implementar matricula para catalogo externo quando houver regra de negocio final.
   }
 
   const handleContinue = (id: string) => {
