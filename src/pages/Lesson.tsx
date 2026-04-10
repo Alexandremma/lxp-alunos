@@ -16,28 +16,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "@/components/learning/VideoPlayer";
 import { LessonLayout } from "@/components/learning/LessonLayout";
-import {
-  getLessonById,
-  getTrailById,
-  getModulesByTrailId,
-  getModuleByLessonId,
-  getLessonsForTrail,
-  getAdjacentLessons,
-  getTrailProgressByLessons,
-} from "@/data/mockData";
+// TODO: Replace mock-based logic with adapters once lesson endpoints are defined.
 import { toast } from "sonner";
+import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
 
 const Lesson = () => {
   const { trailId, lessonId } = useParams();
   const navigate = useNavigate();
+  const completeLesson = useCompleteLesson();
 
-  const lesson = getLessonById(lessonId || "");
-  const trail = getTrailById(trailId || "");
-  const currentModule = getModuleByLessonId(lessonId || "");
-  const modules = getModulesByTrailId(trailId || "");
-  const allLessons = getLessonsForTrail(trailId || "");
-  const { prev, next } = getAdjacentLessons(trailId || "", lessonId || "");
-  const progress = getTrailProgressByLessons(trailId || "");
+  const lesson = null
+  const trail = null
+  const currentModule = null
+  const modules: any[] = []
+  const allLessons: any[] = []
+  const prev = null as any
+  const next = null as any
+  const progress = 0
 
   if (!lesson || !trail) {
     return (
@@ -52,10 +47,16 @@ const Lesson = () => {
     );
   }
 
-  const handleComplete = () => {
-    toast.success("Aula concluída! 🎉", {
-      description: `+${lesson.xpReward} XP ganhos`,
-    });
+  const handleComplete = async () => {
+    try {
+      await completeLesson.mutateAsync({ trailId: String(trailId), lessonId: String(lessonId) });
+      toast.success("Aula concluída! 🎉");
+      if (next) {
+        navigate(`/trails/${trailId}/lesson/${next.id}`);
+      }
+    } catch (e) {
+      toast.error("Não foi possível concluir a aula. Tente novamente.");
+    }
   };
 
   const handlePrev = () => {

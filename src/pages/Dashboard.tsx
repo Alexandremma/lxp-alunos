@@ -8,16 +8,19 @@ import { Progress } from "@/components/ui/progress";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
 import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
 import { TrailCard } from "@/components/learning/TrailCard";
-import { currentStudent, trails, upcomingActivities, getStudentStats, freeCourses } from "@/data/mockData";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 
 const Dashboard = () => {
-  const stats = getStudentStats();
-  const inProgressTrails = trails.filter((t) => t.status === "in_progress").slice(0, 2);
-  const continueTrail = inProgressTrails[0];
-  const hasNoMockCourses = trails.length === 0;
-  const suggestedCourses = freeCourses.slice(0, 3);
+  // Temporary stats placeholders until real metrics are wired
+  const stats = {
+    streak: 0,
+    level: 1,
+    totalXp: 0,
+    completedTrails: 0,
+    totalLessonsCompleted: 0,
+    totalHoursStudied: 0,
+  };
 
   const { profile } = useAuth();
 
@@ -25,9 +28,8 @@ const Dashboard = () => {
   const enrolledCourses = useMemo(() => enrolledCoursesData ?? [], [enrolledCoursesData]);
 
   const displayName = useMemo(() => {
-    const fallback = currentStudent.name.split(" ")[0];
-    const candidate = profile?.name ?? "";
-    if (!candidate.trim()) return fallback;
+    const candidate = (profile?.name ?? "").trim();
+    if (!candidate) return "Aluno";
     return candidate.split(" ")[0];
   }, [profile?.name]);
 
@@ -166,51 +168,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Suggested Courses */}
-            {suggestedCourses.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Cursos Recomendados para Você
-                  </h2>
-                  <Link to="/cursos-livres" className="text-sm text-primary hover:underline">
-                    Ver todos
-                  </Link>
-                </div>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {suggestedCourses.map((course) => (
-                    <Card key={course.id} className="overflow-hidden card-hover group">
-                      <div className="relative h-40">
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
-                          {course.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                          {course.description}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3" />
-                            <span>{course.workload}h</span>
-                          </div>
-                          <Link to="/cursos-livres">
-                            <Button size="sm" variant="outline">
-                              Ver Detalhes
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Suggested Courses (hidden until real catalog recommendation is wired) */}
 
             {/* Quick Actions */}
             <Card>
@@ -265,56 +223,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Continue Learning */}
-            {continueTrail && (
-              <Card className="overflow-hidden border-primary/20">
-                <CardContent className="p-0">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="md:w-1/3 h-48 md:h-auto">
-                      <img
-                        src={continueTrail.thumbnail}
-                        alt={continueTrail.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 p-6 flex flex-col justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-primary uppercase tracking-wide mb-2">
-                          Continue de onde parou
-                        </p>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">
-                          {continueTrail.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {continueTrail.description}
-                        </p>
-                      </div>
-                      <div className="mt-4 space-y-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {continueTrail.completedLessons}/{continueTrail.totalLessons} aulas
-                          </span>
-                          <span className="font-medium">
-                            {Math.round((continueTrail.completedLessons / continueTrail.totalLessons) * 100)}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={(continueTrail.completedLessons / continueTrail.totalLessons) * 100}
-                          className="h-2"
-                        />
-                        <div className="pt-1">
-                          <Link to={`/trails/${continueTrail.id}`}>
-                            <Button className="w-full md:w-auto glow-sm">
-                              Continuar Aprendendo
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Hidden until trail progress is wired */}
 
             {/* Main Content Grid */}
             <div className="grid lg:grid-cols-3 gap-6">
@@ -327,9 +236,7 @@ const Dashboard = () => {
                   </Link>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {inProgressTrails.map((trail) => (
-                    <TrailCard key={trail.id} trail={trail} />
-                  ))}
+                  {/* Grid aguardando dados reais */}
                 </div>
               </div>
 
@@ -337,13 +244,11 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-foreground">Próximas Atividades</h2>
-                  <span className="text-xs text-muted-foreground">
-                    {upcomingActivities.length} pendentes
-                  </span>
+                  <span className="text-xs text-muted-foreground">—</span>
                 </div>
                 <Card>
                   <CardContent className="p-2">
-                    <ActivityChecklist activities={upcomingActivities} />
+                    <ActivityChecklist activities={[]} />
                   </CardContent>
                 </Card>
               </div>
