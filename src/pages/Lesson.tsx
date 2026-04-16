@@ -16,28 +16,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "@/components/learning/VideoPlayer";
 import { LessonLayout } from "@/components/learning/LessonLayout";
-import {
-  getLessonById,
-  getTrailById,
-  getModulesByTrailId,
-  getModuleByLessonId,
-  getLessonsForTrail,
-  getAdjacentLessons,
-  getTrailProgressByLessons,
-} from "@/data/mockData";
+// TODO: Replace mock-based logic with adapters once lesson endpoints are defined.
 import { toast } from "sonner";
+import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
+import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
+import type {
+  Trail as LegacyTrail,
+  Module as LegacyModule,
+  Lesson as LegacyLesson,
+} from "@/data/mockData";
 
 const Lesson = () => {
   const { trailId, lessonId } = useParams();
   const navigate = useNavigate();
+  const completeLesson = useCompleteLesson();
+  const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId);
 
-  const lesson = getLessonById(lessonId || "");
-  const trail = getTrailById(trailId || "");
-  const currentModule = getModuleByLessonId(lessonId || "");
-  const modules = getModulesByTrailId(trailId || "");
-  const allLessons = getLessonsForTrail(trailId || "");
-  const { prev, next } = getAdjacentLessons(trailId || "", lessonId || "");
-  const progress = getTrailProgressByLessons(trailId || "");
+  const lesson = React.useMemo(
+    () => allLessons.find((item) => String(item.id) === String(lessonId)) ?? null,
+    [allLessons, lessonId],
+  );
+  const currentModule = React.useMemo(
+    () => modules.find((item) => item.id === lesson?.moduleId) ?? null,
+    [modules, lesson?.moduleId],
+  );
+  const currentLessonIndex = allLessons.findIndex((l) => String(l.id) === String(lessonId));
+  const prev = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
+  const next =
+    currentLessonIndex >= 0 && currentLessonIndex < allLessons.length - 1
+      ? allLessons[currentLessonIndex + 1]
+      : null;
+  const completedLessons = allLessons.filter((item) => item.status === "completed").length;
+  const progress = allLessons.length > 0 ? Math.round((completedLessons / allLessons.length) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Carregando aula...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!lesson || !trail) {
     return (
@@ -52,10 +72,16 @@ const Lesson = () => {
     );
   }
 
-  const handleComplete = () => {
-    toast.success("Aula concluída! 🎉", {
-      description: `+${lesson.xpReward} XP ganhos`,
-    });
+  const handleComplete = async () => {
+    try {
+      await completeLesson.mutateAsync({ trailId: String(trailId), lessonId: String(lessonId) });
+      toast.success("Aula concluída! 🎉");
+      if (next) {
+        navigate(`/trails/${trailId}/lesson/${next.id}`);
+      }
+    } catch {
+      toast.error("Não foi possível concluir a aula. Tente novamente.");
+    }
   };
 
   const handlePrev = () => {
@@ -70,28 +96,18 @@ const Lesson = () => {
     }
   };
 
-  // Find current lesson index for display
-  const currentLessonIndex = allLessons.findIndex((l) => l.id === lessonId);
   const totalLessons = allLessons.length;
 
   // Calculate remaining time
-  const remainingLessons = allLessons.slice(currentLessonIndex);
+  const remainingLessons = currentLessonIndex >= 0 ? allLessons.slice(currentLessonIndex) : allLessons;
   const remainingTime = remainingLessons.reduce((acc, l) => acc + l.duration, 0);
-
-  const lessonTypeLabels = {
-    video: "Videoaula",
-    reading: "Leitura",
-    quiz: "Quiz",
-    project: "Projeto",
-    discussion: "Discussão",
-  };
 
   return (
     <LessonLayout
-      trail={trail}
-      modules={modules}
-      currentLesson={lesson}
-      allLessons={allLessons}
+      trail={trail as unknown as LegacyTrail}
+      modules={modules as unknown as LegacyModule[]}
+      currentLesson={lesson as unknown as LegacyLesson}
+      allLessons={allLessons as unknown as LegacyLesson[]}
       progress={progress}
     >
       <div className="max-w-5xl mx-auto p-6 lg:p-8 space-y-6 animate-fade-up">
@@ -122,6 +138,18 @@ const Lesson = () => {
               className="w-full"
             />
           </div>
+        )}
+
+        {/* TODO: Trocar este bloco pelo iframe final (alice_url via rents/list) apos alinhamento final da API externa. */}
+        {lesson.ebookPath && lesson.type !== "video" && (
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground mb-2">
+                Conteudo de e-book disponivel para esta aula.
+              </p>
+              <p className="text-xs break-all text-muted-foreground">{lesson.ebookPath}</p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Lesson Title & Description */}

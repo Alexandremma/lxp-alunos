@@ -9,14 +9,23 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
 import { TrailCalendar } from "@/components/learning/TrailCalendar";
-import { getTrailById, getModulesByTrailId, lessons, getTrailProgress } from "@/data/mockData";
+import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const TrailDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const trail = getTrailById(id || "");
-  const modules = getModulesByTrailId(id || "");
+  const { trail, modules, lessons, isLoading } = useTrailDetail(id || undefined);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Carregando trilha...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!trail) {
     return (
@@ -31,8 +40,10 @@ const TrailDetail = () => {
     );
   }
 
-  const progress = getTrailProgress(trail);
-  const moduleLessons = lessons.filter((l) => modules.some((m) => m.id === l.moduleId));
+  const totalLessons = lessons.length || 0;
+  const completedLessons = 0;
+  const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const moduleLessons = lessons.filter((l) => modules.some((m: any) => m.id === l.moduleId));
 
   return (
     <DashboardLayout>
@@ -45,10 +56,10 @@ const TrailDetail = () => {
 
         {/* Hero Section */}
         <div className="relative rounded-2xl overflow-hidden">
-          <img src={trail.thumbnail} alt={trail.title} className="w-full h-64 object-cover" />
+          <img src={trail.thumbnail ?? "/placeholder.svg"} alt={trail.title} className="w-full h-64 object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6">
-            <Badge variant="secondary" className="mb-3">{trail.category}</Badge>
+            {trail.category && <Badge variant="secondary" className="mb-3">{trail.category}</Badge>}
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">{trail.title}</h1>
             <p className="text-muted-foreground mt-2 max-w-2xl">{trail.description}</p>
           </div>

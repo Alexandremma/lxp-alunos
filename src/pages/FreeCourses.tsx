@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +19,8 @@ import {
   GraduationCap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { freeCourses, mainCourse, type FreeCourse } from "@/data/mockData";
+import { mainCourse, type FreeCourse } from "@/data/mockData";
+import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
 
 type FilterType = "all" | "course" | "language" | "workshop" | "certification" | "extension";
 
@@ -36,7 +38,17 @@ const statusConfig = {
   completed: { label: "Concluído", color: "bg-success/10 text-success" },
 };
 
-const FreeCourseCard = ({ course }: { course: FreeCourse }) => {
+const FreeCourseCard = ({
+  course,
+  onEnroll,
+  onContinue,
+  onViewCertificate,
+}: {
+  course: FreeCourse
+  onEnroll: (id: string) => void
+  onContinue: (id: string) => void
+  onViewCertificate: (id: string) => void
+}) => {
   const CategoryIcon = categoryConfig[course.category].icon;
 
   return (
@@ -85,9 +97,14 @@ const FreeCourseCard = ({ course }: { course: FreeCourse }) => {
           </div>
         )}
 
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           variant={course.status === "available" ? "default" : course.status === "enrolled" ? "secondary" : "outline"}
+          onClick={() => {
+            if (course.status === "available") onEnroll(course.id);
+            else if (course.status === "enrolled") onContinue(course.id);
+            else onViewCertificate(course.id);
+          }}
         >
           {course.status === "available" && "Inscrever-se"}
           {course.status === "enrolled" && (
@@ -104,21 +121,51 @@ const FreeCourseCard = ({ course }: { course: FreeCourse }) => {
 };
 
 const FreeCourses = () => {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterType>("all");
-
-  const filteredCourses = freeCourses.filter((course) => {
-    if (filter === "all") return true;
-    return course.category === filter;
+  const { items, isLoading } = useStudentCatalog({
+    category: filter,
+    page: 1,
+    pageSize: 24,
   });
 
+  const filteredCourses: FreeCourse[] = useMemo(() => {
+    // Temporary mapping to existing card type; when adapters return full shape we can align types.
+    return items.map((i) => ({
+      id: i.id,
+      title: i.name,
+      description: i.description ?? "",
+      thumbnail: "/placeholder.svg",
+      category: (i.category ?? "extension") as FreeCourse["category"],
+      status: i.enrolled ? ((i.progressPercent ?? 0) >= 100 ? "completed" : "enrolled") : "available",
+      progress: i.progressPercent ?? 0,
+      workload: 0,
+      instructor: "—",
+    }))
+  }, [items]);
+
   const counts = {
-    all: freeCourses.length,
-    course: freeCourses.filter((c) => c.category === "course").length,
-    language: freeCourses.filter((c) => c.category === "language").length,
-    workshop: freeCourses.filter((c) => c.category === "workshop").length,
-    certification: freeCourses.filter((c) => c.category === "certification").length,
-    extension: freeCourses.filter((c) => c.category === "extension").length,
+    all: filteredCourses.length,
+    course: filteredCourses.filter((c) => c.category === "course").length,
+    language: filteredCourses.filter((c) => c.category === "language").length,
+    workshop: filteredCourses.filter((c) => c.category === "workshop").length,
+    certification: filteredCourses.filter((c) => c.category === "certification").length,
+    extension: filteredCourses.filter((c) => c.category === "extension").length,
   };
+
+  const handleEnroll = (id: string) => {
+    void id;
+    // TODO: Implementar matricula para catalogo externo quando houver regra de negocio final.
+  }
+
+  const handleContinue = (id: string) => {
+    // Temporary route (will be replaced by next-lesson resolution)
+    navigate(`/trails/${id}`)
+  }
+
+  const handleViewCertificate = (id: string) => {
+    navigate(`/certificado/${id}`)
+  }
 
   return (
     <DashboardLayout>
@@ -133,7 +180,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-primary">
-                {freeCourses.filter((c) => c.status === "enrolled").length}
+                {filteredCourses.filter((c) => c.status === "enrolled").length}
               </div>
               <p className="text-xs text-muted-foreground">Cursando</p>
             </CardContent>
@@ -141,7 +188,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-success">
-                {freeCourses.filter((c) => c.status === "completed").length}
+                {filteredCourses.filter((c) => c.status === "completed").length}
               </div>
               <p className="text-xs text-muted-foreground">Concluídos</p>
             </CardContent>
@@ -149,9 +196,9 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {freeCourses
+                {filteredCourses
                   .filter((c) => c.status !== "available")
-                  .reduce((acc, c) => acc + c.workload, 0)}h
+                  .reduce((acc, c) => acc + (c.workload ?? 0), 0)}h
               </div>
               <p className="text-xs text-muted-foreground">Horas Cursadas</p>
             </CardContent>
@@ -159,7 +206,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {freeCourses.filter((c) => c.status === "available").length}
+                {filteredCourses.filter((c) => c.status === "available").length}
               </div>
               <p className="text-xs text-muted-foreground">Disponíveis</p>
             </CardContent>
@@ -182,10 +229,24 @@ const FreeCourses = () => {
         </Tabs>
 
         {/* Courses Grid */}
-        {filteredCourses.length > 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <BookMarked className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="font-medium mb-1">Carregando trilhas...</p>
+              <p className="text-sm text-muted-foreground">Aguarde um instante</p>
+            </CardContent>
+          </Card>
+        ) : filteredCourses.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => (
-              <FreeCourseCard key={course.id} course={course} />
+              <FreeCourseCard
+                key={course.id}
+                course={course}
+                onEnroll={handleEnroll}
+                onContinue={handleContinue}
+                onViewCertificate={handleViewCertificate}
+              />
             ))}
           </div>
         ) : (
