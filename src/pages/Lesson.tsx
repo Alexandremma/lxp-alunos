@@ -64,7 +64,7 @@ const Lesson = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Aula não encontrada</p>
-          <Button variant="outline" onClick={() => navigate("/trails")}>
+          <Button variant="outline" onClick={() => navigate("/cursos-livres")}>
             Voltar para Trilhas
           </Button>
         </div>
@@ -74,7 +74,11 @@ const Lesson = () => {
 
   const handleComplete = async () => {
     try {
-      await completeLesson.mutateAsync({ trailId: String(trailId), lessonId: String(lessonId) });
+      await completeLesson.mutateAsync({
+        trailId: String(trailId),
+        lessonId: String(lessonId),
+        totalLessons: allLessons.length,
+      });
       toast.success("Aula concluída! 🎉");
       if (next) {
         navigate(`/trails/${trailId}/lesson/${next.id}`);

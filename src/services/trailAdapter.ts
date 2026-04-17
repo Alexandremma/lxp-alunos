@@ -56,7 +56,10 @@ type ExternalDisciplineDetail = {
   autores?: ExternalAuthor[] | null
 }
 
+/** Chave = `trailId` da rota (UUID da disciplina no LXP), para não colidir quando o mesmo ID externo 9001 liga várias disciplinas. */
 const detailCache = new Map<string, ExternalDisciplineDetail>()
+
+const TRAIL_ID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function normalizeBaseUrl(baseUrl?: string): string {
   if (!baseUrl) return ""
@@ -74,7 +77,7 @@ function buildHeaders(): HeadersInit {
   return headers
 }
 
-async function resolveExternalDisciplineId(trailId: string): Promise<string> {
+export async function resolveExternalDisciplineId(trailId: string): Promise<string> {
   if (/^\d+$/.test(trailId)) return trailId
 
   const { data, error } = await supabase
@@ -93,15 +96,49 @@ async function resolveExternalDisciplineId(trailId: string): Promise<string> {
   return trailId
 }
 
-async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDisciplineDetail | null> {
-  const externalId = await resolveExternalDisciplineId(trailId)
-  const cacheKey = String(externalId)
-  if (detailCache.has(cacheKey)) return detailCache.get(cacheKey) ?? null
+/**
+ * Quando a API Eadstock não está configurada ou falha, monta estrutura mínima a partir do LXP
+ * para a UI não quebrar (aulas demo alinhadas a IDs usados no seed de progresso: u-1, u-2).
+ */
+async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<ExternalDisciplineDetail | null> {
+  if (!TRAIL_ID_UUID_RE.test(trailId)) return null
 
+  const { data: disc, error } = await supabase
+    .from("lxp_course_disciplines")
+    .select("id, name, code, workload, professor")
+    .eq("id", trailId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!disc) return null
+
+  const externalId = await resolveExternalDisciplineId(trailId)
+  const title = disc.name?.trim() || disc.code || "Disciplina"
+  const unidades: ExternalUnit[] = [
+    { id: "u-1", nome: `${title} — Parte 1`, order: 1 },
+    { id: "u-2", nome: `${title} — Parte 2`, order: 2 },
+  ]
+
+  return {
+    id: externalId,
+    nome: title,
+    ementa: `Disciplina ${disc.code}. Com a biblioteca externa configurada (VITE_EADSTOCK_BASE_URL), as aulas passam a refletir o catálogo real.`,
+    carga_horaria: disc.workload ?? 60,
+    unidades,
+    autores: disc.professor ? [{ nome: disc.professor }] : [],
+  }
+}
+
+async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDisciplineDetail | null> {
+  if (detailCache.has(trailId)) return detailCache.get(trailId) ?? null
+
+  const externalId = await resolveExternalDisciplineId(trailId)
   const baseUrl = normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL)
+
   if (!baseUrl) {
-    // TODO: Definir VITE_EADSTOCK_BASE_URL por ambiente para habilitar consumo real de disciplinas.
-    return null
+    const fallback = await getDisciplineDetailFallbackFromLxp(trailId)
+    if (fallback) detailCache.set(trailId, fallback)
+    return fallback
   }
 
   const response = await fetch(`${baseUrl}/disciplinas/get/${externalId}`, {
@@ -110,11 +147,16 @@ async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDis
   })
 
   if (!response.ok) {
+    const fallback = await getDisciplineDetailFallbackFromLxp(trailId)
+    if (fallback) {
+      detailCache.set(trailId, fallback)
+      return fallback
+    }
     throw new Error(`Falha ao carregar disciplina externa (${response.status}).`)
   }
 
   const payload = (await response.json()) as ExternalDisciplineDetail
-  detailCache.set(cacheKey, payload)
+  detailCache.set(trailId, payload)
   return payload
 }
 

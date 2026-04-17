@@ -10,6 +10,7 @@ import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
 import { TrailCard } from "@/components/learning/TrailCard";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
 
 const Dashboard = () => {
   // Temporary stats placeholders until real metrics are wired
@@ -24,7 +25,12 @@ const Dashboard = () => {
 
   const { profile } = useAuth();
 
-  const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
+  const {
+    data: enrolledCoursesData,
+    isLoading: loadingEnrollments,
+    error: enrollmentsError,
+    refetch: refetchEnrollments,
+  } = useGetActiveEnrolledCourses(profile?.id);
   const enrolledCourses = useMemo(() => enrolledCoursesData ?? [], [enrolledCoursesData]);
 
   const displayName = useMemo(() => {
@@ -34,7 +40,7 @@ const Dashboard = () => {
   }, [profile?.name]);
 
   const currentCourse = enrolledCourses[0];
-  const hasNoEnrolledCourses = enrolledCourses.length === 0;
+  const hasNoEnrolledCourses = !loadingEnrollments && enrolledCourses.length === 0;
 
   return (
     <DashboardLayout>
@@ -58,6 +64,23 @@ const Dashboard = () => {
         </div>
 
         {/* Curso matriculado (fonte real do Supabase) */}
+        {enrollmentsError && (
+          <QueryStateCard
+            state="error"
+            title="Não foi possível carregar sua matrícula agora."
+            description="Você pode tentar novamente sem sair da tela."
+            actionLabel="Tentar novamente"
+            onAction={() => void refetchEnrollments()}
+            className="border-destructive/30 bg-destructive/5"
+          />
+        )}
+        {loadingEnrollments && (
+          <QueryStateCard
+            state="loading"
+            title="Carregando seu curso atual..."
+            className="border-primary/20 bg-gradient-to-br from-primary/5 to-background"
+          />
+        )}
         {currentCourse && (
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
             <CardContent className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -231,7 +254,7 @@ const Dashboard = () => {
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-foreground">Trilhas em Andamento</h2>
-                  <Link to="/trails" className="text-sm text-primary hover:underline">
+                  <Link to="/cursos-livres" className="text-sm text-primary hover:underline">
                     Ver todas
                   </Link>
                 </div>

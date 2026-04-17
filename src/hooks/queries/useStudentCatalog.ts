@@ -1,6 +1,9 @@
-import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { getLibraryCatalog, type SearchLibraryResponse } from "@/services/libraryAdapter"
+import {
+  getEnrolledLinkedDisciplinesCatalog,
+  getLibraryCatalog,
+  type SearchLibraryResponse,
+} from "@/services/libraryAdapter"
 import { useAuth } from "@/hooks/use-auth"
 
 export function useStudentCatalog(params: {
@@ -8,23 +11,24 @@ export function useStudentCatalog(params: {
   type?: "discipline" | "all"
   page?: number
   pageSize?: number
-  category?: "course" | "language" | "workshop" | "certification" | "extension" | "all"
 }) {
   const { profile } = useAuth()
-  const { q = "", type = "all", page = 1, pageSize = 24, category = "all" } = params
+  const { q = "", type = "all", page = 1, pageSize = 24 } = params
 
   const query = useQuery<SearchLibraryResponse, Error>({
-    queryKey: ["lxp", "catalog", { q, type, page, pageSize, category, profileId: profile?.id }],
-    queryFn: () => getLibraryCatalog({ q, type, page, pageSize }),
+    queryKey: ["lxp", "catalog", { q, type, page, pageSize, profileId: profile?.id }],
+    queryFn: async () => {
+      const remote = await getLibraryCatalog({ q, type, page, pageSize })
+      if (remote.items.length > 0) return remote
+      if (!profile?.id) return remote
+      return getEnrolledLinkedDisciplinesCatalog(profile.id, { q })
+    },
     enabled: !!profile?.id, // require student session
     placeholderData: (previousData) => previousData,
   })
 
-  const items = useMemo(() => {
-    const list = query.data?.items ?? []
-    if (category === "all") return list
-    return list.filter((i) => i.category === category)
-  }, [query.data?.items, category])
+  /** Lista completa; filtro por aba fica na UI para não zerar contagens globais. */
+  const items = query.data?.items ?? []
 
   return {
     items,
@@ -32,6 +36,7 @@ export function useStudentCatalog(params: {
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error: query.error,
+    refetch: query.refetch,
   }
 }
 

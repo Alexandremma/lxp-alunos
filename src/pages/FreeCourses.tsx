@@ -21,6 +21,9 @@ import {
 import { cn } from "@/lib/utils";
 import { mainCourse, type FreeCourse } from "@/data/mockData";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
+import { useContinueTrail } from "@/hooks/useContinueTrail";
+import { toast } from "sonner";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
 
 type FilterType = "all" | "course" | "language" | "workshop" | "certification" | "extension";
 
@@ -43,11 +46,13 @@ const FreeCourseCard = ({
   onEnroll,
   onContinue,
   onViewCertificate,
+  isResolving,
 }: {
   course: FreeCourse
   onEnroll: (id: string) => void
   onContinue: (id: string) => void
   onViewCertificate: (id: string) => void
+  isResolving?: boolean
 }) => {
   const CategoryIcon = categoryConfig[course.category].icon;
 
@@ -100,12 +105,16 @@ const FreeCourseCard = ({
         <Button
           className="w-full"
           variant={course.status === "available" ? "default" : course.status === "enrolled" ? "secondary" : "outline"}
+          disabled={isResolving}
           onClick={() => {
             if (course.status === "available") onEnroll(course.id);
             else if (course.status === "enrolled") onContinue(course.id);
             else onViewCertificate(course.id);
           }}
         >
+          {isResolving && "Abrindo..."}
+          {!isResolving && (
+            <>
           {course.status === "available" && "Inscrever-se"}
           {course.status === "enrolled" && (
             <>
@@ -114,6 +123,8 @@ const FreeCourseCard = ({
             </>
           )}
           {course.status === "completed" && "Ver Certificado"}
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>
@@ -122,15 +133,15 @@ const FreeCourseCard = ({
 
 const FreeCourses = () => {
   const navigate = useNavigate();
+  const { resolveNextPath } = useContinueTrail();
   const [filter, setFilter] = useState<FilterType>("all");
-  const { items, isLoading } = useStudentCatalog({
-    category: filter,
+  const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
+  const { items, isLoading, isFetching, error, refetch } = useStudentCatalog({
     page: 1,
     pageSize: 24,
   });
 
-  const filteredCourses: FreeCourse[] = useMemo(() => {
-    // Temporary mapping to existing card type; when adapters return full shape we can align types.
+  const allCourses: FreeCourse[] = useMemo(() => {
     return items.map((i) => ({
       id: i.id,
       title: i.name,
@@ -144,23 +155,40 @@ const FreeCourses = () => {
     }))
   }, [items]);
 
-  const counts = {
-    all: filteredCourses.length,
-    course: filteredCourses.filter((c) => c.category === "course").length,
-    language: filteredCourses.filter((c) => c.category === "language").length,
-    workshop: filteredCourses.filter((c) => c.category === "workshop").length,
-    certification: filteredCourses.filter((c) => c.category === "certification").length,
-    extension: filteredCourses.filter((c) => c.category === "extension").length,
-  };
+  /** Só a grade respeita a aba; contagens e KPIs usam `allCourses`. */
+  const filteredCourses = useMemo(() => {
+    if (filter === "all") return allCourses;
+    return allCourses.filter((c) => c.category === filter);
+  }, [allCourses, filter]);
+
+  const counts = useMemo(
+    () => ({
+      all: allCourses.length,
+      course: allCourses.filter((c) => c.category === "course").length,
+      language: allCourses.filter((c) => c.category === "language").length,
+      workshop: allCourses.filter((c) => c.category === "workshop").length,
+      certification: allCourses.filter((c) => c.category === "certification").length,
+      extension: allCourses.filter((c) => c.category === "extension").length,
+    }),
+    [allCourses],
+  );
 
   const handleEnroll = (id: string) => {
     void id;
     // TODO: Implementar matricula para catalogo externo quando houver regra de negocio final.
   }
 
-  const handleContinue = (id: string) => {
-    // Temporary route (will be replaced by next-lesson resolution)
-    navigate(`/trails/${id}`)
+  const handleContinue = async (id: string) => {
+    try {
+      setResolvingCourseId(id);
+      const nextPath = await resolveNextPath(id);
+      navigate(nextPath);
+    } catch {
+      toast.error("Nao foi possivel abrir a proxima aula. Tente novamente.");
+      navigate(`/trails/${id}`);
+    } finally {
+      setResolvingCourseId(null);
+    }
   }
 
   const handleViewCertificate = (id: string) => {
@@ -174,13 +202,16 @@ const FreeCourses = () => {
           title="Minhas Trilhas"
           description="Amplie seus conhecimentos com cursos de extensão, idiomas, workshops e certificações."
         />
+        {isFetching && !isLoading && (
+          <p className="text-xs text-muted-foreground">Atualizando catálogo...</p>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-primary">
-                {filteredCourses.filter((c) => c.status === "enrolled").length}
+                {allCourses.filter((c) => c.status === "enrolled").length}
               </div>
               <p className="text-xs text-muted-foreground">Cursando</p>
             </CardContent>
@@ -188,7 +219,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-success">
-                {filteredCourses.filter((c) => c.status === "completed").length}
+                {allCourses.filter((c) => c.status === "completed").length}
               </div>
               <p className="text-xs text-muted-foreground">Concluídos</p>
             </CardContent>
@@ -196,7 +227,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {filteredCourses
+                {allCourses
                   .filter((c) => c.status !== "available")
                   .reduce((acc, c) => acc + (c.workload ?? 0), 0)}h
               </div>
@@ -206,7 +237,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {filteredCourses.filter((c) => c.status === "available").length}
+                {allCourses.filter((c) => c.status === "available").length}
               </div>
               <p className="text-xs text-muted-foreground">Disponíveis</p>
             </CardContent>
@@ -230,13 +261,21 @@ const FreeCourses = () => {
 
         {/* Courses Grid */}
         {isLoading ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <BookMarked className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="font-medium mb-1">Carregando trilhas...</p>
-              <p className="text-sm text-muted-foreground">Aguarde um instante</p>
-            </CardContent>
-          </Card>
+          <QueryStateCard
+            state="loading"
+            title="Carregando trilhas..."
+            description="Aguarde um instante"
+            icon={BookMarked}
+          />
+        ) : error ? (
+          <QueryStateCard
+            state="error"
+            title="Não foi possível carregar as trilhas"
+            description="Verifique sua conexão e tente novamente."
+            actionLabel="Tentar novamente"
+            onAction={() => void refetch()}
+            icon={BookMarked}
+          />
         ) : filteredCourses.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => (
@@ -246,6 +285,7 @@ const FreeCourses = () => {
                 onEnroll={handleEnroll}
                 onContinue={handleContinue}
                 onViewCertificate={handleViewCertificate}
+                isResolving={resolvingCourseId === course.id}
               />
             ))}
           </div>

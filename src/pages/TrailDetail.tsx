@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Clock, BookOpen, Trophy, User, Calendar } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -10,19 +11,23 @@ import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
 import { TrailCalendar } from "@/components/learning/TrailCalendar";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
+import { useContinueTrail } from "@/hooks/useContinueTrail";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
 
 const TrailDetail = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { trail, modules, lessons, isLoading } = useTrailDetail(id || undefined);
+  const { resolveNextPath } = useContinueTrail();
+  const { trail, modules, lessons, isLoading, error } = useTrailDetail(id || undefined);
+  const [isResolvingContinue, setIsResolvingContinue] = useState(false);
 
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Carregando trilha...</p>
-        </div>
+        <QueryStateCard state="loading" title="Carregando trilha..." />
       </DashboardLayout>
     );
   }
@@ -30,26 +35,40 @@ const TrailDetail = () => {
   if (!trail) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Trilha não encontrada</p>
-          <Link to="/trails">
-            <Button variant="outline" className="mt-4">Voltar para Trilhas</Button>
-          </Link>
-        </div>
+        <QueryStateCard
+          state={error ? "error" : "empty"}
+          title={error ? "Nao foi possivel carregar a trilha." : "Trilha não encontrada"}
+          description={error ? "Tente novamente em instantes ou volte para a listagem." : undefined}
+          actionLabel="Voltar para Trilhas"
+          onAction={() => navigate("/cursos-livres")}
+        />
       </DashboardLayout>
     );
   }
 
-  const totalLessons = lessons.length || 0;
-  const completedLessons = 0;
+  const totalLessons = lessons.length || trail.totalLessons || 0;
+  const completedLessons = trail.completedLessons ?? 0;
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const moduleLessons = lessons.filter((l) => modules.some((m: any) => m.id === l.moduleId));
+
+  const handleContinue = async () => {
+    try {
+      setIsResolvingContinue(true);
+      const nextPath = await resolveNextPath(trail.id);
+      navigate(nextPath);
+    } catch {
+      toast.error("Nao foi possivel abrir a proxima aula. Tente novamente.");
+      navigate(`/trails/${trail.id}`);
+    } finally {
+      setIsResolvingContinue(false);
+    }
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
         {/* Back Button */}
-        <Link to="/trails" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Link to="/cursos-livres" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="w-4 h-4" />
           Voltar para Trilhas
         </Link>
@@ -96,7 +115,7 @@ const TrailDetail = () => {
           {/* Modules */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-xl font-semibold">Módulos</h2>
-            <Accordion type="single" collapsible defaultValue="mod-001-4" className="space-y-3">
+            <Accordion type="single" collapsible defaultValue={modules[0]?.id} className="space-y-3">
               {modules.map((module) => (
                 <AccordionItem key={module.id} value={module.id} className="border rounded-lg bg-card px-4">
                   <AccordionTrigger className="hover:no-underline py-4">
@@ -130,7 +149,13 @@ const TrailDetail = () => {
                   <p className="text-sm text-muted-foreground">{trail.completedLessons} de {trail.totalLessons} aulas concluídas</p>
                 </div>
                 <Progress value={progress} className="w-full" />
-                <Button className="w-full">Continuar</Button>
+                <Button
+                  className="w-full"
+                  onClick={handleContinue}
+                  disabled={isResolvingContinue || totalLessons === 0}
+                >
+                  {isResolvingContinue ? "Abrindo..." : totalLessons === 0 ? "Sem aulas disponíveis" : "Continuar"}
+                </Button>
               </CardContent>
             </Card>
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,7 +16,7 @@ import {
   Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mainCourse, type Period, type Subject } from "@/data/mockData";
+import { type Period, type Subject } from "@/data/mockData";
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetMyCourseOverview } from "@/hooks/queries/useGetMyCourseOverview";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
 
 const statusConfig = {
   completed: { label: "Concluído", color: "bg-success/10 text-success border-success/20", icon: CheckCircle },
@@ -36,6 +38,9 @@ const subjectStatusConfig = {
   pending: { label: "Pendente", color: "bg-muted text-muted-foreground" },
   failed: { label: "Reprovado", color: "bg-destructive/10 text-destructive" },
 };
+
+/** Disciplinas vindas do Supabase usam UUID; o mock antigo não — só linkamos quando for UUID. */
+const DISCIPLINE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const PeriodCard = ({ period }: { period: Period }) => {
   const [isOpen, setIsOpen] = useState(period.status === "current");
@@ -102,12 +107,26 @@ const PeriodCard = ({ period }: { period: Period }) => {
 };
 
 const SubjectRow = ({ subject }: { subject: Subject }) => {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">{subject.name}</span>
+  const canOpenDisciplineTrail = DISCIPLINE_UUID_RE.test(subject.id);
+
+  const row = (
+    <div
+      className={cn(
+        "flex items-center justify-between p-3 rounded-lg bg-muted/30 transition-colors",
+        canOpenDisciplineTrail && "hover:bg-muted/60",
+      )}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-sm group-hover:text-primary transition-colors">
+            {subject.name}
+          </span>
           <span className="text-xs text-muted-foreground">({subject.code})</span>
+          {canOpenDisciplineTrail && (
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
+              Abrir trilha
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
           <span>{subject.credits} créditos</span>
@@ -121,7 +140,7 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         {subject.grade !== undefined && (
           <span className={cn(
             "font-semibold text-sm",
@@ -136,11 +155,29 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
       </div>
     </div>
   );
+
+  if (canOpenDisciplineTrail) {
+    return (
+      <Link
+        to={`/trails/${subject.id}`}
+        className="block rounded-lg group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        {row}
+      </Link>
+    );
+  }
+
+  return row;
 };
 
 const MyCourse = () => {
   const { profile } = useAuth();
-  const { data: currentCourse, isLoading: loadingCourse } = useGetMyCourseOverview(profile?.id);
+  const {
+    data: currentCourse,
+    isLoading: loadingCourse,
+    error: courseError,
+    refetch: refetchCourse,
+  } = useGetMyCourseOverview(profile?.id);
 
   const periods = useMemo<Period[]>(
     () =>
@@ -159,11 +196,11 @@ const MyCourse = () => {
           grade: subject.grade,
           professor: subject.professor,
         })),
-      })) ?? mainCourse.periods,
+      })) ?? [],
     [currentCourse?.periods],
   );
 
-  const courseName = useMemo(() => currentCourse?.name ?? mainCourse.name, [currentCourse?.name]);
+  const courseName = useMemo(() => currentCourse?.name ?? "Sem curso ativo", [currentCourse?.name]);
   const completedPeriods = useMemo(() => periods.filter((p) => p.status === "completed").length, [periods]);
   const totalPeriods = periods.length || 1;
   const courseProgress = Math.round((completedPeriods / totalPeriods) * 100);
@@ -202,6 +239,16 @@ const MyCourse = () => {
           title="Meu Curso"
           description="Visualize sua grade curricular completa e acompanhe seu progresso acadêmico."
         />
+        {courseError && (
+          <QueryStateCard
+            state="error"
+            title="Não foi possível carregar os dados do curso."
+            description="Tente novamente para atualizar a grade curricular."
+            actionLabel="Tentar novamente"
+            onAction={() => void refetchCourse()}
+            className="border-destructive/30 bg-destructive/5"
+          />
+        )}
 
         {/* Course Overview */}
         <Card className="border-primary/20">
@@ -228,14 +275,9 @@ const MyCourse = () => {
                       <span>Status: {currentCourse.status}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {totalPeriods} períodos
-                      </span>
-                      <span>•</span>
-                      <span>Curso em andamento</span>
-                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Nenhum curso ativo encontrado para seu perfil.
+                    </p>
                   )}
                 </div>
               </div>
@@ -261,9 +303,16 @@ const MyCourse = () => {
           </TabsList>
 
           <TabsContent value="grade" className="space-y-4">
-            {periods.map((period) => (
-              <PeriodCard key={period.id} period={period} />
-            ))}
+            {periods.length > 0 ? (
+              periods.map((period) => <PeriodCard key={period.id} period={period} />)
+            ) : (
+              <QueryStateCard
+                state="empty"
+                title="Nenhuma disciplina disponível no momento."
+                description="Quando sua grade for liberada, ela aparecerá aqui."
+                className="border-primary/20 bg-gradient-to-br from-primary/5 to-background"
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="summary">
