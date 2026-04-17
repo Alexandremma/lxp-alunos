@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabaseClient"
+
 export type LibraryContentType = "discipline"
 
 export type LibraryItem = {
@@ -64,6 +66,119 @@ function buildHeaders(): HeadersInit {
   if (apiSecret) headers["X-API-Secret"] = apiSecret
 
   return headers
+}
+
+function mapCourseCategoryToLibraryTab(
+  cat: string | null | undefined,
+): NonNullable<LibraryItem["category"]> {
+  switch (cat) {
+    case "extension":
+      return "extension"
+    case "postgraduate":
+      return "certification"
+    default:
+      return "course"
+  }
+}
+
+function progressPercentFromDisciplineStatus(status: string | undefined): number {
+  if (status === "approved") return 100
+  if (status === "in_progress") return 40
+  return 0
+}
+
+/**
+ * Quando o catálogo Eadstock não está disponível ou vem vazio, lista disciplinas do(s) curso(s)
+ * em que o aluno está matriculado e que possuem vínculo em `lxp_course_library_links`.
+ * O `id` retornado é o UUID de `lxp_course_disciplines` (use em `/trails/:id`).
+ */
+export async function getEnrolledLinkedDisciplinesCatalog(
+  profileId: string,
+  params: { q?: string } = {},
+): Promise<SearchLibraryResponse> {
+  const q = params.q?.trim().toLowerCase() ?? ""
+
+  const { data: enrollments, error: e1 } = await supabase
+    .from("lxp_enrollments")
+    .select("course_id")
+    .eq("student_profile_id", profileId)
+    .eq("status", "active")
+  if (e1) throw e1
+
+  const courseIds = [...new Set((enrollments ?? []).map((r) => r.course_id))]
+  if (courseIds.length === 0) return { items: [], total: 0 }
+
+  const { data: courses, error: e2 } = await supabase
+    .from("lxp_courses")
+    .select("id, category")
+    .in("id", courseIds)
+  if (e2) throw e2
+  const catByCourse = new Map((courses ?? []).map((c) => [c.id, c.category as string]))
+
+  const { data: periods, error: e3 } = await supabase
+    .from("lxp_course_periods")
+    .select("id, course_id")
+    .in("course_id", courseIds)
+  if (e3) throw e3
+
+  const periodIds = (periods ?? []).map((p) => p.id)
+  const courseByPeriod = new Map((periods ?? []).map((p) => [p.id, p.course_id]))
+  if (periodIds.length === 0) return { items: [], total: 0 }
+
+  const { data: disciplines, error: e4 } = await supabase
+    .from("lxp_course_disciplines")
+    .select("id, name, code, workload, course_period_id")
+    .in("course_period_id", periodIds)
+  if (e4) throw e4
+
+  const discIds = (disciplines ?? []).map((d) => d.id)
+  if (discIds.length === 0) return { items: [], total: 0 }
+
+  const { data: links, error: e5 } = await supabase
+    .from("lxp_course_library_links")
+    .select("course_discipline_id, library_content_id, library_content_name")
+    .eq("library_content_type", "discipline")
+    .in("course_discipline_id", discIds)
+  if (e5) throw e5
+
+  const linkByDisc = new Map((links ?? []).map((l) => [l.course_discipline_id, l]))
+
+  const { data: prog, error: e6 } = await supabase
+    .from("lxp_student_discipline_progress")
+    .select("course_discipline_id, status")
+    .eq("student_profile_id", profileId)
+    .in("course_discipline_id", discIds)
+  if (e6) throw e6
+
+  const progByDisc = new Map((prog ?? []).map((p) => [p.course_discipline_id, p.status as string]))
+
+  const items: LibraryItem[] = []
+  for (const d of disciplines ?? []) {
+    if (!linkByDisc.has(d.id)) continue
+    const link = linkByDisc.get(d.id)!
+    const courseId = courseByPeriod.get(d.course_period_id)
+    const tabCategory = mapCourseCategoryToLibraryTab(courseId ? catByCourse.get(courseId) : undefined)
+    const name = d.name?.trim() ?? d.code ?? "Disciplina"
+    const code = (d.code ?? "").toLowerCase()
+    if (q && !name.toLowerCase().includes(q) && !code.includes(q)) continue
+
+    const st = progByDisc.get(d.id)
+    items.push({
+      id: d.id,
+      name,
+      type: "discipline",
+      description: link.library_content_name
+        ? `${link.library_content_name} (ID externo ${link.library_content_id})`
+        : `Biblioteca externa ${link.library_content_id}`,
+      duration: d.workload != null && d.workload > 0 ? `${d.workload}h` : undefined,
+      category: tabCategory,
+      enrolled: true,
+      progressPercent: progressPercentFromDisciplineStatus(st),
+    })
+  }
+
+  items.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+  return { items, total: items.length }
 }
 
 export async function getLibraryCatalog(params: SearchLibraryParams): Promise<SearchLibraryResponse> {

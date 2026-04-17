@@ -1,7 +1,18 @@
 import { useQuery } from "@tanstack/react-query"
-import { getTrailDetail, getTrailModules, getTrailLessons, type Trail, type TrailModule, type TrailLesson } from "@/services/trailAdapter"
+import * as React from "react"
+import { useAuth } from "@/hooks/use-auth"
+import {
+  getTrailDetail,
+  getTrailModules,
+  getTrailLessons,
+  resolveExternalDisciplineId,
+  type Trail,
+  type TrailModule,
+} from "@/services/trailAdapter"
+import { fetchLessonProgressMap, mergeTrailLessonsWithProgress } from "@/services/progressService"
 
 export function useTrailDetail(trailId?: string) {
+  const { profile } = useAuth()
   const enabled = Boolean(trailId)
 
   const trail = useQuery<Trail | null>({
@@ -22,12 +33,45 @@ export function useTrailDetail(trailId?: string) {
     enabled,
   })
 
+  const progressMap = useQuery({
+    queryKey: ["lxp", "trail", "lesson-progress-map", trailId, profile?.id],
+    queryFn: async () => {
+      const ext = await resolveExternalDisciplineId(trailId!)
+      return fetchLessonProgressMap(profile!.id, ext)
+    },
+    enabled: enabled && Boolean(profile?.id),
+  })
+
+  const mergedLessons = React.useMemo(() => {
+    const base = lessons.data ?? []
+    const map = progressMap.data
+    if (!map) return base
+    return mergeTrailLessonsWithProgress(base, map)
+  }, [lessons.data, progressMap.data])
+
+  const mergedTrail = React.useMemo(() => {
+    const t = trail.data
+    if (!t) return null
+    const completedLessons = mergedLessons.filter((l) => l.status === "completed").length
+    const totalLessons = mergedLessons.length > 0 ? mergedLessons.length : t.totalLessons
+    return {
+      ...t,
+      totalLessons,
+      completedLessons,
+      totalModules: totalLessons,
+    }
+  }, [trail.data, mergedLessons])
+
   return {
-    trail: trail.data ?? null,
+    trail: mergedTrail,
     modules: modules.data ?? [],
-    lessons: lessons.data ?? [],
-    isLoading: trail.isLoading || modules.isLoading || lessons.isLoading,
-    error: trail.error || modules.error || lessons.error,
+    lessons: mergedLessons,
+    isLoading:
+      trail.isLoading ||
+      modules.isLoading ||
+      lessons.isLoading ||
+      (Boolean(profile?.id) && progressMap.isLoading),
+    error: trail.error || modules.error || lessons.error || progressMap.error,
   }
 }
 
