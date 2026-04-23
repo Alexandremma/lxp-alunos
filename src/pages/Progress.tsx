@@ -3,12 +3,48 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressRing } from "@/components/learning/ProgressRing";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
-import { getStudentStats, weeklyStudyData, trails } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { useAuth } from "@/hooks/use-auth";
+import { useProgressOverview } from "@/hooks/queries/useProgressOverview";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { BookOpen } from "lucide-react";
 
 const Progress = () => {
-  const stats = getStudentStats();
-  const completionRate = Math.round((stats.completedTrails / stats.totalTrails) * 100);
+  const { profile } = useAuth();
+  const { data, isLoading, error, refetch } = useProgressOverview(profile?.id);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6 animate-fade-up">
+          <PageHeader title="Meu Progresso" description="Acompanhe sua evolução e estatísticas de aprendizagem." />
+          <QueryStateCard state="loading" title="Carregando seu progresso..." />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6 animate-fade-up">
+          <PageHeader title="Meu Progresso" description="Acompanhe sua evolução e estatísticas de aprendizagem." />
+          <QueryStateCard
+            state="error"
+            title="Nao foi possivel carregar seu progresso."
+            description="Tente novamente para atualizar seus indicadores."
+            actionLabel="Tentar novamente"
+            onAction={() => void refetch()}
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const stats = data.stats;
+  const weeklyStudyData = data.weeklyStudyData;
+  const trails = data.trails;
+  const completionRate = stats.totalTrails > 0 ? Math.round((stats.completedTrails / stats.totalTrails) * 100) : 0;
 
   return (
     <DashboardLayout>
@@ -51,18 +87,27 @@ const Progress = () => {
         <Card>
           <CardHeader><CardTitle>Resumo das Trilhas</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {trails.map((trail) => (
-                <div key={trail.id} className="flex items-center gap-4">
-                  <img src={trail.thumbnail} alt={trail.title} className="w-12 h-12 rounded-lg object-cover" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{trail.title}</p>
-                    <p className="text-xs text-muted-foreground">{trail.completedLessons}/{trail.totalLessons} aulas</p>
+            {trails.length > 0 ? (
+              <div className="space-y-4">
+                {trails.map((trail) => (
+                  <div key={trail.id} className="flex items-center gap-4">
+                    <img src={trail.thumbnail} alt={trail.title} className="w-12 h-12 rounded-lg object-cover" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{trail.title}</p>
+                      <p className="text-xs text-muted-foreground">{trail.completedLessons}/{trail.totalLessons} aulas</p>
+                    </div>
+                    <ProgressRing progress={trail.progressPercent} size="sm" />
                   </div>
-                  <ProgressRing progress={(trail.completedLessons / trail.totalLessons) * 100} size="sm" />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <QueryStateCard
+                state="empty"
+                title="Sem trilhas para exibir"
+                description="Quando houver trilhas vinculadas ao seu curso, seu progresso aparecerá aqui."
+                icon={BookOpen}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

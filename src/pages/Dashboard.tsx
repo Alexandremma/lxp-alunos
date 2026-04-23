@@ -1,29 +1,25 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Flame, Zap, BookOpen, Clock, ChevronRight, Trophy, Sparkles, BookOpenCheck, ArrowRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Zap, BookOpen, Clock, Trophy, Sparkles, BookOpenCheck, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
 import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
-import { TrailCard } from "@/components/learning/TrailCard";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
+import { useContinueTrail } from "@/hooks/useContinueTrail";
+import { toast } from "sonner";
+import { useDashboardStats } from "@/hooks/queries/useDashboardStats";
 
 const Dashboard = () => {
-  // Temporary stats placeholders until real metrics are wired
-  const stats = {
-    streak: 0,
-    level: 1,
-    totalXp: 0,
-    completedTrails: 0,
-    totalLessonsCompleted: 0,
-    totalHoursStudied: 0,
-  };
-
+  const navigate = useNavigate();
   const { profile } = useAuth();
+  const { resolveNextPath } = useContinueTrail();
+  const [resolvingTrailId, setResolvingTrailId] = useState<string | null>(null);
 
   const {
     data: enrolledCoursesData,
@@ -32,6 +28,17 @@ const Dashboard = () => {
     refetch: refetchEnrollments,
   } = useGetActiveEnrolledCourses(profile?.id);
   const enrolledCourses = useMemo(() => enrolledCoursesData ?? [], [enrolledCoursesData]);
+  const {
+    items: catalogItems,
+    isLoading: loadingCatalog,
+    error: catalogError,
+    refetch: refetchCatalog,
+  } = useStudentCatalog({ page: 1, pageSize: 8 });
+  const {
+    data: dashboardStats,
+    error: statsError,
+    refetch: refetchStats,
+  } = useDashboardStats(profile?.id);
 
   const displayName = useMemo(() => {
     const candidate = (profile?.name ?? "").trim();
@@ -41,6 +48,33 @@ const Dashboard = () => {
 
   const currentCourse = enrolledCourses[0];
   const hasNoEnrolledCourses = !loadingEnrollments && enrolledCourses.length === 0;
+  const stats = dashboardStats ?? {
+    streak: 0,
+    level: 1,
+    totalXp: 0,
+    completedTrails: 0,
+    totalLessonsCompleted: 0,
+    totalHoursStudied: 0,
+  };
+  const inProgressTrails = useMemo(
+    () =>
+      catalogItems
+        .filter((item) => item.enrolled && (item.progressPercent ?? 0) < 100)
+        .slice(0, 4),
+    [catalogItems],
+  );
+
+  const handleContinueTrail = async (trailId: string) => {
+    try {
+      setResolvingTrailId(trailId);
+      const nextPath = await resolveNextPath(trailId);
+      navigate(nextPath);
+    } catch {
+      toast.error("Nao foi possivel continuar a trilha agora.");
+    } finally {
+      setResolvingTrailId(null);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -62,6 +96,15 @@ const Dashboard = () => {
             <FeedbackBadge type="level" value={`Nível ${stats.level}`} label={`${stats.totalXp} XP`} />
           </div>
         </div>
+        {statsError && (
+          <QueryStateCard
+            state="error"
+            title="Nao foi possivel atualizar seus indicadores."
+            description="Os dados de trilhas continuam disponíveis; tente atualizar os KPI."
+            actionLabel="Atualizar KPI"
+            onAction={() => void refetchStats()}
+          />
+        )}
 
         {/* Curso matriculado (fonte real do Supabase) */}
         {enrollmentsError && (
@@ -259,7 +302,59 @@ const Dashboard = () => {
                   </Link>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* Grid aguardando dados reais */}
+                  {loadingCatalog ? (
+                    <QueryStateCard
+                      state="loading"
+                      title="Carregando trilhas em andamento..."
+                      className="md:col-span-2"
+                    />
+                  ) : catalogError ? (
+                    <QueryStateCard
+                      state="error"
+                      title="Nao foi possivel carregar suas trilhas."
+                      description="Tente novamente para atualizar seus estudos em andamento."
+                      actionLabel="Tentar novamente"
+                      onAction={() => void refetchCatalog()}
+                      className="md:col-span-2"
+                    />
+                  ) : inProgressTrails.length === 0 ? (
+                    <QueryStateCard
+                      state="empty"
+                      title="Nenhuma trilha em andamento"
+                      description="Quando voce iniciar uma trilha, ela aparecera aqui."
+                      className="md:col-span-2"
+                    />
+                  ) : (
+                    inProgressTrails.map((trail) => {
+                      const progress = Math.max(0, Math.min(100, trail.progressPercent ?? 0));
+                      return (
+                        <Card key={trail.id} className="card-hover">
+                          <CardContent className="p-4 space-y-3">
+                            <div>
+                              <p className="font-semibold text-foreground line-clamp-1">{trail.name}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {trail.description ?? "Disciplina em andamento"}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">Progresso</span>
+                                <span className="font-medium">{progress}%</span>
+                              </div>
+                              <Progress value={progress} className="h-2" />
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={() => void handleContinueTrail(trail.id)}
+                              disabled={resolvingTrailId === trail.id}
+                            >
+                              {resolvingTrailId === trail.id ? "Abrindo..." : "Continuar"}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
