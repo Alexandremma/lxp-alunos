@@ -4,11 +4,13 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GameBadge } from "@/components/learning/GameBadge";
 import { EvidenceCard } from "@/components/learning/EvidenceCard";
-import { EmptyLearning } from "@/components/states/EmptyLearning";
-import { evidences, Evidence } from "@/data/mockData";
-import { Award, GraduationCap, Folder, Users } from "lucide-react";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { useAuth } from "@/hooks/use-auth";
+import { usePortfolioEvidences } from "@/hooks/queries/usePortfolioEvidences";
+import type { LearningEvidence } from "@/types/learningEvidence";
+import { Award, BookOpen, Folder, GraduationCap, Users } from "lucide-react";
 
-type FilterType = Evidence["type"];
+type FilterType = LearningEvidence["type"];
 
 const filterConfig: Record<FilterType, { label: string; icon: React.ElementType }> = {
   badge: { label: "Badges", icon: Award },
@@ -18,7 +20,10 @@ const filterConfig: Record<FilterType, { label: string; icon: React.ElementType 
 };
 
 const Portfolio = () => {
+  const { profile } = useAuth();
+  const { data, isLoading, error, refetch } = usePortfolioEvidences(profile?.id);
   const [filter, setFilter] = useState<FilterType>("badge");
+  const evidences = data ?? [];
 
   const filtered = evidences.filter((e) => e.type === filter);
   
@@ -66,8 +71,17 @@ const Portfolio = () => {
           </TabsList>
         </Tabs>
 
-        {/* Content Grid */}
-        {sortedFiltered.length > 0 ? (
+        {isLoading ? (
+          <QueryStateCard state="loading" title="Carregando seu portfólio..." />
+        ) : error ? (
+          <QueryStateCard
+            state="error"
+            title="Não foi possível carregar seu portfólio."
+            description="Tente novamente para buscar suas evidências."
+            actionLabel="Tentar novamente"
+            onAction={() => void refetch()}
+          />
+        ) : sortedFiltered.length > 0 ? (
           <div className={gridClasses}>
             {sortedFiltered.map((evidence, index) => (
               <div
@@ -84,7 +98,12 @@ const Portfolio = () => {
             ))}
           </div>
         ) : (
-          <EmptyLearning type="portfolio" />
+          <QueryStateCard
+            state="empty"
+            title="Seu portfólio ainda está vazio"
+            description="Conclua disciplinas e aulas para gerar certificados e badges automaticamente."
+            icon={BookOpen}
+          />
         )}
       </div>
     </DashboardLayout>
