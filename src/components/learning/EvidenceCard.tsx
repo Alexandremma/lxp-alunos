@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Evidence } from "@/data/mockData";
+import type { LearningEvidence } from "@/types/learningEvidence";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 interface EvidenceCardProps {
-  evidence: Evidence;
+  evidence: LearningEvidence;
   className?: string;
 }
 

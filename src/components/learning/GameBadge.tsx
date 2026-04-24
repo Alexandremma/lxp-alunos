@@ -4,7 +4,7 @@ import {
   GraduationCap, Rocket, Heart, LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Evidence } from "@/data/mockData";
+import type { LearningEvidence } from "@/types/learningEvidence";
 
 type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -83,7 +83,7 @@ const rarityConfig: Record<Rarity, {
 };
 
 interface GameBadgeProps {
-  evidence: Evidence;
+  evidence: LearningEvidence;
   className?: string;
 }
 
