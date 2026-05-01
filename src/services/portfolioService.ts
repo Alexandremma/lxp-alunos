@@ -4,10 +4,10 @@ import type { LearningEvidence } from "@/types/learningEvidence";
 type DisciplineProgressRow = {
   course_discipline_id: string;
   status: string | null;
-  progress_percent: number | null;
-  completed_at: string | null;
-  updated_at: string | null;
+  grade: number | null;
   xp_earned: number | null;
+  last_updated_at: string | null;
+  created_at: string | null;
 };
 
 type DisciplineRow = {
@@ -22,14 +22,14 @@ function toIsoNowIfMissing(value?: string | null): string {
 }
 
 function isDisciplineCompleted(row: DisciplineProgressRow): boolean {
-  return row.status === "approved" || row.status === "completed" || (row.progress_percent ?? 0) >= 100;
+  return row.status === "approved";
 }
 
 export async function getPortfolioEvidences(profileId: string): Promise<LearningEvidence[]> {
   const [{ data: progressRows, error: progressError }, lessonsResult] = await Promise.all([
     supabase
       .from("lxp_student_discipline_progress")
-      .select("course_discipline_id,status,progress_percent,completed_at,updated_at,xp_earned")
+      .select("course_discipline_id,status,grade,xp_earned,last_updated_at,created_at")
       .eq("student_profile_id", profileId),
     supabase
       .from("lxp_student_lesson_progress")
@@ -58,7 +58,7 @@ export async function getPortfolioEvidences(profileId: string): Promise<Learning
     if (!isDisciplineCompleted(progress)) continue;
     const discipline = disciplineById.get(progress.course_discipline_id);
     const title = discipline?.name?.trim() || discipline?.code?.trim() || "Disciplina concluída";
-    const completionDate = toIsoNowIfMissing(progress.completed_at ?? progress.updated_at);
+    const completionDate = toIsoNowIfMissing(progress.last_updated_at ?? progress.created_at);
 
     evidences.push({
       id: `certificate-${progress.course_discipline_id}`,

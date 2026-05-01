@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -124,7 +124,7 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
           <span className="text-xs text-muted-foreground">({subject.code})</span>
           {canOpenDisciplineTrail && (
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
-              Abrir trilha
+              Abrir disciplina
             </span>
           )}
         </div>
@@ -171,6 +171,7 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
 };
 
 const MyCourse = () => {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const {
     data: currentCourse,
@@ -217,6 +218,10 @@ const MyCourse = () => {
   );
   const approvedSubjects = useMemo(
     () => periods.reduce((acc, p) => acc + p.subjects.filter((s) => s.status === "approved").length, 0),
+    [periods],
+  );
+  const inProgressSubjects = useMemo(
+    () => periods.reduce((acc, p) => acc + p.subjects.filter((s) => s.status === "in_progress").length, 0),
     [periods],
   );
   const totalSubjects = useMemo(() => periods.reduce((acc, p) => acc + p.subjects.length, 0), [periods]);
@@ -295,6 +300,17 @@ const MyCourse = () => {
           </CardContent>
         </Card>
 
+        {!loadingCourse && !currentCourse && (
+          <QueryStateCard
+            state="empty"
+            title="Você ainda não possui curso ativo"
+            description="Explore suas disciplinas disponíveis para iniciar seus estudos."
+            actionLabel="Ir para Minhas Disciplinas"
+            onAction={() => navigate("/cursos-livres")}
+            className="border-primary/20 bg-gradient-to-br from-primary/5 to-background"
+          />
+        )}
+
         {/* Tabs for Main Course vs Free Courses */}
         <Tabs defaultValue="grade" className="space-y-4">
           <TabsList>
@@ -316,7 +332,7 @@ const MyCourse = () => {
           </TabsContent>
 
           <TabsContent value="summary">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-muted-foreground">Créditos Cursados</CardTitle>
@@ -341,6 +357,20 @@ const MyCourse = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     de {totalSubjects} no curso
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-muted-foreground">Disciplinas em Andamento</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">
+                    {inProgressSubjects}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    em progresso agora
                   </p>
                 </CardContent>
               </Card>

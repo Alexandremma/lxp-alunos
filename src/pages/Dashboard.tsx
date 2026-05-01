@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
-import { ActivityChecklist } from "@/components/learning/ActivityChecklist";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
@@ -70,7 +69,7 @@ const Dashboard = () => {
       const nextPath = await resolveNextPath(trailId);
       navigate(nextPath);
     } catch {
-      toast.error("Nao foi possivel continuar a trilha agora.");
+      toast.error("Nao foi possivel continuar a disciplina agora.");
     } finally {
       setResolvingTrailId(null);
     }
@@ -100,7 +99,7 @@ const Dashboard = () => {
           <QueryStateCard
             state="error"
             title="Nao foi possivel atualizar seus indicadores."
-            description="Os dados de trilhas continuam disponíveis; tente atualizar os KPI."
+            description="Os dados de disciplinas continuam disponíveis; tente atualizar os KPI."
             actionLabel="Atualizar KPI"
             onAction={() => void refetchStats()}
           />
@@ -171,7 +170,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.completedTrails}</p>
-                <p className="text-xs text-muted-foreground">Trilhas Concluídas</p>
+                <p className="text-xs text-muted-foreground">Disciplinas Concluídas</p>
               </div>
             </CardContent>
           </Card>
@@ -251,7 +250,7 @@ const Dashboard = () => {
                         </div>
                         <h3 className="font-semibold text-foreground">Explorar Cursos</h3>
                         <p className="text-xs text-muted-foreground">
-                          Descubra trilhas de aprendizado disponíveis
+                          Descubra disciplinas de aprendizado disponíveis
                         </p>
                       </CardContent>
                     </Card>
@@ -288,15 +287,9 @@ const Dashboard = () => {
           </>
         ) : (
           <>
-            {/* Continue Learning */}
-            {/* Hidden until trail progress is wired */}
-
-            {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Trails in Progress */}
-              <div className="lg:col-span-2 space-y-4">
+            <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-foreground">Trilhas em Andamento</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Disciplinas em Andamento</h2>
                   <Link to="/cursos-livres" className="text-sm text-primary hover:underline">
                     Ver todas
                   </Link>
@@ -305,13 +298,13 @@ const Dashboard = () => {
                   {loadingCatalog ? (
                     <QueryStateCard
                       state="loading"
-                      title="Carregando trilhas em andamento..."
+                      title="Carregando disciplinas em andamento..."
                       className="md:col-span-2"
                     />
                   ) : catalogError ? (
                     <QueryStateCard
                       state="error"
-                      title="Nao foi possivel carregar suas trilhas."
+                      title="Nao foi possivel carregar suas disciplinas."
                       description="Tente novamente para atualizar seus estudos em andamento."
                       actionLabel="Tentar novamente"
                       onAction={() => void refetchCatalog()}
@@ -320,8 +313,8 @@ const Dashboard = () => {
                   ) : inProgressTrails.length === 0 ? (
                     <QueryStateCard
                       state="empty"
-                      title="Nenhuma trilha em andamento"
-                      description="Quando voce iniciar uma trilha, ela aparecera aqui."
+                      title="Nenhuma disciplina em andamento"
+                      description="Quando voce iniciar uma disciplina, ela aparecera aqui."
                       className="md:col-span-2"
                     />
                   ) : (
@@ -356,20 +349,6 @@ const Dashboard = () => {
                     })
                   )}
                 </div>
-              </div>
-
-              {/* Upcoming Activities */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-foreground">Próximas Atividades</h2>
-                  <span className="text-xs text-muted-foreground">—</span>
-                </div>
-                <Card>
-                  <CardContent className="p-2">
-                    <ActivityChecklist activities={[]} />
-                  </CardContent>
-                </Card>
-              </div>
             </div>
           </>
         )}

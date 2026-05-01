@@ -65,7 +65,7 @@ const Lesson = () => {
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Aula não encontrada</p>
           <Button variant="outline" onClick={() => navigate("/cursos-livres")}>
-            Voltar para Trilhas
+            Voltar para Disciplinas
           </Button>
         </div>
       </div>
@@ -73,6 +73,7 @@ const Lesson = () => {
   }
 
   const handleComplete = async () => {
+    if (lesson.status === "completed") return;
     try {
       await completeLesson.mutateAsync({
         trailId: String(trailId),
@@ -82,6 +83,9 @@ const Lesson = () => {
       toast.success("Aula concluída! 🎉");
       if (next) {
         navigate(`/trails/${trailId}/lesson/${next.id}`);
+      } else {
+        toast.success("Disciplina concluída! 🎓");
+        navigate(`/trails/${trailId}`);
       }
     } catch {
       toast.error("Não foi possível concluir a aula. Tente novamente.");
@@ -97,7 +101,9 @@ const Lesson = () => {
   const handleNext = () => {
     if (next) {
       navigate(`/trails/${trailId}/lesson/${next.id}`);
+      return;
     }
+    navigate(`/trails/${trailId}`);
   };
 
   const totalLessons = allLessons.length;
@@ -276,18 +282,24 @@ const Lesson = () => {
             <span className="hidden sm:inline">Anterior</span>
           </Button>
 
-          <Button onClick={handleComplete} className="gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Concluir aula
-          </Button>
+          {lesson.status === "completed" ? (
+            <Badge variant="outline" className="gap-2 px-3 py-1.5 text-success border-success/30 bg-success/10">
+              <CheckCircle2 className="w-4 h-4" />
+              Aula concluída
+            </Badge>
+          ) : (
+            <Button onClick={handleComplete} className="gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Concluir aula
+            </Button>
+          )}
 
           <Button
             variant="outline"
             onClick={handleNext}
-            disabled={!next}
             className="gap-2"
           >
-            <span className="hidden sm:inline">Próxima</span>
+            <span className="hidden sm:inline">{next ? "Próxima" : "Finalizar Disciplina"}</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

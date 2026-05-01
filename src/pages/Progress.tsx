@@ -55,19 +55,19 @@ const Progress = () => {
           <FeedbackBadge type="xp" value={stats.totalXp} label="XP Total" size="lg" className="p-4" />
           <FeedbackBadge type="level" value={`Nível ${stats.level}`} label="Ranking" size="lg" className="p-4" />
           <FeedbackBadge type="streak" value={stats.streak} label="Dias seguidos" size="lg" className="p-4" />
-          <FeedbackBadge type="completion" value={`${stats.completedTrails}/${stats.totalTrails}`} label="Trilhas" size="lg" className="p-4" />
+          <FeedbackBadge type="completion" value={`${stats.completedTrails}/${stats.totalTrails}`} label="Disciplinas" size="lg" className="p-4" />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>Horas de Estudo por Dia</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Aulas Concluídas por Dia</CardTitle></CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyStudyData}>
                   <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
-                  <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completedLessons" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -78,14 +78,14 @@ const Progress = () => {
             <CardContent className="flex items-center justify-center h-64">
               <div className="text-center">
                 <ProgressRing progress={completionRate} size="xl" color="success" />
-                <p className="mt-4 text-muted-foreground">{stats.completedTrails} trilhas concluídas de {stats.totalTrails}</p>
+                <p className="mt-4 text-muted-foreground">{stats.completedTrails} disciplinas concluídas de {stats.totalTrails}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <Card>
-          <CardHeader><CardTitle>Resumo das Trilhas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Resumo das Disciplinas</CardTitle></CardHeader>
           <CardContent>
             {trails.length > 0 ? (
               <div className="space-y-4">
@@ -103,8 +103,8 @@ const Progress = () => {
             ) : (
               <QueryStateCard
                 state="empty"
-                title="Sem trilhas para exibir"
-                description="Quando houver trilhas vinculadas ao seu curso, seu progresso aparecerá aqui."
+                title="Sem disciplinas para exibir"
+                description="Quando houver disciplinas vinculadas ao seu curso, seu progresso aparecerá aqui."
                 icon={BookOpen}
               />
             )}

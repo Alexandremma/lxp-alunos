@@ -39,7 +39,7 @@ const TrailDetail = () => {
           state={error ? "error" : "empty"}
           title={error ? "Nao foi possivel carregar a trilha." : "Trilha não encontrada"}
           description={error ? "Tente novamente em instantes ou volte para a listagem." : undefined}
-          actionLabel="Voltar para Trilhas"
+          actionLabel="Voltar para Disciplinas"
           onAction={() => navigate("/cursos-livres")}
         />
       </DashboardLayout>
@@ -57,7 +57,7 @@ const TrailDetail = () => {
       const nextPath = await resolveNextPath(trail.id);
       navigate(nextPath);
     } catch {
-      toast.error("Nao foi possivel abrir a proxima aula. Tente novamente.");
+      toast.error("Nao foi possivel abrir a proxima disciplina agora. Tente novamente.");
       navigate(`/trails/${trail.id}`);
     } finally {
       setIsResolvingContinue(false);
@@ -70,7 +70,7 @@ const TrailDetail = () => {
         {/* Back Button */}
         <Link to="/cursos-livres" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="w-4 h-4" />
-          Voltar para Trilhas
+          Voltar para Disciplinas
         </Link>
 
         {/* Hero Section */}
@@ -151,10 +151,14 @@ const TrailDetail = () => {
                 <Progress value={progress} className="w-full" />
                 <Button
                   className="w-full"
-                  onClick={handleContinue}
-                  disabled={isResolvingContinue || totalLessons === 0}
+                  onClick={totalLessons === 0 ? () => navigate("/cursos-livres") : handleContinue}
+                  disabled={isResolvingContinue}
                 >
-                  {isResolvingContinue ? "Abrindo..." : totalLessons === 0 ? "Sem aulas disponíveis" : "Continuar"}
+                  {isResolvingContinue
+                    ? "Abrindo..."
+                    : totalLessons === 0
+                      ? "Voltar para Minhas Disciplinas"
+                      : "Continuar"}
                 </Button>
               </CardContent>
             </Card>
