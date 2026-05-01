@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export type WeeklyStudyPoint = {
   day: string;
-  hours: number;
+  completedLessons: number;
 };
 
 export type ProgressTrailSummary = {
@@ -29,22 +29,21 @@ function buildWeeklyStudyData(
   lessonRows: Array<{ last_accessed_at: string | null; completed_at: string | null }>,
 ): WeeklyStudyPoint[] {
   const now = new Date();
-  const dayHours = new Array<number>(7).fill(0);
+  const dayLessons = new Array<number>(7).fill(0);
 
   for (let delta = 6; delta >= 0; delta -= 1) {
     const d = new Date(now);
     d.setDate(now.getDate() - delta);
     const weekDay = d.getDay();
-    dayHours[weekDay] = 0;
+    dayLessons[weekDay] = 0;
   }
 
   for (const row of lessonRows) {
-    const source = row.last_accessed_at ?? row.completed_at;
+    const source = row.completed_at;
     if (!source) continue;
     const date = new Date(source);
     if (Number.isNaN(date.getTime())) continue;
-    // Estimativa leve: cada acesso registrado conta 30 min.
-    dayHours[date.getDay()] += 0.5;
+    dayLessons[date.getDay()] += 1;
   }
 
   const data: WeeklyStudyPoint[] = [];
@@ -52,7 +51,7 @@ function buildWeeklyStudyData(
     const d = new Date(now);
     d.setDate(now.getDate() - delta);
     const wd = d.getDay();
-    data.push({ day: WEEK_DAYS_PT[wd], hours: Number(dayHours[wd].toFixed(1)) });
+    data.push({ day: WEEK_DAYS_PT[wd], completedLessons: dayLessons[wd] });
   }
 
   return data;

@@ -24,6 +24,7 @@ import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
 import { useContinueTrail } from "@/hooks/useContinueTrail";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
 
 type FilterType = "all" | "course" | "language" | "workshop" | "certification" | "extension";
 
@@ -136,6 +137,7 @@ const FreeCourses = () => {
   const { resolveNextPath } = useContinueTrail();
   const [filter, setFilter] = useState<FilterType>("all");
   const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
+  const enrollInTrail = useEnrollInTrail();
   const { items, isLoading, isFetching, error, refetch } = useStudentCatalog({
     page: 1,
     pageSize: 24,
@@ -174,8 +176,15 @@ const FreeCourses = () => {
   );
 
   const handleEnroll = (id: string) => {
-    void id;
-    // TODO: Implementar matricula para catalogo externo quando houver regra de negocio final.
+    enrollInTrail.mutate(id, {
+      onSuccess: () => {
+        toast.success("Matricula realizada com sucesso.");
+      },
+      onError: (err) => {
+        const message = err instanceof Error ? err.message : "Nao foi possivel concluir a matricula.";
+        toast.error(message);
+      },
+    });
   }
 
   const handleContinue = async (id: string) => {
@@ -199,8 +208,8 @@ const FreeCourses = () => {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
         <PageHeader
-          title="Minhas Trilhas"
-          description="Amplie seus conhecimentos com cursos de extensão, idiomas, workshops e certificações."
+          title="Minhas Disciplinas"
+          description="Acompanhe e continue suas disciplinas, organizadas por tipo de curso."
         />
         {isFetching && !isLoading && (
           <p className="text-xs text-muted-foreground">Atualizando catálogo...</p>
@@ -263,14 +272,14 @@ const FreeCourses = () => {
         {isLoading ? (
           <QueryStateCard
             state="loading"
-            title="Carregando trilhas..."
+            title="Carregando disciplinas..."
             description="Aguarde um instante"
             icon={BookMarked}
           />
         ) : error ? (
           <QueryStateCard
             state="error"
-            title="Não foi possível carregar as trilhas"
+            title="Não foi possível carregar as disciplinas"
             description="Verifique sua conexão e tente novamente."
             actionLabel="Tentar novamente"
             onAction={() => void refetch()}
@@ -292,8 +301,8 @@ const FreeCourses = () => {
         ) : (
           <EmptyLearning
             type="trails"
-            title="Nenhum curso encontrado"
-            description="Não há cursos nesta categoria. Tente outra."
+            title="Nenhuma disciplina encontrada"
+            description="Nao ha disciplinas nesta categoria. Tente outra."
           />
         )}
       </div>

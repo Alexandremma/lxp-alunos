@@ -18,8 +18,6 @@ import Financial from "./pages/Financial";
 import Enrollment from "./pages/Enrollment";
 import Support from "./pages/Support";
 import KitchenSink from "./pages/KitchenSink";
-import IntegratorProjects from "./pages/IntegratorProjects";
-import IntegratorProject from "./pages/IntegratorProject";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Certificate from "./pages/Certificate";
@@ -36,7 +34,12 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <Routes>
               {/* Autenticação */}
               <Route path="/login" element={<Login />} />
@@ -74,25 +77,6 @@ const App = () => (
                 path="/portfolio"
                 element={<ProtectedRoute element={<Portfolio />} requiredRole="student" />}
               />
-              <Route
-                path="/projeto-integrador"
-                element={
-                  <ProtectedRoute
-                    element={<IntegratorProjects />}
-                    requiredRole="student"
-                  />
-                }
-              />
-              <Route
-                path="/projeto-integrador/:id"
-                element={
-                  <ProtectedRoute
-                    element={<IntegratorProject />}
-                    requiredRole="student"
-                  />
-                }
-              />
-
               {/* Novas páginas */}
               <Route
                 path="/certificado/:courseId"

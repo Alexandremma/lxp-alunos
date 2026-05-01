@@ -15,7 +15,6 @@ import {
   ClipboardList,
   HeadphonesIcon,
   Sparkles,
-  Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -40,8 +39,7 @@ const navSections: NavSection[] = [
     items: [
       { title: "Início", url: "/", icon: LayoutDashboard },
       { title: "Meu Curso", url: "/meu-curso", icon: GraduationCap },
-      { title: "Minhas Trilhas", url: "/cursos-livres", icon: Sparkles },
-      { title: "Projeto Integrador", url: "/projeto-integrador", icon: Layers },
+      { title: "Minhas Disciplinas", url: "/cursos-livres", icon: Sparkles },
       { title: "Progresso", url: "/progress", icon: BarChart3 },
       { title: "Portfólio", url: "/portfolio", icon: Trophy },
     ],
