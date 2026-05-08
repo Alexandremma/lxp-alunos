@@ -12,8 +12,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useLogout } from "@/hooks/use-logout"
+import { useAuth } from "@/hooks/use-auth"
+
+function initialsFromDisplay(label: string): string {
+  const t = label.trim()
+  if (!t) return "?"
+  const parts = t.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return t.slice(0, 2).toUpperCase()
+}
 
 interface TopBarProps {
   onMenuClick?: () => void
@@ -24,6 +35,27 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const { logout } = useLogout()
+  const { profile, user } = useAuth()
+
+  const menuName = useMemo(() => {
+    const fromProfile = profile?.name?.trim()
+    if (fromProfile) return fromProfile
+    const meta = user?.user_metadata?.full_name
+    if (typeof meta === "string" && meta.trim()) return meta.trim()
+    const email = user?.email?.trim()
+    if (email) return email.split("@")[0] ?? email
+    return "Aluno"
+  }, [profile?.name, user])
+
+  const menuEmail = useMemo(
+    () => profile?.email?.trim() || user?.email?.trim() || "",
+    [profile?.email, user?.email],
+  )
+
+  const avatarInitials = useMemo(
+    () => initialsFromDisplay(menuName === "Aluno" && menuEmail ? menuEmail : menuName),
+    [menuName, menuEmail],
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -103,9 +135,9 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="/placeholder.svg" alt="User" />
+                <AvatarImage src="/placeholder.svg" alt={menuName} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  JD
+                  {avatarInitials}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -113,9 +145,9 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">Maria Silva</p>
+                <p className="text-sm font-medium">{menuName}</p>
                 <p className="text-xs text-muted-foreground">
-                  maria.silva@universidade.edu.br
+                  {menuEmail || "—"}
                 </p>
               </div>
             </DropdownMenuLabel>
