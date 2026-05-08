@@ -13,11 +13,19 @@ import {
 import { GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
+const DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL = "https://lxp-alunos.vercel.app/definir-senha";
+const lxpAlunosSetPasswordUrl = (
+  import.meta.env.VITE_LXP_ALUNOS_SET_PASSWORD_URL ?? DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL
+).trim();
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authView, setAuthView] = useState<"login" | "forgot">("login");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,6 +96,29 @@ export default function Login() {
     navigate("/", { replace: true });
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotMessage(null);
+    setError(null);
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) {
+      setError("Informe o e-mail cadastrado.");
+      return;
+    }
+    setForgotLoading(true);
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: lxpAlunosSetPasswordUrl,
+    });
+    setForgotLoading(false);
+    if (resetErr) {
+      setError("Não foi possível enviar o e-mail. Tente novamente ou fale com o suporte.");
+      return;
+    }
+    setForgotMessage(
+      "Se existir uma conta com este e-mail, você receberá um link para redefinir a senha em instantes.",
+    );
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -103,46 +134,101 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu.email@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Senha</Label>
+          {authView === "login" ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu.email@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => {
+                      setError(null);
+                      setForgotMessage(null);
+                      setAuthView("forgot");
+                    }}
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-            {error && (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                Sua conta é criada pela instituição. Em caso de dúvidas, entre em contato
+                com o suporte.
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.
               </p>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <div className="text-center text-sm text-muted-foreground">
-              Sua conta é criada pela instituição. Em caso de dúvidas, entre em contato
-              com o suporte.
-            </div>
-          </form>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="seu.email@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
+              {forgotMessage && (
+                <p className="text-sm text-muted-foreground" role="status">
+                  {forgotMessage}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={forgotLoading}>
+                {forgotLoading ? "Enviando..." : "Enviar link de redefinição"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setError(null);
+                  setForgotMessage(null);
+                  setAuthView("login");
+                }}
+              >
+                Voltar ao login
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

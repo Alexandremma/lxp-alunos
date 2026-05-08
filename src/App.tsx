@@ -20,6 +20,7 @@ import Support from "./pages/Support";
 import KitchenSink from "./pages/KitchenSink";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import SetPassword from "./pages/SetPassword";
 import Certificate from "./pages/Certificate";
 import ProjectUpload from "./pages/ProjectUpload";
 import CoursesManagement from "./pages/admin/CoursesManagement";
@@ -43,6 +44,7 @@ const App = () => (
             <Routes>
               {/* Autenticação */}
               <Route path="/login" element={<Login />} />
+              <Route path="/definir-senha" element={<SetPassword />} />
 
               {/* Ensino (aluno autenticado) */}
               <Route
