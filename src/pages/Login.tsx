@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+    const errorCode = params.get("error_code");
+    if (!errorCode) return;
+
+    if (errorCode === "otp_expired") {
+      setError("Este link de ativação expirou ou já foi utilizado. Solicite um novo convite/redefinição de senha.");
+    } else {
+      const description = params.get("error_description");
+      setError(description ? decodeURIComponent(description.replace(/\+/g, " ")) : "Não foi possível concluir a ativação da conta.");
+    }
+
+    // Limpa o hash de erro da URL para evitar reprocessamento ao atualizar.
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
