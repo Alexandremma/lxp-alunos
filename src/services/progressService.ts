@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
+import { ensureCertificateIssue } from "@/services/certificateIssueService"
 import { resolveExternalDisciplineId, type TrailLesson } from "@/services/trailAdapter"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -119,6 +120,13 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
     { onConflict: "student_profile_id,course_discipline_id" },
   )
   if (discErr) throw discErr
+
+  if (allDone) {
+    await ensureCertificateIssue({
+      studentProfileId: params.studentProfileId,
+      courseDisciplineId: courseDiscId,
+    })
+  }
 }
 
 export type LessonProgressStatus = "pending" | "in_progress" | "completed"

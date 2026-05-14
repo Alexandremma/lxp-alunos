@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
+import { queryKeys } from "@/consts/queryKeys"
 import { recordLessonComplete } from "@/services/progressService"
 
 export function useCompleteLesson() {
@@ -21,6 +22,11 @@ export function useCompleteLesson() {
       queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "modules", variables.trailId] })
       queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "lessons", variables.trailId] })
       queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "lesson-progress-map", variables.trailId] })
+      if (profile?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profile.id) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profile.id) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.evidences(profile.id) })
+      }
     },
   })
 }
