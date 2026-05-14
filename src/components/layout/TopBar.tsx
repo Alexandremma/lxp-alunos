@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
 import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { useLogout } from "@/hooks/use-logout"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -152,9 +153,11 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Meu Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
-            <DropdownMenuItem>Meus Certificados</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/portfolio?tab=certificados" className="cursor-pointer">
+                Meus Certificados
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"

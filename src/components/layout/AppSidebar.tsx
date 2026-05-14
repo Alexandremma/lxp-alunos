@@ -1,19 +1,12 @@
 import { useLocation } from "react-router-dom"
 import {
   LayoutDashboard,
-  BookOpen,
   GraduationCap,
   Trophy,
   BarChart3,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Palette,
-  FileText,
-  CreditCard,
-  ClipboardList,
-  HeadphonesIcon,
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -53,11 +46,6 @@ const navSections: NavSection[] = [
   //     { title: "Atendimento", url: "/secretaria/atendimento", icon: HeadphonesIcon },
   //   ],
   // },
-]
-
-const bottomNavItems: NavItem[] = [
-  { title: "Design System", url: "/kitchen-sink", icon: Palette },
-  { title: "Configurações", url: "/settings", icon: Settings },
 ]
 
 interface AppSidebarProps {
@@ -154,21 +142,6 @@ const AppSidebar = ({
 
       {/* Bottom Section */}
       <div className="p-3 space-y-1 border-t border-sidebar-border">
-        {bottomNavItems.map((item) => (
-          <NavLink
-            key={item.url}
-            to={item.url}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-              "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-              collapsed && "justify-center px-2"
-            )}
-            activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>{item.title}</span>}
-          </NavLink>
-        ))}
         <button
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full",

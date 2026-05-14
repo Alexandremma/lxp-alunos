@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,43 +20,103 @@ const filterConfig: Record<FilterType, { label: string; icon: React.ElementType 
   participation: { label: "Participação", icon: Users },
 };
 
+const TAB_QUERY_BY_FILTER: Record<FilterType, string | null> = {
+  badge: null,
+  certificate: "certificados",
+  project: "projetos",
+  participation: "participacao",
+};
+
+function filterFromTabParam(tab: string | null): FilterType {
+  switch (tab?.toLowerCase()) {
+    case "certificados":
+    case "certificate":
+    case "certificado":
+      return "certificate";
+    case "badges":
+    case "badge":
+      return "badge";
+    case "projetos":
+    case "project":
+    case "projeto":
+      return "project";
+    case "participacao":
+    case "participação":
+    case "participation":
+      return "participation";
+    default:
+      return "badge";
+  }
+}
+
+const rarityOrder: Record<string, number> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+
 const Portfolio = () => {
   const { profile } = useAuth();
   const { data, isLoading, error, refetch } = usePortfolioEvidences(profile?.id);
-  const [filter, setFilter] = useState<FilterType>("badge");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [filter, setFilter] = useState<FilterType>(() => filterFromTabParam(tabParam));
+
+  useEffect(() => {
+    setFilter(filterFromTabParam(tabParam));
+  }, [tabParam]);
+
+  const syncTabToUrl = useCallback(
+    (next: FilterType) => {
+      const slug = TAB_QUERY_BY_FILTER[next];
+      if (!slug) {
+        setSearchParams({}, { replace: true });
+      } else {
+        setSearchParams({ tab: slug }, { replace: true });
+      }
+    },
+    [setSearchParams],
+  );
+
+  const handleFilterChange = useCallback(
+    (v: string) => {
+      const next = v as FilterType;
+      setFilter(next);
+      syncTabToUrl(next);
+    },
+    [syncTabToUrl],
+  );
+
   const evidences = data ?? [];
 
-  const filtered = evidences.filter((e) => e.type === filter);
-  
+  const filtered = useMemo(() => evidences.filter((e) => e.type === filter), [evidences, filter]);
+
   // Sort badges by rarity, others by date
-  const rarityOrder = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
-  const sortedFiltered = [...filtered].sort((a, b) => {
-    if (filter === 'badge') {
-      const rarityA = rarityOrder[a.rarity || 'common'];
-      const rarityB = rarityOrder[b.rarity || 'common'];
-      if (rarityA !== rarityB) return rarityA - rarityB;
-    }
-    return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
-  });
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      if (filter === "badge") {
+        const rarityA = rarityOrder[a.rarity || "common"] ?? 4;
+        const rarityB = rarityOrder[b.rarity || "common"] ?? 4;
+        if (rarityA !== rarityB) return rarityA - rarityB;
+      }
+      return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
+    });
+  }, [filtered, filter]);
 
   const getCounts = (type: FilterType) => evidences.filter((e) => e.type === type).length;
 
   // Grid classes based on type
-  const gridClasses = filter === 'badge' 
-    ? "grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-    : "grid sm:grid-cols-2 lg:grid-cols-3 gap-6";
+  const gridClasses =
+    filter === "badge"
+      ? "grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      : "grid sm:grid-cols-2 lg:grid-cols-3 gap-6";
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
-        <PageHeader 
-          title="Portfólio de Conquistas" 
-          description="Suas conquistas, certificados e projetos em um só lugar." 
+        <PageHeader
+          title="Portfólio de Conquistas"
+          description="Suas conquistas, certificados e projetos em um só lugar."
         />
 
-
         {/* Filter Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+        <Tabs value={filter} onValueChange={handleFilterChange}>
           <TabsList className="grid grid-cols-4 w-full max-w-2xl">
             {(Object.keys(filterConfig) as FilterType[]).map((type) => {
               const config = filterConfig[type];
@@ -89,7 +150,7 @@ const Portfolio = () => {
                 className="animate-scale-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                {filter === 'badge' ? (
+                {filter === "badge" ? (
                   <GameBadge evidence={evidence} />
                 ) : (
                   <EvidenceCard evidence={evidence} />
