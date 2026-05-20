@@ -20,6 +20,9 @@ import { LessonLayout } from "@/components/learning/LessonLayout";
 import { toast } from "sonner";
 import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
+import { useAuth } from "@/hooks/use-auth";
+import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
+import { isAliceConfigured } from "@/services/aliceService";
 import type {
   Trail as LegacyTrail,
   Module as LegacyModule,
@@ -30,6 +33,7 @@ const Lesson = () => {
   const { trailId, lessonId } = useParams();
   const navigate = useNavigate();
   const completeLesson = useCompleteLesson();
+  const { profile, user } = useAuth();
   const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId);
 
   const lesson = React.useMemo(
@@ -150,17 +154,34 @@ const Lesson = () => {
           </div>
         )}
 
-        {/* TODO: Trocar este bloco pelo iframe final (alice_url via rents/list) apos alinhamento final da API externa. */}
-        {lesson.ebookPath && lesson.type !== "video" && (
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground mb-2">
-                Conteudo de e-book disponivel para esta aula.
-              </p>
-              <p className="text-xs break-all text-muted-foreground">{lesson.ebookPath}</p>
-            </CardContent>
-          </Card>
-        )}
+        {lesson.type !== "video" &&
+          lesson.aliceContentId &&
+          isAliceConfigured() && (
+            <AliceLessonFrame
+              contentId={lesson.aliceContentId}
+              user={{
+                fullName:
+                  profile?.name?.trim() ||
+                  user?.email?.split("@")[0] ||
+                  "Aluno LXP",
+                userId: profile?.user_id || user?.id || "",
+                email: profile?.email || user?.email || "",
+              }}
+            />
+          )}
+
+        {lesson.type !== "video" &&
+          !lesson.aliceContentId &&
+          lesson.ebookPath && (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Conteudo de e-book disponivel para esta aula (caderno digital).
+                </p>
+                <p className="text-xs break-all text-muted-foreground">{lesson.ebookPath}</p>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Lesson Title & Description */}
         <div className="space-y-3">

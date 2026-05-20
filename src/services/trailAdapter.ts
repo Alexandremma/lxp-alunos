@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabaseClient"
+import {
+  fetchAliceRentsForDiscipline,
+  isAliceConfigured,
+  matchAliceRentForLesson,
+} from "@/services/aliceService"
 
 export type Trail = {
   id: string
@@ -35,6 +40,8 @@ export type TrailLesson = {
   xpReward: number
   status: "completed" | "in_progress" | "available" | "locked"
   ebookPath?: string
+  /** Hash ?c= do Alice (GET /api/rents) para launch POST no iframe */
+  aliceContentId?: string
 }
 
 type ExternalAuthor = { nome?: string | null }
@@ -179,19 +186,52 @@ export async function getTrailLessons(trailId: string): Promise<TrailLesson[]> {
   const detail = await getExternalDisciplineDetail(trailId)
   if (!detail) return []
 
+  const externalId = await resolveExternalDisciplineId(trailId)
+  let aliceRents: Awaited<ReturnType<typeof fetchAliceRentsForDiscipline>> = []
+  if (isAliceConfigured()) {
+    try {
+      aliceRents = await fetchAliceRentsForDiscipline(
+        externalId,
+        detail.nome?.trim() ?? undefined,
+      )
+    } catch (err) {
+      console.warn("[trailAdapter] Alice /api/rents:", err)
+    }
+  }
+
+  if (aliceRents.length > 0 && !(detail.unidades?.length ?? 0)) {
+    return aliceRents.map((rent, index) => ({
+      id: rent.contentId,
+      moduleId: rent.contentId,
+      title: rent.nomeUnidade,
+      description: "Conteudo da aula (Alice).",
+      content: undefined,
+      duration: 30,
+      type: "reading" as const,
+      xpReward: 10,
+      status: index === 0 ? "in_progress" : "available",
+      aliceContentId: rent.contentId,
+    }))
+  }
+
   const units = [...(detail.unidades ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  return units.map((unit, index) => ({
-    id: String(unit.id),
-    moduleId: String(unit.id),
-    title: unit.nome?.trim() || `Aula ${index + 1}`,
-    description: "Conteudo da aula disponibilizado pela biblioteca externa.",
-    content: undefined,
-    duration: 30,
-    type: "reading",
-    xpReward: 10,
-    status: index === 0 ? "in_progress" : "available",
-    ebookPath: unit.url_caderno_digital ?? undefined,
-  }))
+  return units.map((unit, index) => {
+    const unitTitle = unit.nome?.trim() || `Aula ${index + 1}`
+    const rent = matchAliceRentForLesson(aliceRents, unitTitle, index)
+    return {
+      id: String(unit.id),
+      moduleId: String(unit.id),
+      title: unitTitle,
+      description: "Conteudo da aula disponibilizado pela biblioteca externa.",
+      content: undefined,
+      duration: 30,
+      type: "reading" as const,
+      xpReward: 10,
+      status: index === 0 ? "in_progress" : "available",
+      ebookPath: unit.url_caderno_digital ?? undefined,
+      aliceContentId: rent?.contentId,
+    }
+  })
 }
 
 export async function getTrailDetail(trailId: string): Promise<Trail | null> {
