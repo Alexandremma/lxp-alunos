@@ -9,7 +9,6 @@ import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
-import { TrailCalendar } from "@/components/learning/TrailCalendar";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useContinueTrail } from "@/hooks/useContinueTrail";
 import { format, parseISO } from "date-fns";
@@ -162,9 +161,6 @@ const TrailDetail = () => {
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Calendário de Marcos */}
-            <TrailCalendar trailId={trail.id} />
           </div>
         </div>
       </div>
