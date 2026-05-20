@@ -25,6 +25,7 @@ import Certificate from "./pages/Certificate";
 import ProjectUpload from "./pages/ProjectUpload";
 import CoursesManagement from "./pages/admin/CoursesManagement";
 import StudentsManagement from "./pages/admin/StudentsManagement";
+import AliceLaunchTest from "./pages/AliceLaunchTest";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,9 @@ const App = () => (
                 path="/admin/alunos"
                 element={<ProtectedRoute element={<StudentsManagement />} requiredRole="admin" />}
               />
+
+              {/* Teste integração Alice no domínio deployado (whitelist B42) */}
+              <Route path="/teste-alice" element={<AliceLaunchTest />} />
 
               {/* Utils (pode manter livre ou proteger, aqui vou deixar livre para dev) */}
               <Route path="/kitchen-sink" element={<KitchenSink />} />
