@@ -155,22 +155,6 @@ const Lesson = () => {
         )}
 
         {lesson.type !== "video" &&
-          lesson.aliceContentId &&
-          isAliceConfigured() && (
-            <AliceLessonFrame
-              contentId={lesson.aliceContentId}
-              user={{
-                fullName:
-                  profile?.name?.trim() ||
-                  user?.email?.split("@")[0] ||
-                  "Aluno LXP",
-                userId: profile?.user_id || user?.id || "",
-                email: profile?.email || user?.email || "",
-              }}
-            />
-          )}
-
-        {lesson.type !== "video" &&
           !lesson.aliceContentId &&
           lesson.ebookPath && (
             <Card>
@@ -218,7 +202,21 @@ const Lesson = () => {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            {lesson.content ? (
+            {lesson.type !== "video" &&
+            lesson.aliceContentId &&
+            isAliceConfigured() ? (
+              <AliceLessonFrame
+                contentId={lesson.aliceContentId}
+                user={{
+                  fullName:
+                    profile?.name?.trim() ||
+                    user?.email?.split("@")[0] ||
+                    "Aluno LXP",
+                  userId: profile?.user_id || user?.id || "",
+                  email: profile?.email || user?.email || "",
+                }}
+              />
+            ) : lesson.content ? (
               <Card>
                 <CardContent className="p-6 prose prose-invert max-w-none">
                   <p className="text-foreground leading-relaxed whitespace-pre-line">
@@ -230,7 +228,9 @@ const Lesson = () => {
               <Card>
                 <CardContent className="p-6">
                   <p className="text-muted-foreground">
-                    O conteúdo de leitura será exibido aqui.
+                    {isAliceConfigured()
+                      ? "Conteúdo Alice indisponível para esta aula. Verifique o vínculo no backoffice e o deploy (VITE_ALICE_*)."
+                      : "O conteúdo de leitura será exibido aqui. Configure VITE_ALICE_* no deploy para o e-book."}
                   </p>
                 </CardContent>
               </Card>

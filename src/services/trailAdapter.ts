@@ -3,6 +3,7 @@ import {
   fetchAliceRentsForDiscipline,
   isAliceConfigured,
   matchAliceRentForLesson,
+  type AliceRent,
 } from "@/services/aliceService"
 
 export type Trail = {
@@ -65,6 +66,9 @@ type ExternalDisciplineDetail = {
 
 /** Chave = `trailId` da rota (UUID da disciplina no LXP), para não colidir quando o mesmo ID externo 9001 liga várias disciplinas. */
 const detailCache = new Map<string, ExternalDisciplineDetail>()
+const aliceRentsCache = new Map<string, AliceRent[]>()
+
+const ALICE_MODULE_ID = "alice-unidades"
 
 const TRAIL_ID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -129,7 +133,7 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
   return {
     id: externalId,
     nome: title,
-    ementa: `Disciplina ${disc.code}. Com a biblioteca externa configurada (VITE_EADSTOCK_BASE_URL), as aulas passam a refletir o catálogo real.`,
+    ementa: `Disciplina ${disc.code}. Com Alice (VITE_ALICE_*) ou Eadstock (VITE_EADSTOCK_BASE_URL) no deploy, as aulas refletem o catálogo vinculado no backoffice.`,
     carga_horaria: disc.workload ?? 60,
     unidades,
     autores: disc.professor ? [{ nome: disc.professor }] : [],
@@ -167,9 +171,54 @@ async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDis
   return payload
 }
 
+async function getAliceRentsForTrail(trailId: string, searchHint?: string): Promise<AliceRent[]> {
+  if (!isAliceConfigured()) return []
+  if (aliceRentsCache.has(trailId)) return aliceRentsCache.get(trailId) ?? []
+
+  const externalId = await resolveExternalDisciplineId(trailId)
+  try {
+    const rents = await fetchAliceRentsForDiscipline(externalId, searchHint)
+    aliceRentsCache.set(trailId, rents)
+    return rents
+  } catch (err) {
+    console.warn("[trailAdapter] Alice /api/rents:", err)
+    aliceRentsCache.set(trailId, [])
+    return []
+  }
+}
+
+function mapAliceRentsToLessons(rents: AliceRent[]): TrailLesson[] {
+  return rents.map((rent, index) => ({
+    id: rent.contentId,
+    moduleId: ALICE_MODULE_ID,
+    title: rent.nomeUnidade,
+    description: "Conteúdo da aula (Alice / EaDStock).",
+    content: undefined,
+    duration: 30,
+    type: "reading" as const,
+    xpReward: 10,
+    status: index === 0 ? "in_progress" : "available",
+    aliceContentId: rent.contentId,
+  }))
+}
+
 export async function getTrailModules(trailId: string): Promise<TrailModule[]> {
   const detail = await getExternalDisciplineDetail(trailId)
   if (!detail) return []
+
+  const aliceRents = await getAliceRentsForTrail(trailId, detail.nome?.trim() ?? undefined)
+  if (aliceRents.length > 0) {
+    return [
+      {
+        id: ALICE_MODULE_ID,
+        title: "Aulas",
+        description: undefined,
+        order: 1,
+        status: "in_progress",
+        lessonsCount: aliceRents.length,
+      },
+    ]
+  }
 
   const units = [...(detail.unidades ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   return units.map((unit, index) => ({
@@ -186,38 +235,19 @@ export async function getTrailLessons(trailId: string): Promise<TrailLesson[]> {
   const detail = await getExternalDisciplineDetail(trailId)
   if (!detail) return []
 
-  const externalId = await resolveExternalDisciplineId(trailId)
-  let aliceRents: Awaited<ReturnType<typeof fetchAliceRentsForDiscipline>> = []
-  if (isAliceConfigured()) {
-    try {
-      aliceRents = await fetchAliceRentsForDiscipline(
-        externalId,
-        detail.nome?.trim() ?? undefined,
-      )
-    } catch (err) {
-      console.warn("[trailAdapter] Alice /api/rents:", err)
-    }
-  }
-
-  if (aliceRents.length > 0 && !(detail.unidades?.length ?? 0)) {
-    return aliceRents.map((rent, index) => ({
-      id: rent.contentId,
-      moduleId: rent.contentId,
-      title: rent.nomeUnidade,
-      description: "Conteudo da aula (Alice).",
-      content: undefined,
-      duration: 30,
-      type: "reading" as const,
-      xpReward: 10,
-      status: index === 0 ? "in_progress" : "available",
-      aliceContentId: rent.contentId,
-    }))
+  const aliceRents = await getAliceRentsForTrail(trailId, detail.nome?.trim() ?? undefined)
+  if (aliceRents.length > 0) {
+    return mapAliceRentsToLessons(aliceRents)
   }
 
   const units = [...(detail.unidades ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const aliceRentsForMatch = isAliceConfigured()
+    ? await getAliceRentsForTrail(trailId, detail.nome?.trim() ?? undefined)
+    : []
+
   return units.map((unit, index) => {
     const unitTitle = unit.nome?.trim() || `Aula ${index + 1}`
-    const rent = matchAliceRentForLesson(aliceRents, unitTitle, index)
+    const rent = matchAliceRentForLesson(aliceRentsForMatch, unitTitle, index)
     return {
       id: String(unit.id),
       moduleId: String(unit.id),
@@ -238,8 +268,10 @@ export async function getTrailDetail(trailId: string): Promise<Trail | null> {
   const detail = await getExternalDisciplineDetail(trailId)
   if (!detail) return null
 
+  const aliceRents = await getAliceRentsForTrail(trailId, detail.nome?.trim() ?? undefined)
   const units = detail.unidades ?? []
-  const totalLessons = units.length
+  const totalLessons = aliceRents.length > 0 ? aliceRents.length : units.length
+  const totalModules = aliceRents.length > 0 ? 1 : units.length
   const estimatedHoursRaw = Number(detail.carga_horaria ?? 0)
   const estimatedHours = Number.isFinite(estimatedHoursRaw) && estimatedHoursRaw > 0
     ? estimatedHoursRaw
@@ -256,7 +288,7 @@ export async function getTrailDetail(trailId: string): Promise<Trail | null> {
     thumbnail: "/placeholder.svg",
     category: "Disciplina",
     instructor: firstAuthor ?? "Biblioteca Externa",
-    totalModules: totalLessons,
+    totalModules,
     totalLessons,
     completedLessons: 0,
     estimatedHours,
