@@ -3,6 +3,8 @@
  * @see INTEGRACAO_ALICE_EADSTOCK.md
  */
 
+import { resolveAliceBaseUrl } from "@/lib/resolveAliceBaseUrl"
+
 export type AliceRent = {
   id: number
   hash: string
@@ -34,12 +36,6 @@ type AliceRentsResponse = {
   }>
 }
 
-function normalizeBaseUrl(baseUrl?: string): string {
-  if (!baseUrl) return ""
-  if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) return baseUrl.replace(/\/$/, "")
-  return `https://${baseUrl.replace(/\/$/, "")}`
-}
-
 export function isAliceConfigured(): boolean {
   const key = import.meta.env.VITE_ALICE_API_KEY?.trim()
   const secret = import.meta.env.VITE_ALICE_API_SECRET?.trim()
@@ -53,6 +49,7 @@ function getAliceCredentials(): { apiKey: string; secret: string } | null {
   return { apiKey, secret }
 }
 
+/** Só Basic + Accept — X-Api-Key / X-Secret-Key quebram CORS no browser (preflight). */
 export function buildAliceApiHeaders(): HeadersInit {
   const creds = getAliceCredentials()
   if (!creds) return { Accept: "application/json" }
@@ -60,8 +57,6 @@ export function buildAliceApiHeaders(): HeadersInit {
   return {
     Accept: "application/json",
     Authorization: `Basic ${basic}`,
-    "X-Api-Key": creds.apiKey,
-    "X-Secret-Key": creds.secret,
   }
 }
 
@@ -98,7 +93,7 @@ export async function fetchAliceRents(params?: {
   limit?: number
   search?: string
 }): Promise<AliceDisciplineRents[]> {
-  const base = normalizeBaseUrl(import.meta.env.VITE_ALICE_BASE_URL ?? "https://alice.eadstock.com.br")
+  const base = resolveAliceBaseUrl(import.meta.env.VITE_ALICE_BASE_URL)
   if (!isAliceConfigured()) return []
 
   const qs = new URLSearchParams()
@@ -161,8 +156,7 @@ export async function computeAliceLaunchKey(apiKey: string, secret: string): Pro
 export function buildAliceLaunchUrl(contentId: string, useHttp?: boolean): string {
   const scheme =
     useHttp || import.meta.env.VITE_ALICE_LAUNCH_USE_HTTP === "true" ? "http" : "https"
-  const base = normalizeBaseUrl(import.meta.env.VITE_ALICE_BASE_URL ?? "alice.eadstock.com.br")
-    .replace(/^https?:\/\//, "")
+  const base = resolveAliceBaseUrl(import.meta.env.VITE_ALICE_BASE_URL).replace(/^https?:\/\//, "")
   return `${scheme}://${base}/?c=${encodeURIComponent(parseAliceContentId(contentId))}`
 }
 
