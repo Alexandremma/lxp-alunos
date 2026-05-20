@@ -1,6 +1,5 @@
-import { Bell, Search, Menu, Moon, Sun } from "lucide-react"
+import { Bell, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SearchInput } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -28,11 +27,11 @@ function initialsFromDisplay(label: string): string {
 }
 
 interface TopBarProps {
-  onMenuClick?: () => void
-  showMenuButton?: boolean
+  isSidebarOpen: boolean
+  onToggleSidebar: () => void
 }
 
-const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
+const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const { logout } = useLogout()
@@ -64,22 +63,21 @@ const TopBar = ({ onMenuClick, showMenuButton = false }: TopBarProps) => {
 
   return (
     <header className="h-16 border-b border-border bg-card px-4 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-4">
-        {showMenuButton && (
-          <Button variant="ghost" size="icon" onClick={onMenuClick}>
-            <Menu className="h-5 w-5" />
-          </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggleSidebar}
+        className="shrink-0 text-muted-foreground"
+        aria-label={isSidebarOpen ? "Recolher menu lateral" : "Abrir menu lateral"}
+      >
+        {isSidebarOpen ? (
+          <PanelLeftClose className="h-5 w-5" />
+        ) : (
+          <PanelLeftOpen className="h-5 w-5" />
         )}
-        <div className="hidden md:block w-80">
-          <SearchInput placeholder="Search..." />
-        </div>
-      </div>
+      </Button>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Search className="h-5 w-5" />
-        </Button>
-
         {/* Theme Toggle */}
         {mounted && (
           <Button

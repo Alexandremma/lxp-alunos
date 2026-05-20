@@ -93,7 +93,7 @@ const PeriodCard = ({ period }: { period: Period }) => {
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-3">
             <div className="space-y-2">
               {period.subjects.map((subject) => (
                 <SubjectRow key={subject.id} subject={subject} />
