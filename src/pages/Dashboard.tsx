@@ -50,6 +50,7 @@ const Dashboard = () => {
   const stats = dashboardStats ?? {
     streak: 0,
     level: 1,
+    levelTitle: "Iniciante",
     totalXp: 0,
     completedTrails: 0,
     totalLessonsCompleted: 0,
@@ -91,8 +92,8 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <FeedbackBadge type="streak" value={stats.streak} label="dias seguidos" />
-            <FeedbackBadge type="level" value={`Nível ${stats.level}`} label={`${stats.totalXp} XP`} />
+            <FeedbackBadge type="streak" value={stats.streak} label="dias seguidos de acesso" />
+            <FeedbackBadge type="level" value={stats.levelTitle} label={`Nível ${stats.level} · ${stats.totalXp} XP`} />
           </div>
         </div>
         {statsError && (

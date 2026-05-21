@@ -53,8 +53,8 @@ const Progress = () => {
 
         <div className="grid md:grid-cols-4 gap-4">
           <FeedbackBadge type="xp" value={stats.totalXp} label="XP Total" size="lg" className="p-4" />
-          <FeedbackBadge type="level" value={`Nível ${stats.level}`} label="Ranking" size="lg" className="p-4" />
-          <FeedbackBadge type="streak" value={stats.streak} label="Dias seguidos" size="lg" className="p-4" />
+          <FeedbackBadge type="level" value={stats.levelTitle} label={`Nível ${stats.level}`} size="lg" className="p-4" />
+          <FeedbackBadge type="streak" value={stats.streak} label="Dias seguidos de acesso" size="lg" className="p-4" />
           <FeedbackBadge type="completion" value={`${stats.completedTrails}/${stats.totalTrails}`} label="Disciplinas" size="lg" className="p-4" />
         </div>
 
