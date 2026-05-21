@@ -7,11 +7,12 @@ import { getAccessDateKey } from "@/lib/accessDate";
  */
 export async function recordStudentDailyAccess(studentProfileId: string): Promise<void> {
   const access_date = getAccessDateKey();
-  const { error } = await supabase.from("lxp_student_daily_access").upsert(
-    { student_profile_id: studentProfileId, access_date },
-    { onConflict: "student_profile_id,access_date", ignoreDuplicates: true },
-  );
+  const { error } = await supabase.from("lxp_student_daily_access").insert({
+    student_profile_id: studentProfileId,
+    access_date,
+  });
   if (error) {
+    if (error.code === "23505") return;
     console.warn("[studentAccess] record daily access:", error.message);
   }
 }

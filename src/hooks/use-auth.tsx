@@ -7,6 +7,8 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import { recordStudentDailyAccess } from "@/services/studentAccessService";
 
 type ProfileRole = "student" | "admin" | "staff" | string;
@@ -30,13 +32,19 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function trackStudentDailyAccess(profile: LxpProfile | null) {
+function trackStudentDailyAccess(profile: LxpProfile | null, invalidateStats?: (id: string) => void) {
   if (!profile || profile.role !== "student") return;
-  void recordStudentDailyAccess(profile.id);
+  void recordStudentDailyAccess(profile.id).then(() => invalidateStats?.(profile.id));
 }
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
+  const invalidateGamificationQueries = (profileId: string) => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profileId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.evidences(profileId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profileId) });
+  };
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<LxpProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +76,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
         const nextProfile = (data as LxpProfile) ?? null;
         setProfile(nextProfile);
-        trackStudentDailyAccess(nextProfile);
+        trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
       } else {
         setProfile(null);
       }
@@ -105,7 +113,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           }
           const nextProfile = (data as LxpProfile) ?? null;
           setProfile(nextProfile);
-          trackStudentDailyAccess(nextProfile);
+          trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
         })
         .finally(() => setLoading(false));
     });
