@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import { recordStudentDailyAccess } from "@/services/studentAccessService";
 
 type ProfileRole = "student" | "admin" | "staff" | string;
 
@@ -28,6 +29,11 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function trackStudentDailyAccess(profile: LxpProfile | null) {
+  if (!profile || profile.role !== "student") return;
+  void recordStudentDailyAccess(profile.id);
+}
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -60,7 +66,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           console.warn("[use-auth] Erro ao buscar lxp_profiles:", error.message);
         }
 
-        setProfile((data as LxpProfile) ?? null);
+        const nextProfile = (data as LxpProfile) ?? null;
+        setProfile(nextProfile);
+        trackStudentDailyAccess(nextProfile);
       } else {
         setProfile(null);
       }
@@ -95,7 +103,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
               error.message,
             );
           }
-          setProfile((data as LxpProfile) ?? null);
+          const nextProfile = (data as LxpProfile) ?? null;
+          setProfile(nextProfile);
+          trackStudentDailyAccess(nextProfile);
         })
         .finally(() => setLoading(false));
     });

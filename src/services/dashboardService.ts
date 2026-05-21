@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
+import { computeConsecutiveLoginStreak } from "@/lib/accessDate";
+import { listStudentAccessDates } from "@/services/studentAccessService";
 
 export type DashboardStats = {
   streak: number;
@@ -36,7 +38,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
     levelsResult,
     disciplineProgressResult,
     lessonsCountResult,
-    lessonDatesResult,
+    accessDatesResult,
   ] = await Promise.all([
     supabase.from("lxp_student_xp_events").select("xp_delta").eq("student_profile_id", profileId),
     supabase
@@ -50,18 +52,14 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
       .select("id", { count: "exact", head: true })
       .eq("student_profile_id", profileId)
       .eq("status", "completed"),
-    supabase
-      .from("lxp_student_lesson_progress")
-      .select("completed_at")
-      .eq("student_profile_id", profileId)
-      .eq("status", "completed")
-      .not("completed_at", "is", null),
+    listStudentAccessDates(profileId).catch(() => [] as string[]),
   ]);
 
   if (levelsResult.error) throw levelsResult.error;
   if (disciplineProgressResult.error) throw disciplineProgressResult.error;
   if (lessonsCountResult.error) throw lessonsCountResult.error;
-  if (lessonDatesResult.error) throw lessonDatesResult.error;
+
+  const accessDates = accessDatesResult;
 
   let totalXp = 0;
   if (xpRowsResult.error) {
@@ -82,13 +80,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
   const completedTrails = progressRows.filter((row) => (row as { status: string }).status === "approved").length;
   const totalLessonsCompleted = lessonsCountResult.count ?? 0;
   const totalHoursStudied = Number((totalLessonsCompleted * 0.5).toFixed(1));
-  const uniqueDays = new Set(
-    (lessonDatesResult.data ?? [])
-      .map((row) => row.completed_at as string | null)
-      .filter(Boolean)
-      .map((iso) => (iso as string).slice(0, 10)),
-  );
-  const streak = uniqueDays.size;
+  const streak = computeConsecutiveLoginStreak(accessDates);
 
   return {
     streak,

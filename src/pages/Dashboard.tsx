@@ -92,7 +92,7 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <FeedbackBadge type="streak" value={stats.streak} label="dias seguidos" />
+            <FeedbackBadge type="streak" value={stats.streak} label="dias seguidos de acesso" />
             <FeedbackBadge type="level" value={stats.levelTitle} label={`Nível ${stats.level} · ${stats.totalXp} XP`} />
           </div>
         </div>
