@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { X, ChevronLeft, Eye, EyeOff, StickyNote, MessageCircle, GraduationCap, Heart, Reply } from "lucide-react";
+import { X, ChevronLeft, Eye, EyeOff, StickyNote, MessageCircle, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -10,79 +10,9 @@ import { AiTutorSidebar } from "./AiTutorSidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LessonDiscussionPanel } from "@/components/learning/LessonDiscussionPanel";
 import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
-
-// Mock comments data
-const mockComments = [
-  {
-    id: "1",
-    user: { name: "Maria Silva", initials: "MS" },
-    content: "Excelente explicação sobre redes neurais! Finalmente entendi como funciona o processo de backpropagation. O exemplo prático ajudou muito.",
-    timestamp: "há 2 dias",
-    likes: 12,
-    liked: false,
-    replies: [
-      {
-        id: "1-1",
-        user: { name: "Prof. Carlos Mendes", initials: "CM" },
-        content: "Fico feliz que tenha ajudado, Maria! Se tiver mais dúvidas sobre o tema, estou à disposição.",
-        timestamp: "há 1 dia",
-        likes: 5,
-        liked: false,
-        isInstructor: true
-      }
-    ]
-  },
-  {
-    id: "2",
-    user: { name: "João Santos", initials: "JS" },
-    content: "No minuto 3:45 o professor menciona 'função de custo'. Alguém pode explicar melhor esse conceito? Fiquei com dúvida.",
-    timestamp: "há 5 horas",
-    likes: 3,
-    liked: false,
-    replies: [
-      {
-        id: "2-1",
-        user: { name: "Ana Oliveira", initials: "AO" },
-        content: "A função de custo mede o erro entre a previsão do modelo e o valor real. Quanto menor, melhor o modelo está performando!",
-        timestamp: "há 3 horas",
-        likes: 7,
-        liked: false,
-        isInstructor: false
-      }
-    ]
-  },
-  {
-    id: "3",
-    user: { name: "Pedro Almeida", initials: "PA" },
-    content: "Encontrei um artigo muito bom que complementa essa aula: 'Deep Learning Book' do Ian Goodfellow. Recomendo para quem quer se aprofundar!",
-    timestamp: "há 1 dia",
-    likes: 18,
-    liked: true,
-    replies: []
-  },
-  {
-    id: "4",
-    user: { name: "Carla Rodrigues", initials: "CR" },
-    content: "Qual a diferença entre Machine Learning e Deep Learning? O professor mencionou rapidamente mas não ficou claro pra mim.",
-    timestamp: "há 3 horas",
-    likes: 2,
-    liked: false,
-    replies: []
-  },
-  {
-    id: "5",
-    user: { name: "Lucas Fernandes", initials: "LF" },
-    content: "Acabei de assistir e já estou ansioso para a próxima aula! O conteúdo está muito bem estruturado. 🚀",
-    timestamp: "há 30 min",
-    likes: 0,
-    liked: false,
-    replies: []
-  }
-];
 
 interface LessonLayoutProps {
   children: React.ReactNode;
@@ -91,6 +21,9 @@ interface LessonLayoutProps {
   currentLesson: Lesson;
   allLessons: Lesson[];
   progress: number;
+  /** IDs usados em progresso/comentários (trailId + lessonId). */
+  externalDisciplineId?: string;
+  externalUnitId?: string;
 }
 
 export const LessonLayout = ({
@@ -100,6 +33,8 @@ export const LessonLayout = ({
   currentLesson,
   allLessons,
   progress,
+  externalDisciplineId,
+  externalUnitId,
 }: LessonLayoutProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -336,108 +271,15 @@ export const LessonLayout = ({
                         </p>
                       </div>
                     </div>
+                  ) : externalDisciplineId && externalUnitId ? (
+                    <LessonDiscussionPanel
+                      externalDisciplineId={externalDisciplineId}
+                      externalUnitId={externalUnitId}
+                    />
                   ) : (
-                    <div className="space-y-4">
-                      <Textarea
-                        placeholder="Faça uma pergunta ou comentário..."
-                        className="min-h-[80px] resize-none"
-                      />
-                      <Button size="sm" className="w-full">
-                        Enviar comentário
-                      </Button>
-                      
-                      <div className="pt-4 border-t border-border space-y-4">
-                        {mockComments.map((comment) => (
-                          <div key={comment.id} className="space-y-3">
-                            {/* Main comment */}
-                            <div className="space-y-2">
-                              <div className="flex items-start gap-3">
-                                <Avatar className="h-8 w-8 shrink-0">
-                                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                    {comment.user.initials}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-medium text-foreground">
-                                      {comment.user.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {comment.timestamp}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm text-foreground/90 mt-1 leading-relaxed">
-                                    {comment.content}
-                                  </p>
-                                  <div className="flex items-center gap-3 mt-2">
-                                    <button className={cn(
-                                      "flex items-center gap-1 text-xs transition-colors",
-                                      comment.liked 
-                                        ? "text-red-500" 
-                                        : "text-muted-foreground hover:text-red-500"
-                                    )}>
-                                      <Heart className={cn("h-3.5 w-3.5", comment.liked && "fill-current")} />
-                                      {comment.likes > 0 && comment.likes}
-                                    </button>
-                                    <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                                      <Reply className="h-3.5 w-3.5" />
-                                      Responder
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Replies */}
-                            {comment.replies.length > 0 && (
-                              <div className="ml-8 pl-3 border-l-2 border-border space-y-3">
-                                {comment.replies.map((reply) => (
-                                  <div key={reply.id} className="flex items-start gap-3">
-                                    <Avatar className="h-7 w-7 shrink-0">
-                                      <AvatarFallback className={cn(
-                                        "text-xs",
-                                        reply.isInstructor 
-                                          ? "bg-amber-500/20 text-amber-600" 
-                                          : "bg-secondary text-secondary-foreground"
-                                      )}>
-                                        {reply.user.initials}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-medium text-foreground">
-                                          {reply.user.name}
-                                        </span>
-                                        {reply.isInstructor && (
-                                          <Badge variant="warning" size="sm">
-                                            Instrutor
-                                          </Badge>
-                                        )}
-                                        <span className="text-xs text-muted-foreground">
-                                          {reply.timestamp}
-                                        </span>
-                                      </div>
-                                      <p className="text-sm text-foreground/90 mt-1 leading-relaxed">
-                                        {reply.content}
-                                      </p>
-                                      <button className={cn(
-                                        "flex items-center gap-1 text-xs mt-2 transition-colors",
-                                        reply.liked 
-                                          ? "text-red-500" 
-                                          : "text-muted-foreground hover:text-red-500"
-                                      )}>
-                                        <Heart className={cn("h-3.5 w-3.5", reply.liked && "fill-current")} />
-                                        {reply.likes > 0 && reply.likes}
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Discussão indisponível para esta aula.
+                    </p>
                   )}
                 </div>
               </div>
