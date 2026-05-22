@@ -180,13 +180,16 @@ const Lesson = () => {
                 {lesson.description}
               </p>
             </div>
-            <Badge
-              variant="secondary"
-              className="shrink-0 flex items-center gap-1"
-            >
-              <Award className="w-3.5 h-3.5" />
-              +{lesson.xpReward} XP
-            </Badge>
+            {lesson.xpReward > 0 && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 flex items-center gap-1"
+                title="Valor configurado em Gamificação → Aula Assistida"
+              >
+                <Award className="w-3.5 h-3.5" />
+                +{lesson.xpReward} XP ao concluir
+              </Badge>
+            )}
           </div>
         </div>
 

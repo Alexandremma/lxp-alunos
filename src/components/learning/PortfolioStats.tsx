@@ -4,10 +4,12 @@ import { cn } from "@/lib/utils";
 
 interface PortfolioStatsProps {
   evidences: Evidence[];
+  /** XP real do aluno (soma de lxp_student_xp_events). Não usar soma de xpReward dos cards. */
+  totalXpFromEvents: number;
 }
 
-export const PortfolioStats = ({ evidences }: PortfolioStatsProps) => {
-  const totalXp = evidences.reduce((acc, e) => acc + (e.xpReward || 0), 0);
+export const PortfolioStats = ({ evidences, totalXpFromEvents }: PortfolioStatsProps) => {
+  const totalXp = totalXpFromEvents;
   
   const rarityCounts = {
     legendary: evidences.filter(e => e.rarity === 'legendary').length,

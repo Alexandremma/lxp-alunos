@@ -127,7 +127,7 @@ export const GameBadge = ({ evidence, className }: GameBadgeProps) => {
 
         {/* XP + Date - always at bottom */}
         <div className="mt-auto flex flex-col items-center gap-1.5">
-          {evidence.xpReward && (
+          {(evidence.xpReward ?? 0) > 0 && (
             <div className={cn(
               "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold",
               config.iconBg,
