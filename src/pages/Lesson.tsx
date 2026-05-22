@@ -123,6 +123,8 @@ const Lesson = () => {
       currentLesson={lesson as unknown as LegacyLesson}
       allLessons={allLessons as unknown as LegacyLesson[]}
       progress={progress}
+      externalDisciplineId={String(trailId)}
+      externalUnitId={String(lessonId)}
     >
       <div className="max-w-5xl mx-auto p-6 lg:p-8 space-y-6 animate-fade-up">
         {/* Lesson Header Info */}
