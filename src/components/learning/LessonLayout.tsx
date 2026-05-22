@@ -9,9 +9,9 @@ import { AiTutorFab } from "./AiTutorFab";
 import { AiTutorSidebar } from "./AiTutorSidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LessonDiscussionPanel } from "@/components/learning/LessonDiscussionPanel";
+import { LessonNotesPanel } from "@/components/learning/LessonNotesPanel";
 import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
 
 interface LessonLayoutProps {
@@ -256,21 +256,16 @@ export const LessonLayout = ({
 
                 <div className="flex-1 overflow-y-auto p-4">
                   {rightPanel === 'notes' ? (
-                    <div className="space-y-4">
-                      <Textarea
-                        placeholder="Escreva suas anotações aqui..."
-                        className="min-h-[120px] resize-none"
+                    externalDisciplineId && externalUnitId ? (
+                      <LessonNotesPanel
+                        externalDisciplineId={externalDisciplineId}
+                        externalUnitId={externalUnitId}
                       />
-                      <Button size="sm" className="w-full">
-                        Salvar anotação
-                      </Button>
-                      
-                      <div className="pt-4 border-t border-border">
-                        <p className="text-sm text-muted-foreground text-center py-8">
-                          Suas anotações aparecerão aqui
-                        </p>
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Anotações indisponíveis para esta aula.
+                      </p>
+                    )
                   ) : externalDisciplineId && externalUnitId ? (
                     <LessonDiscussionPanel
                       externalDisciplineId={externalDisciplineId}

@@ -7,13 +7,26 @@ import {
   getTrailLessons,
   resolveExternalDisciplineId,
   type Trail,
+  type TrailLesson,
   type TrailModule,
 } from "@/services/trailAdapter"
 import { fetchLessonProgressMap, mergeTrailLessonsWithProgress } from "@/services/progressService"
+import { getLessonCompleteXp } from "@/services/gamificationXpRulesService"
+import { useXpRules } from "@/hooks/queries/useXpRules"
+
+function applyLessonXpToLessons(
+  lessons: TrailLesson[],
+  lessonXp: number | undefined,
+): TrailLesson[] {
+  if (lessonXp === undefined) return lessons
+  return lessons.map((l) => ({ ...l, xpReward: lessonXp }))
+}
 
 export function useTrailDetail(trailId?: string) {
   const { profile } = useAuth()
   const enabled = Boolean(trailId)
+  const xpRulesQ = useXpRules()
+  const lessonXp = xpRulesQ.data ? getLessonCompleteXp(xpRulesQ.data) : undefined
 
   const trail = useQuery<Trail | null>({
     queryKey: ["lxp", "trail", "detail", trailId],
@@ -43,11 +56,11 @@ export function useTrailDetail(trailId?: string) {
   })
 
   const mergedLessons = React.useMemo(() => {
-    const base = lessons.data ?? []
+    const base = applyLessonXpToLessons(lessons.data ?? [], lessonXp)
     const map = progressMap.data
     if (!map) return base
-    return mergeTrailLessonsWithProgress(base, map)
-  }, [lessons.data, progressMap.data])
+    return applyLessonXpToLessons(mergeTrailLessonsWithProgress(base, map), lessonXp)
+  }, [lessons.data, progressMap.data, lessonXp])
 
   const mergedTrail = React.useMemo(() => {
     const t = trail.data
@@ -59,8 +72,9 @@ export function useTrailDetail(trailId?: string) {
       totalLessons,
       completedLessons,
       totalModules: totalLessons,
+      xpReward: lessonXp !== undefined ? totalLessons * lessonXp : t.xpReward,
     }
-  }, [trail.data, mergedLessons])
+  }, [trail.data, mergedLessons, lessonXp])
 
   return {
     trail: mergedTrail,
@@ -70,6 +84,7 @@ export function useTrailDetail(trailId?: string) {
       trail.isLoading ||
       modules.isLoading ||
       lessons.isLoading ||
+      xpRulesQ.isLoading ||
       (Boolean(profile?.id) && progressMap.isLoading),
     error: trail.error || modules.error || lessons.error || progressMap.error,
   }

@@ -196,6 +196,7 @@ function mapAliceRentsToLessons(rents: AliceRent[]): TrailLesson[] {
     content: undefined,
     duration: 30,
     type: "reading" as const,
+    /** Substituído em useTrailDetail por lxp_gamification_xp_rules.lesson_complete */
     xpReward: 10,
     status: index === 0 ? "in_progress" : "available",
     aliceContentId: rent.contentId,
