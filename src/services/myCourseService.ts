@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { MyCourseData, MyCoursePeriod, SubjectStatus } from "@/types/myCourse";
 
-type EnrollmentRow = { course_id: string; created_at?: string | null };
+type EnrollmentRow = { course_id: string; created_at?: string | null; status: string };
 type CourseRow = { id: string; name: string; description: string | null; status: string; created_at: string };
 type ProgressRow = { course_discipline_id: string; status: SubjectStatus; grade: number | null };
 
@@ -14,7 +14,7 @@ function resolvePeriodStatus(subjectStatuses: SubjectStatus[]): MyCoursePeriod["
 export async function getMyCourseOverview(profileId: string): Promise<MyCourseData | null> {
   const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from("lxp_enrollments")
-    .select("course_id,created_at")
+    .select("course_id,created_at,status")
     .eq("student_profile_id", profileId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -35,7 +35,7 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
 
   const { data: periodRows, error: periodsError } = await supabase
     .from("lxp_course_periods")
-    .select("id,number,name,lxp_course_disciplines(id,name,code,workload,credits,professor)")
+    .select("id,number,name,lxp_course_disciplines(id,name,code,workload,credits,professor,status)")
     .eq("course_id", enrollment.course_id)
     .order("number", { ascending: true });
   if (periodsError) throw periodsError;
@@ -60,6 +60,8 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
     );
   }
 
+  const enrollmentInactive = enrollment.status === "inactive";
+
   const periods: MyCoursePeriod[] = (periodRows ?? []).map((period: any) => {
     const subjects = ((period.lxp_course_disciplines ?? []) as Array<{
       id: string;
@@ -68,6 +70,7 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
       workload: number;
       credits: number;
       professor?: string;
+      status?: string;
     }>).map((discipline) => {
       const progress = progressByDisciplineId.get(discipline.id);
       return {
@@ -79,6 +82,8 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
         professor: discipline.professor ?? undefined,
         status: progress?.status ?? "pending",
         grade: progress?.grade ?? undefined,
+        disciplineInactive: (discipline.status ?? "active") === "inactive",
+        enrollmentInactive,
       };
     });
 

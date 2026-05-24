@@ -15,15 +15,17 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 
 const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { resolveNextPath } = useContinueTrail();
   const { trail, modules, lessons, isLoading, error } = useTrailDetail(id || undefined);
+  const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isResolvingContinue, setIsResolvingContinue] = useState(false);
 
-  if (isLoading) {
+  if (isLoading || accessLoading) {
     return (
       <DashboardLayout>
         <QueryStateCard state="loading" title="Carregando trilha..." />
@@ -38,6 +40,20 @@ const TrailDetail = () => {
           state={error ? "error" : "empty"}
           title={error ? "Nao foi possivel carregar a trilha." : "Trilha não encontrada"}
           description={error ? "Tente novamente em instantes ou volte para a listagem." : undefined}
+          actionLabel="Voltar para Disciplinas"
+          onAction={() => navigate("/cursos-livres")}
+        />
+      </DashboardLayout>
+    );
+  }
+
+  if (access && !access.allowed) {
+    return (
+      <DashboardLayout>
+        <QueryStateCard
+          state="empty"
+          title={access.title}
+          description={access.message}
           actionLabel="Voltar para Disciplinas"
           onAction={() => navigate("/cursos-livres")}
         />

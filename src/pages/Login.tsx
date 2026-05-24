@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -12,6 +13,11 @@ import {
 } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  isLikelyNetworkError,
+  mapResetPasswordErrorMessage,
+  mapSignInErrorMessage,
+} from "@/lib/authLoginMessages";
 
 const DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL = "https://lxp-alunos.vercel.app/definir-senha";
 const lxpAlunosSetPasswordUrl = (
@@ -42,82 +48,115 @@ export default function Login() {
       setError("Este link de ativação expirou ou já foi utilizado. Solicite um novo convite/redefinição de senha.");
     } else {
       const description = params.get("error_description");
-      setError(description ? decodeURIComponent(description.replace(/\+/g, " ")) : "Não foi possível concluir a ativação da conta.");
+      setError(
+        description
+          ? decodeURIComponent(description.replace(/\+/g, " "))
+          : "Não foi possível concluir a ativação da conta.",
+      );
     }
 
-    // Limpa o hash de erro da URL para evitar reprocessamento ao atualizar.
     window.history.replaceState({}, document.title, window.location.pathname);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const {
-      data: { session },
-      error: signInError,
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError || !session) {
-      setError("Credenciais inválidas. Verifique seu email e senha.");
-      setLoading(false);
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setError("Informe seu e-mail.");
+      return;
+    }
+    if (!password) {
+      setError("Informe sua senha.");
       return;
     }
 
-    const currentUser = session.user;
+    setLoading(true);
+    setError(null);
 
-    // Tenta buscar / criar perfil, mas não bloqueia o login se der erro.
-    const { data: existingProfile, error: profileError } = await supabase
-      .from("lxp_profiles")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.warn("[Login] Erro ao carregar perfil:", profileError.message);
-    } else if (!existingProfile) {
-      const { error: insertError } = await supabase.from("lxp_profiles").insert({
-        user_id: currentUser.id,
-        email: currentUser.email,
-        name: currentUser.user_metadata?.full_name ?? currentUser.email,
-        role: "student",
+    try {
+      const {
+        data: { session },
+        error: signInError,
+      } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
       });
 
-      if (insertError) {
-        console.warn("[Login] Erro ao criar perfil:", insertError.message);
+      if (signInError || !session) {
+        setError(mapSignInErrorMessage(signInError));
+        return;
       }
-    }
 
-    setLoading(false);
-    navigate("/", { replace: true });
+      const currentUser = session.user;
+
+      const { data: existingProfile, error: profileError } = await supabase
+        .from("lxp_profiles")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn("[Login] Erro ao carregar perfil:", profileError.message);
+      } else if (!existingProfile) {
+        const { error: insertError } = await supabase.from("lxp_profiles").insert({
+          user_id: currentUser.id,
+          email: currentUser.email,
+          name: currentUser.user_metadata?.full_name ?? currentUser.email,
+          role: "student",
+        });
+
+        if (insertError) {
+          console.warn("[Login] Erro ao criar perfil:", insertError.message);
+        }
+      }
+
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(
+        isLikelyNetworkError(err)
+          ? "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente."
+          : "Não foi possível entrar. Tente novamente em instantes.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotMessage(null);
-    setError(null);
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) {
       setError("Informe o e-mail cadastrado.");
       return;
     }
+
     setForgotLoading(true);
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: lxpAlunosSetPasswordUrl,
-    });
-    setForgotLoading(false);
-    if (resetErr) {
-      setError("Não foi possível enviar o e-mail. Tente novamente ou fale com o suporte.");
-      return;
+    setError(null);
+
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: lxpAlunosSetPasswordUrl,
+      });
+      if (resetErr) {
+        setError(mapResetPasswordErrorMessage(resetErr));
+        return;
+      }
+      setForgotMessage(
+        "Se existir uma conta com este e-mail, você receberá um link para redefinir a senha em instantes.",
+      );
+    } catch (err) {
+      setError(
+        isLikelyNetworkError(err)
+          ? "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente."
+          : "Não foi possível enviar o e-mail. Tente novamente ou fale com o suporte.",
+      );
+    } finally {
+      setForgotLoading(false);
     }
-    setForgotMessage(
-      "Se existir uma conta com este e-mail, você receberá um link para redefinir a senha em instantes.",
-    );
   };
+
+  const formBusy = loading || forgotLoading;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -134,101 +173,110 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {authView === "login" ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu.email@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Senha</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => {
-                      setError(null);
-                      setForgotMessage(null);
-                      setAuthView("forgot");
-                    }}
-                  >
-                    Esqueci minha senha
-                  </button>
+          <div aria-live="assertive" className="space-y-4">
+            {authView === "login" ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="seu.email@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={formBusy}
+                    required
+                  />
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Senha</Label>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline disabled:opacity-50"
+                      disabled={formBusy}
+                      onClick={() => {
+                        setForgotMessage(null);
+                        setAuthView("forgot");
+                      }}
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={formBusy}
+                    required
+                  />
+                </div>
 
-              {error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                Sua conta é criada pela instituição. Em caso de dúvidas, entre em contato
-                com o suporte.
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="forgot-email">Email</Label>
-                <Input
-                  id="forgot-email"
-                  type="email"
-                  placeholder="seu.email@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              {error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {error}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Entrando..." : "Entrar"}
+                </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  Sua conta é criada pela instituição. Em caso de dúvidas, entre em contato
+                  com o suporte.
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.
                 </p>
-              )}
-              {forgotMessage && (
-                <p className="text-sm text-muted-foreground" role="status">
-                  {forgotMessage}
-                </p>
-              )}
-              <Button type="submit" className="w-full" disabled={forgotLoading}>
-                {forgotLoading ? "Enviando..." : "Enviar link de redefinição"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  setError(null);
-                  setForgotMessage(null);
-                  setAuthView("login");
-                }}
-              >
-                Voltar ao login
-              </Button>
-            </form>
-          )}
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="seu.email@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={formBusy}
+                    required
+                  />
+                </div>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                {forgotMessage && (
+                  <Alert variant="success">
+                    <AlertDescription>{forgotMessage}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" className="w-full" disabled={forgotLoading}>
+                  {forgotLoading ? "Enviando..." : "Enviar link de redefinição"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  disabled={formBusy}
+                  onClick={() => {
+                    setError(null);
+                    setForgotMessage(null);
+                    setAuthView("login");
+                  }}
+                >
+                  Voltar ao login
+                </Button>
+              </form>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

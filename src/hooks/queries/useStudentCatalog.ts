@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import {
   getEnrolledLinkedDisciplinesCatalog,
-  getLibraryCatalog,
   type SearchLibraryResponse,
 } from "@/services/libraryAdapter"
 import { useAuth } from "@/hooks/use-auth"
@@ -18,9 +17,8 @@ export function useStudentCatalog(params: {
   const query = useQuery<SearchLibraryResponse, Error>({
     queryKey: ["lxp", "catalog", { q, type, page, pageSize, profileId: profile?.id }],
     queryFn: async () => {
-      const remote = await getLibraryCatalog({ q, type, page, pageSize })
-      if (remote.items.length > 0) return remote
-      if (!profile?.id) return remote
+      if (!profile?.id) return { items: [], total: 0 }
+      // Fonte única: disciplinas das matrículas do aluno com vínculo de conteúdo (não catálogo Eadstock genérico).
       return getEnrolledLinkedDisciplinesCatalog(profile.id, { q })
     },
     enabled: !!profile?.id, // require student session
