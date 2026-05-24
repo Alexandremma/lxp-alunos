@@ -20,7 +20,9 @@ import { LessonLayout } from "@/components/learning/LessonLayout";
 import { toast } from "sonner";
 import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
+import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
+import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
 import type {
@@ -35,6 +37,7 @@ const Lesson = () => {
   const completeLesson = useCompleteLesson();
   const { profile, user } = useAuth();
   const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId);
+  const { data: access, isLoading: accessLoading } = useDisciplineAccess(trailId);
 
   const lesson = React.useMemo(
     () => allLessons.find((item) => String(item.id) === String(lessonId)) ?? null,
@@ -53,11 +56,27 @@ const Lesson = () => {
   const completedLessons = allLessons.filter((item) => item.status === "completed").length;
   const progress = allLessons.length > 0 ? Math.round((completedLessons / allLessons.length) * 100) : 0;
 
-  if (isLoading) {
+  if (isLoading || accessLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Carregando aula...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (access && !access.allowed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full">
+          <QueryStateCard
+            state="empty"
+            title={access.title}
+            description={access.message}
+            actionLabel="Voltar para Disciplinas"
+            onAction={() => navigate("/cursos-livres")}
+          />
         </div>
       </div>
     );

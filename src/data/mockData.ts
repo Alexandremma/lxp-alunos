@@ -107,6 +107,8 @@ export interface Subject {
   status: 'approved' | 'in_progress' | 'pending' | 'failed';
   grade?: number;
   professor?: string;
+  disciplineInactive?: boolean;
+  enrollmentInactive?: boolean;
 }
 
 export interface Period {
@@ -136,8 +138,9 @@ export interface FreeCourse {
   description: string;
   thumbnail: string;
   category: 'language' | 'workshop' | 'certification' | 'extension' | 'course';
-  status: 'available' | 'enrolled' | 'completed';
+  status: 'available' | 'enrolled' | 'completed' | 'inactive' | 'enrollment_blocked';
   workload: number;
+  credits?: number;
   instructor: string;
   startDate?: string;
   progress?: number;

@@ -13,7 +13,8 @@ import {
   ChevronDown, 
   ChevronRight,
   GraduationCap,
-  Calendar
+  Calendar,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Period, type Subject } from "@/data/mockData";
@@ -107,18 +108,30 @@ const PeriodCard = ({ period }: { period: Period }) => {
 };
 
 const SubjectRow = ({ subject }: { subject: Subject }) => {
-  const canOpenDisciplineTrail = DISCIPLINE_UUID_RE.test(subject.id);
+  const blocked =
+    subject.disciplineInactive || subject.enrollmentInactive;
+  const canOpenDisciplineTrail = DISCIPLINE_UUID_RE.test(subject.id) && !blocked;
 
   const row = (
     <div
       className={cn(
-        "flex items-center justify-between p-3 rounded-lg bg-muted/30 transition-colors",
+        "flex items-center justify-between p-3 rounded-lg transition-colors",
+        blocked
+          ? "border border-dashed border-warning/40 bg-warning/5 cursor-not-allowed opacity-80"
+          : "bg-muted/30",
         canOpenDisciplineTrail && "hover:bg-muted/60",
       )}
+      aria-disabled={blocked || undefined}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-sm group-hover:text-primary transition-colors">
+          <span
+            className={cn(
+              "font-medium text-sm",
+              canOpenDisciplineTrail && "group-hover:text-primary transition-colors",
+              blocked && "text-muted-foreground",
+            )}
+          >
             {subject.name}
           </span>
           <span className="text-xs text-muted-foreground">({subject.code})</span>
@@ -128,20 +141,34 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
           <span>{subject.credits} créditos</span>
-          <span>•</span>
-          <span>{subject.workload}h</span>
-          {subject.professor && (
-            <>
-              <span>•</span>
-              <span>{subject.professor}</span>
-            </>
+          {subject.workload > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {subject.workload}h
+            </span>
+          )}
+          {subject.professor?.trim() && (
+            <span className="flex items-center gap-1">
+              <User className="h-3.5 w-3.5 shrink-0" />
+              {subject.professor}
+            </span>
           )}
         </div>
+        {subject.disciplineInactive && (
+          <p className="mt-2 text-xs text-warning">
+            Esta disciplina está inativa. O acesso às aulas ficará disponível quando a instituição reativá-la.
+          </p>
+        )}
+        {subject.enrollmentInactive && !subject.disciplineInactive && (
+          <p className="mt-2 text-xs text-destructive">
+            Sua matrícula neste curso está inativa. Você não pode acessar as disciplinas até a reativação.
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        {subject.grade !== undefined && (
+        {!blocked && subject.grade !== undefined && (
           <span className={cn(
             "font-semibold text-sm",
             subject.grade >= 7 ? "text-success" : subject.grade >= 5 ? "text-warning" : "text-destructive"
@@ -149,9 +176,19 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
             {subject.grade.toFixed(1)}
           </span>
         )}
-        <Badge variant="outline" className={subjectStatusConfig[subject.status].color}>
-          {subjectStatusConfig[subject.status].label}
-        </Badge>
+        {subject.disciplineInactive ? (
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 shrink-0">
+            Disciplina inativa
+          </Badge>
+        ) : subject.enrollmentInactive ? (
+          <Badge variant="outline" className="bg-destructive/10 text-destructive shrink-0">
+            Matrícula inativa
+          </Badge>
+        ) : (
+          <Badge variant="outline" className={subjectStatusConfig[subject.status].color}>
+            {subjectStatusConfig[subject.status].label}
+          </Badge>
+        )}
       </div>
     </div>
   );
@@ -167,7 +204,7 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
     );
   }
 
-  return row;
+  return <div className="rounded-lg">{row}</div>;
 };
 
 const MyCourse = () => {

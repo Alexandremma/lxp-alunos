@@ -16,7 +16,8 @@ import {
   Clock,
   Users,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mainCourse, type FreeCourse } from "@/data/mockData";
@@ -40,6 +41,8 @@ const statusConfig = {
   available: { label: "Disponível", color: "bg-muted text-muted-foreground" },
   enrolled: { label: "Matriculado", color: "bg-primary/10 text-primary" },
   completed: { label: "Concluído", color: "bg-success/10 text-success" },
+  inactive: { label: "Disciplina inativa", color: "bg-warning/10 text-warning border-warning/30" },
+  enrollment_blocked: { label: "Matrícula inativa", color: "bg-destructive/10 text-destructive" },
 };
 
 const FreeCourseCard = ({
@@ -79,18 +82,27 @@ const FreeCourseCard = ({
       </div>
       <CardHeader className="pb-2">
         <CardTitle className="text-base line-clamp-1">{course.title}</CardTitle>
-        <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-          <span className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            {course.workload}h
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            {course.instructor}
-          </span>
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+          {course.workload > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4 shrink-0" />
+              {course.workload}h
+            </span>
+          )}
+          {(course.credits ?? 0) > 0 && (
+            <span className="flex items-center gap-1">
+              <BookOpen className="h-4 w-4 shrink-0" />
+              {course.credits} créditos
+            </span>
+          )}
+          {course.instructor && course.instructor !== "—" && (
+            <span className="flex items-center gap-1">
+              <Users className="h-4 w-4 shrink-0" />
+              {course.instructor}
+            </span>
+          )}
         </div>
 
         {course.status === "enrolled" && course.progress !== undefined && (
@@ -105,27 +117,35 @@ const FreeCourseCard = ({
 
         <Button
           className="w-full"
-          variant={course.status === "available" ? "default" : course.status === "enrolled" ? "secondary" : "outline"}
-          disabled={isResolving}
+          variant={
+            course.status === "available"
+              ? "default"
+              : course.status === "enrolled"
+                ? "secondary"
+                : "outline"
+          }
+          disabled={
+            isResolving ||
+            course.status === "inactive" ||
+            course.status === "enrollment_blocked"
+          }
           onClick={() => {
             if (course.status === "available") onEnroll(course.id);
             else if (course.status === "enrolled") onContinue(course.id);
-            else onViewCertificate(course.id);
+            else if (course.status === "completed") onViewCertificate(course.id);
           }}
         >
           {isResolving && "Abrindo..."}
-          {!isResolving && (
-            <>
-          {course.status === "available" && "Inscrever-se"}
-          {course.status === "enrolled" && (
+          {!isResolving && course.status === "inactive" && "Disciplina inativa"}
+          {!isResolving && course.status === "enrollment_blocked" && "Matrícula inativa"}
+          {!isResolving && course.status === "available" && "Inscrever-se"}
+          {!isResolving && course.status === "enrolled" && (
             <>
               Continuar
               <ChevronRight className="h-4 w-4 ml-1" />
             </>
           )}
-          {course.status === "completed" && "Ver Certificado"}
-            </>
-          )}
+          {!isResolving && course.status === "completed" && "Ver Certificado"}
         </Button>
       </CardContent>
     </Card>
@@ -144,17 +164,28 @@ const FreeCourses = () => {
   });
 
   const allCourses: FreeCourse[] = useMemo(() => {
-    return items.map((i) => ({
-      id: i.id,
-      title: i.name,
-      description: i.description ?? "",
-      thumbnail: "/placeholder.svg",
-      category: (i.category ?? "extension") as FreeCourse["category"],
-      status: i.enrolled ? ((i.progressPercent ?? 0) >= 100 ? "completed" : "enrolled") : "available",
-      progress: i.progressPercent ?? 0,
-      workload: 0,
-      instructor: "—",
-    }))
+    return items.map((i) => {
+      let status: FreeCourse["status"] = "available";
+      if (i.enrollmentInactive) {
+        status = "enrollment_blocked";
+      } else if (i.disciplineInactive) {
+        status = "inactive";
+      } else if (i.enrolled) {
+        status = (i.progressPercent ?? 0) >= 100 ? "completed" : "enrolled";
+      }
+      return {
+        id: i.id,
+        title: i.name,
+        description: "",
+        thumbnail: "/placeholder.svg",
+        category: (i.category ?? "extension") as FreeCourse["category"],
+        status,
+        progress: i.progressPercent ?? 0,
+        workload: i.workloadHours ?? 0,
+        credits: i.credits ?? 0,
+        instructor: i.professor?.trim() || "—",
+      };
+    });
   }, [items]);
 
   /** Só a grade respeita a aba; contagens e KPIs usam `allCourses`. */

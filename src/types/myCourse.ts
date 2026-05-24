@@ -10,6 +10,8 @@ export type MyCourseSubject = {
   professor?: string;
   status: SubjectStatus;
   grade?: number;
+  disciplineInactive?: boolean;
+  enrollmentInactive?: boolean;
 };
 
 export type MyCoursePeriod = {

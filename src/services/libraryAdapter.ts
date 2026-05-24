@@ -14,6 +14,13 @@ export type LibraryItem = {
   category?: "course" | "language" | "workshop" | "certification" | "extension"
   progressPercent?: number
   enrolled?: boolean
+  /** Disciplina inativa no backoffice — exibe "Disciplina inativa" */
+  disciplineInactive?: boolean
+  /** Matrícula inativa neste curso — bloqueia acesso */
+  enrollmentInactive?: boolean
+  professor?: string
+  workloadHours?: number
+  credits?: number
 }
 
 export type SearchLibraryParams = {
@@ -100,12 +107,15 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const { data: enrollments, error: e1 } = await supabase
     .from("lxp_enrollments")
-    .select("course_id")
+    .select("course_id,status")
     .eq("student_profile_id", profileId)
-    .eq("status", "active")
+    .in("status", ["active", "inactive"])
   if (e1) throw e1
 
-  const courseIds = [...new Set((enrollments ?? []).map((r) => r.course_id))]
+  const enrollmentByCourse = new Map(
+    (enrollments ?? []).map((r) => [r.course_id as string, r.status as string]),
+  )
+  const courseIds = [...new Set((enrollments ?? []).map((r) => r.course_id as string))]
   if (courseIds.length === 0) return { items: [], total: 0 }
 
   const { data: courses, error: e2 } = await supabase
@@ -127,7 +137,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const { data: disciplines, error: e4 } = await supabase
     .from("lxp_course_disciplines")
-    .select("id, name, code, workload, course_period_id")
+    .select("id, name, code, workload, credits, professor, course_period_id, status")
     .in("course_period_id", periodIds)
   if (e4) throw e4
 
@@ -157,23 +167,28 @@ export async function getEnrolledLinkedDisciplinesCatalog(
     if (!linkByDisc.has(d.id)) continue
     const link = linkByDisc.get(d.id)!
     const courseId = courseByPeriod.get(d.course_period_id)
+    const enrollmentStatus = courseId ? enrollmentByCourse.get(courseId) : undefined
     const tabCategory = mapCourseCategoryToLibraryTab(courseId ? catByCourse.get(courseId) : undefined)
     const name = d.name?.trim() ?? d.code ?? "Disciplina"
     const code = (d.code ?? "").toLowerCase()
     if (q && !name.toLowerCase().includes(q) && !code.includes(q)) continue
 
     const st = progByDisc.get(d.id)
+    const disciplineInactive = (d.status as string) === "inactive"
+    const enrollmentInactive = enrollmentStatus === "inactive"
     items.push({
       id: d.id,
       name,
       type: "discipline",
-      description: link.library_content_name
-        ? `${link.library_content_name} (ID externo ${link.library_content_id})`
-        : `Biblioteca externa ${link.library_content_id}`,
       duration: d.workload != null && d.workload > 0 ? `${d.workload}h` : undefined,
+      workloadHours: d.workload != null && d.workload > 0 ? d.workload : undefined,
+      credits: d.credits != null && d.credits > 0 ? d.credits : undefined,
+      professor: d.professor?.trim() || undefined,
       category: tabCategory,
       enrolled: true,
       progressPercent: progressPercentFromDisciplineStatus(st),
+      disciplineInactive,
+      enrollmentInactive,
     })
   }
 
