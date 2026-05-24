@@ -47,7 +47,7 @@ const TrailDetail = () => {
     );
   }
 
-  if (access && !access.allowed) {
+  if (access?.allowed === false) {
     return (
       <DashboardLayout>
         <QueryStateCard

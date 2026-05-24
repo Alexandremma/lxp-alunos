@@ -42,7 +42,7 @@ export const ProgressRing = ({
   strokeWidth,
   className,
   showPercentage = true,
-  color = "primary",
+  color = "success",
 }: ProgressRingProps) => {
   const dimension = sizeMap[size];
   const stroke = strokeWidth || strokeWidthMap[size];
