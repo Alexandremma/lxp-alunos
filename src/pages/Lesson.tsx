@@ -12,6 +12,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "@/components/learning/VideoPlayer";
@@ -31,6 +39,8 @@ import type {
   Lesson as LegacyLesson,
 } from "@/data/mockData";
 
+type CompletionDialogMode = "next_lesson" | "trail_complete";
+
 const Lesson = () => {
   const { trailId, lessonId } = useParams();
   const navigate = useNavigate();
@@ -38,6 +48,10 @@ const Lesson = () => {
   const { profile, user } = useAuth();
   const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId);
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(trailId);
+
+  const [completionDialogOpen, setCompletionDialogOpen] = React.useState(false);
+  const [completionDialogMode, setCompletionDialogMode] =
+    React.useState<CompletionDialogMode>("next_lesson");
 
   const lesson = React.useMemo(
     () => allLessons.find((item) => String(item.id) === String(lessonId)) ?? null,
@@ -66,7 +80,7 @@ const Lesson = () => {
     );
   }
 
-  if (access && !access.allowed) {
+  if (access?.allowed === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full">
@@ -95,24 +109,37 @@ const Lesson = () => {
     );
   }
 
+  const isCompleting = completeLesson.isPending;
+
   const handleComplete = async () => {
-    if (lesson.status === "completed") return;
+    if (lesson.status === "completed" || isCompleting) return;
     try {
       await completeLesson.mutateAsync({
         trailId: String(trailId),
         lessonId: String(lessonId),
         totalLessons: allLessons.length,
       });
-      toast.success("Aula concluída! 🎉");
-      if (next) {
-        navigate(`/trails/${trailId}/lesson/${next.id}`);
-      } else {
-        toast.success("Disciplina concluída! 🎓");
-        navigate(`/trails/${trailId}`);
-      }
+      setCompletionDialogMode(next ? "next_lesson" : "trail_complete");
+      setCompletionDialogOpen(true);
     } catch {
       toast.error("Não foi possível concluir a aula. Tente novamente.");
     }
+  };
+
+  const handleGoToNextLesson = () => {
+    setCompletionDialogOpen(false);
+    if (next) {
+      navigate(`/trails/${trailId}/lesson/${next.id}`);
+    }
+  };
+
+  const handleStayOnLesson = () => {
+    setCompletionDialogOpen(false);
+  };
+
+  const handleViewTrailAfterComplete = () => {
+    setCompletionDialogOpen(false);
+    navigate(`/trails/${trailId}`);
   };
 
   const handlePrev = () => {
@@ -227,8 +254,8 @@ const Lesson = () => {
 
           <TabsContent value="overview" className="mt-6">
             {lesson.type !== "video" &&
-            lesson.aliceContentId &&
-            isAliceConfigured() ? (
+              lesson.aliceContentId &&
+              isAliceConfigured() ? (
               <AliceLessonFrame
                 contentId={lesson.aliceContentId}
                 user={{
@@ -333,9 +360,9 @@ const Lesson = () => {
               Aula concluída
             </Badge>
           ) : (
-            <Button onClick={handleComplete} className="gap-2">
+            <Button onClick={handleComplete} disabled={isCompleting} className="gap-2">
               <CheckCircle2 className="w-4 h-4" />
-              Concluir aula
+              {isCompleting ? "Concluindo..." : "Concluir aula"}
             </Button>
           )}
 
@@ -349,6 +376,38 @@ const Lesson = () => {
           </Button>
         </div>
       </div>
+
+      <Dialog open={completionDialogOpen} onOpenChange={setCompletionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              Parabéns!
+            </DialogTitle>
+            <DialogDescription>
+              {completionDialogMode === "next_lesson"
+                ? "Você concluiu esta aula. Deseja seguir para a próxima ou continuar revisando este conteúdo?"
+                : "Você concluiu a última aula desta disciplina. Ótimo trabalho!"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleStayOnLesson}>
+              Ficar nesta aula
+            </Button>
+            {completionDialogMode === "next_lesson" ? (
+              <Button onClick={handleGoToNextLesson}>
+                Ir para a próxima aula
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleViewTrailAfterComplete}>
+                Ver disciplina
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </LessonLayout>
   );
 };
