@@ -40,3 +40,11 @@ export function getLessonCompleteXp(rules: XpRulesMap): number {
 export function getDisciplineCompleteXp(rules: XpRulesMap): number {
   return rules.discipline_complete ?? DEFAULT_XP.discipline_complete;
 }
+
+export function getLessonCommentXp(rules: XpRulesMap): number {
+  return rules.lesson_comment ?? DEFAULT_XP.lesson_comment;
+}
+
+export function getLessonCommentReplyXp(rules: XpRulesMap): number {
+  return rules.lesson_comment_reply ?? DEFAULT_XP.lesson_comment_reply;
+}

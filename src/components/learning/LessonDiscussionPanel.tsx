@@ -1,7 +1,7 @@
 import * as React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Pencil, Reply, Trash2 } from "lucide-react";
+import { Award, Loader2, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +23,11 @@ import {
 } from "@/services/lessonCommentService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useXpRules } from "@/hooks/queries/useXpRules";
+import {
+  getLessonCommentReplyXp,
+  getLessonCommentXp,
+} from "@/services/gamificationXpRulesService";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -67,6 +72,9 @@ export const LessonDiscussionPanel = ({
   externalUnitId,
 }: LessonDiscussionPanelProps) => {
   const commentsQ = useLessonComments({ externalDisciplineId, externalUnitId });
+  const { data: xpRules } = useXpRules();
+  const commentXp = xpRules ? getLessonCommentXp(xpRules) : null;
+  const replyXp = xpRules ? getLessonCommentReplyXp(xpRules) : null;
   const { create, update, remove, profileId } = useLessonCommentMutations({
     externalDisciplineId,
     externalUnitId,
@@ -238,10 +246,16 @@ export const LessonDiscussionPanel = ({
               <p className="text-xs text-muted-foreground">
                 {replyBody.length}/{LESSON_COMMENT_MAX_LENGTH}
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" onClick={() => void submitReply()} disabled={create.isPending}>
                   Publicar resposta
                 </Button>
+                {replyXp != null && replyXp > 0 && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Award className="h-3.5 w-3.5" />
+                    +{replyXp} XP
+                  </span>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => setReplyToId(null)}>
                   Cancelar
                 </Button>
@@ -261,9 +275,17 @@ export const LessonDiscussionPanel = ({
         onChange={(e) => setNewBody(e.target.value.slice(0, LESSON_COMMENT_MAX_LENGTH))}
         className="min-h-[80px] resize-none"
       />
-      <p className="text-xs text-muted-foreground -mt-2">
-        {newBody.length}/{LESSON_COMMENT_MAX_LENGTH}
-      </p>
+      <div className="flex items-center justify-between gap-2 -mt-2">
+        <p className="text-xs text-muted-foreground">
+          {newBody.length}/{LESSON_COMMENT_MAX_LENGTH}
+        </p>
+        {commentXp != null && commentXp > 0 && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+            <Award className="h-3.5 w-3.5" />
+            +{commentXp} XP ao comentar
+          </span>
+        )}
+      </div>
       <Button
         size="sm"
         className="w-full"

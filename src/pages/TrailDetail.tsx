@@ -21,7 +21,8 @@ const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { resolveNextPath } = useContinueTrail();
-  const { trail, modules, lessons, isLoading, error } = useTrailDetail(id || undefined);
+  const { trail, modules, lessons, disciplineCompleteXp, isLoading, error } =
+    useTrailDetail(id || undefined);
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isResolvingContinue, setIsResolvingContinue] = useState(false);
 
@@ -164,6 +165,11 @@ const TrailDetail = () => {
                   <p className="text-sm text-muted-foreground">{trail.completedLessons} de {trail.totalLessons} aulas concluídas</p>
                 </div>
                 <Progress value={progress} className="w-full" />
+                {disciplineCompleteXp != null && disciplineCompleteXp > 0 && (
+                  <p className="text-xs text-center text-muted-foreground w-full">
+                    +{disciplineCompleteXp} XP ao concluir todas as aulas desta disciplina
+                  </p>
+                )}
                 <Button
                   className="w-full"
                   onClick={totalLessons === 0 ? () => navigate("/cursos-livres") : handleContinue}
