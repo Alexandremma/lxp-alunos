@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/use-auth";
+import { XpRulesRealtimeSync } from "@/components/gamification/XpRulesRealtimeSync";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import MyCourse from "./pages/MyCourse";
@@ -31,6 +32,7 @@ import AliceLaunchTest from "./pages/AliceLaunchTest";
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
     <QueryClientProvider client={queryClient}>
+      <XpRulesRealtimeSync />
       <AuthProvider>
         <TooltipProvider>
           <Toaster />

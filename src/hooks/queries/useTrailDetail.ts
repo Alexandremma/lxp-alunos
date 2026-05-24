@@ -11,7 +11,10 @@ import {
   type TrailModule,
 } from "@/services/trailAdapter"
 import { fetchLessonProgressMap, mergeTrailLessonsWithProgress } from "@/services/progressService"
-import { getLessonCompleteXp } from "@/services/gamificationXpRulesService"
+import {
+  getDisciplineCompleteXp,
+  getLessonCompleteXp,
+} from "@/services/gamificationXpRulesService"
 import { useXpRules } from "@/hooks/queries/useXpRules"
 
 function applyLessonXpToLessons(
@@ -27,6 +30,9 @@ export function useTrailDetail(trailId?: string) {
   const enabled = Boolean(trailId)
   const xpRulesQ = useXpRules()
   const lessonXp = xpRulesQ.data ? getLessonCompleteXp(xpRulesQ.data) : undefined
+  const disciplineCompleteXp = xpRulesQ.data
+    ? getDisciplineCompleteXp(xpRulesQ.data)
+    : undefined
 
   const trail = useQuery<Trail | null>({
     queryKey: ["lxp", "trail", "detail", trailId],
@@ -80,6 +86,8 @@ export function useTrailDetail(trailId?: string) {
     trail: mergedTrail,
     modules: modules.data ?? [],
     lessons: mergedLessons,
+    lessonXp,
+    disciplineCompleteXp,
     isLoading:
       trail.isLoading ||
       modules.isLoading ||
