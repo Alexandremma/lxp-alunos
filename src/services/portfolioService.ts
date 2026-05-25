@@ -74,29 +74,46 @@ export async function getPortfolioEvidences(profileId: string): Promise<Learning
   const evidences: LearningEvidence[] = [];
 
   if (disciplineIds.length > 0) {
-    const { data: disciplines, error: disciplinesError } = await supabase
-      .from("lxp_course_disciplines")
-      .select("id,name,code")
-      .in("id", disciplineIds);
+    const [{ data: disciplines, error: disciplinesError }, { data: issues, error: issuesError }] =
+      await Promise.all([
+        supabase
+          .from("lxp_course_disciplines")
+          .select("id,name,code")
+          .in("id", disciplineIds),
+        supabase
+          .from("lxp_certificate_issues")
+          .select("course_discipline_id,validation_code")
+          .eq("student_profile_id", profileId)
+          .in("course_discipline_id", disciplineIds),
+      ]);
     if (disciplinesError) throw disciplinesError;
+    if (issuesError) throw issuesError;
 
     const disciplineById = new Map((disciplines ?? []).map((row: DisciplineRow) => [row.id, row]));
+    const codeByDiscipline = new Map(
+      (issues ?? []).map((row: { course_discipline_id: string; validation_code: string }) => [
+        row.course_discipline_id,
+        row.validation_code,
+      ]),
+    );
 
     for (const progress of disciplineProgress) {
       if (!isDisciplineCompleted(progress)) continue;
       const discipline = disciplineById.get(progress.course_discipline_id);
       const title = discipline?.name?.trim() || discipline?.code?.trim() || "Disciplina concluída";
       const completionDate = toIsoNowIfMissing(progress.last_updated_at ?? progress.created_at);
+      const validationCode = codeByDiscipline.get(progress.course_discipline_id);
 
       evidences.push({
         id: `certificate-${progress.course_discipline_id}`,
-        title: `Certificado - ${title}`,
-        description: "Certificado de conclusão da disciplina.",
+        title,
+        description: validationCode
+          ? `Código de validação: ${validationCode}`
+          : "Certificado de conclusão da disciplina.",
         type: "certificate",
         imageUrl: "/placeholder.svg",
         earnedAt: completionDate,
         trailId: progress.course_discipline_id,
-        shareUrl: `/certificado/${progress.course_discipline_id}`,
         unlockedBy: "Conclusão da disciplina",
       });
     }

@@ -28,6 +28,7 @@ import ProjectUpload from "./pages/ProjectUpload";
 import CoursesManagement from "./pages/admin/CoursesManagement";
 import StudentsManagement from "./pages/admin/StudentsManagement";
 import AliceLaunchTest from "./pages/AliceLaunchTest";
+import ValidateCertificate from "./pages/ValidateCertificate";
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
@@ -47,6 +48,7 @@ const App = () => (
               {/* Autenticação */}
               <Route path="/login" element={<Login />} />
               <Route path="/definir-senha" element={<SetPassword />} />
+              <Route path="/validar-certificado" element={<ValidateCertificate />} />
 
               {/* Ensino (aluno autenticado) */}
               <Route

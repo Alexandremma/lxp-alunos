@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Clock, BookOpen, Trophy, User, Calendar } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -16,15 +17,36 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
+import { useAuth } from "@/hooks/use-auth";
+import { TrailCertificateCard } from "@/components/learning/TrailCertificateCard";
+import { getCertificateDetail } from "@/services/certificateService";
+import { downloadCertificatePdf } from "@/services/certificatePdfService";
+import { supabase } from "@/lib/supabaseClient";
 
 const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { resolveNextPath } = useContinueTrail();
+  const { profile } = useAuth();
   const { trail, modules, lessons, disciplineCompleteXp, isLoading, error } =
     useTrailDetail(id || undefined);
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isResolvingContinue, setIsResolvingContinue] = useState(false);
+  const [isDownloadingCert, setIsDownloadingCert] = useState(false);
+
+  const { data: disciplineMeta } = useQuery({
+    queryKey: ["lxp", "discipline-meta", id],
+    queryFn: async () => {
+      const { data, error: qErr } = await supabase
+        .from("lxp_course_disciplines")
+        .select("workload")
+        .eq("id", id!)
+        .maybeSingle();
+      if (qErr) throw qErr;
+      return data as { workload: number | null } | null;
+    },
+    enabled: Boolean(id),
+  });
 
   if (isLoading || accessLoading) {
     return (
@@ -65,7 +87,34 @@ const TrailDetail = () => {
   const totalLessons = lessons.length || trail.totalLessons || 0;
   const completedLessons = trail.completedLessons ?? 0;
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const certificateReady = totalLessons > 0 && progress >= 100;
   const moduleLessons = lessons.filter((l) => modules.some((m: any) => m.id === l.moduleId));
+
+  const handleDownloadCertificate = async () => {
+    if (!profile?.id || !id) return;
+    try {
+      setIsDownloadingCert(true);
+      const detail = await getCertificateDetail({
+        profileId: profile.id,
+        courseDisciplineId: id,
+      });
+      if (!detail) {
+        toast.error("Certificado indisponível. Conclua todas as aulas primeiro.");
+        return;
+      }
+      downloadCertificatePdf(detail);
+      toast.success("Use a janela de impressão para salvar em PDF.");
+    } catch (err) {
+      console.error(err);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Não foi possível gerar o certificado.";
+      toast.error(message);
+    } finally {
+      setIsDownloadingCert(false);
+    }
+  };
 
   const handleContinue = async () => {
     try {
@@ -183,6 +232,13 @@ const TrailDetail = () => {
                 </Button>
               </CardContent>
             </Card>
+            <TrailCertificateCard
+              trailId={trail.id}
+              ready={certificateReady}
+              workloadHours={disciplineMeta?.workload ?? null}
+              onDownload={() => void handleDownloadCertificate()}
+              isDownloading={isDownloadingCert}
+            />
           </div>
         </div>
       </div>

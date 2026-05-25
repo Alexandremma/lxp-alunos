@@ -116,6 +116,7 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
       course_discipline_id: courseDiscId,
       status,
       last_updated_at: now,
+      ...(allDone ? { completed_at: now } : {}),
     },
     { onConflict: "student_profile_id,course_discipline_id" },
   )
