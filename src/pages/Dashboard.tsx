@@ -59,7 +59,13 @@ const Dashboard = () => {
   const inProgressTrails = useMemo(
     () =>
       catalogItems
-        .filter((item) => item.enrolled && (item.progressPercent ?? 0) < 100)
+        .filter(
+          (item) =>
+            item.enrolled &&
+            !item.disciplineInactive &&
+            !item.enrollmentInactive &&
+            (item.progressPercent ?? 0) < 100,
+        )
         .slice(0, 4),
     [catalogItems],
   );

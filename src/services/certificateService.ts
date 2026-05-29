@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabaseClient"
-import { ensureCertificateIssue } from "@/services/certificateIssueService"
+import {
+  backfillIssueSnapshot,
+  buildCertificateSnapshot,
+  ensureCertificateIssue,
+  type CertificateSnapshot,
+} from "@/services/certificateIssueService"
+import type { CertificatePrintSignature } from "@/lib/certificatePrint"
 
 export type CertificateDetail = {
   id: string
@@ -8,13 +14,19 @@ export type CertificateDetail = {
   issuedAt: string
   codeHash: string
   instructor: string
+  workloadHours: number | null
+  institutionName: string
+  institutionLogoUrl: string | null
+  signatures: CertificatePrintSignature[]
+  validationUrl: string
 }
 
-type DisciplineRow = {
+type IssueRow = {
   id: string
-  name: string | null
-  code: string | null
-  professor: string | null
+  validation_code: string
+  issued_at: string
+  template_id: string | null
+  snapshot: CertificateSnapshot | null
 }
 
 type DisciplineProgressRow = {
@@ -24,97 +36,119 @@ type DisciplineProgressRow = {
   created_at: string | null
 }
 
-type IssueRow = {
-  validation_code: string
-  issued_at: string
-}
-
 function isCompleted(row: DisciplineProgressRow | null): boolean {
   if (!row) return false
   return row.status === "approved"
+}
+
+function snapshotToDetail(
+  issue: { id: string; validation_code: string; issued_at: string },
+  snapshot: CertificateSnapshot,
+): CertificateDetail {
+  const signatures = (snapshot.signatures ?? [])
+    .slice()
+    .sort((a, b) => a.slot - b.slot)
+    .map((s) => ({
+      signerName: s.signer_name,
+      signerTitle: s.signer_title,
+      imageUrl: s.image_url,
+    }))
+
+  const validationPath = `/validar-certificado?code=${encodeURIComponent(issue.validation_code)}`
+
+  return {
+    id: issue.id,
+    courseTitle: snapshot.discipline_name,
+    studentName: snapshot.student_name,
+    issuedAt: issue.issued_at,
+    codeHash: issue.validation_code,
+    instructor: snapshot.instructor_name?.trim() || "Equipe Acadêmica",
+    workloadHours: snapshot.workload_hours,
+    institutionName: snapshot.institution_name || "B42 Edtech",
+    institutionLogoUrl: snapshot.institution_logo_url ?? null,
+    signatures,
+    validationUrl: validationPath,
+  }
 }
 
 export async function getCertificateDetail(params: {
   profileId: string
   courseDisciplineId: string
 }): Promise<CertificateDetail | null> {
-  const [{ data: profile, error: profileError }, { data: discipline, error: disciplineError }, progressResult] =
-    await Promise.all([
-      supabase.from("lxp_profiles").select("id,name").eq("id", params.profileId).maybeSingle(),
-      supabase
-        .from("lxp_course_disciplines")
-        .select("id,name,code,professor")
-        .eq("id", params.courseDisciplineId)
-        .maybeSingle(),
-      supabase
-        .from("lxp_student_discipline_progress")
-        .select("status,completed_at,last_updated_at,created_at")
-        .eq("student_profile_id", params.profileId)
-        .eq("course_discipline_id", params.courseDisciplineId)
-        .maybeSingle(),
-    ])
-
-  if (profileError) throw profileError
-  if (disciplineError) throw disciplineError
-  if (progressResult.error) throw progressResult.error
-
-  const progress = progressResult.data as DisciplineProgressRow | null
-  const disciplineRow = discipline as DisciplineRow | null
-
-  if (!disciplineRow || !isCompleted(progress)) return null
-
-  let issue: IssueRow | null = null
-  const issueResult = await supabase
-    .from("lxp_certificate_issues")
-    .select("validation_code,issued_at")
+  const progressRes = await supabase
+    .from("lxp_student_discipline_progress")
+    .select("status,completed_at,last_updated_at,created_at")
     .eq("student_profile_id", params.profileId)
     .eq("course_discipline_id", params.courseDisciplineId)
     .maybeSingle()
 
-  if (issueResult.error) throw issueResult.error
-  if (issueResult.data?.validation_code && issueResult.data?.issued_at) {
-    issue = {
-      validation_code: issueResult.data.validation_code as string,
-      issued_at: issueResult.data.issued_at as string,
-    }
-  }
+  if (progressRes.error) throw progressRes.error
+  const progress = progressRes.data as DisciplineProgressRow | null
+  if (!isCompleted(progress)) return null
 
-  let validationCode = issue?.validation_code
-  if (!validationCode) {
-    validationCode = await ensureCertificateIssue({
+  let issueRes = await supabase
+    .from("lxp_certificate_issues")
+    .select("id,validation_code,issued_at,template_id,snapshot")
+    .eq("student_profile_id", params.profileId)
+    .eq("course_discipline_id", params.courseDisciplineId)
+    .maybeSingle()
+  if (issueRes.error) throw issueRes.error
+  let issue = issueRes.data as IssueRow | null
+
+  if (!issue) {
+    await ensureCertificateIssue({
       studentProfileId: params.profileId,
       courseDisciplineId: params.courseDisciplineId,
     })
-    const again = await supabase
+    issueRes = await supabase
       .from("lxp_certificate_issues")
-      .select("validation_code,issued_at")
+      .select("id,validation_code,issued_at,template_id,snapshot")
       .eq("student_profile_id", params.profileId)
       .eq("course_discipline_id", params.courseDisciplineId)
       .maybeSingle()
-    if (again.error) throw again.error
-    if (again.data?.issued_at) {
-      issue = {
-        validation_code: validationCode,
-        issued_at: again.data.issued_at as string,
-      }
-    }
+    if (issueRes.error) throw issueRes.error
+    issue = issueRes.data as IssueRow | null
   }
 
-  const studentName = profile?.name?.trim() || "Aluno(a)"
-  const courseTitle = disciplineRow.name?.trim() || disciplineRow.code?.trim() || "Disciplina"
-  const issuedAt =
-    issue?.issued_at ??
-    progress?.completed_at ??
-    progress?.last_updated_at ??
-    progress?.created_at ??
-    new Date().toISOString()
+  if (!issue) return null
 
-  return {
-    id: `cert-${disciplineRow.id}`,
-    courseTitle,
-    studentName,
-    issuedAt,
-    codeHash: validationCode ?? `B42-${disciplineRow.id.slice(0, 8).toUpperCase()}-${params.profileId.slice(0, 6).toUpperCase()}`,
-    instructor: disciplineRow.professor?.trim() || "Equipe Acadêmica",
+  // Snapshot ja gravado: fonte da verdade
+  if (issue.snapshot) {
+    return snapshotToDetail(issue, issue.snapshot)
   }
+
+  // Emissao legada sem snapshot: reidrata e atualiza no banco
+  const snapshot = await buildCertificateSnapshot({
+    studentProfileId: params.profileId,
+    courseDisciplineId: params.courseDisciplineId,
+    templateId: issue.template_id,
+  })
+  await backfillIssueSnapshot({
+    studentProfileId: params.profileId,
+    courseDisciplineId: params.courseDisciplineId,
+    templateId: issue.template_id,
+  })
+  return snapshotToDetail(issue, snapshot)
+}
+
+/** Disciplina concluída (100% das aulas ou status approved). */
+export async function isDisciplineCertificateReady(params: {
+  profileId: string
+  courseDisciplineId: string
+  completedLessons: number
+  totalLessons: number
+}): Promise<boolean> {
+  if (params.totalLessons > 0 && params.completedLessons >= params.totalLessons) {
+    return true
+  }
+
+  const { data, error } = await supabase
+    .from("lxp_student_discipline_progress")
+    .select("status")
+    .eq("student_profile_id", params.profileId)
+    .eq("course_discipline_id", params.courseDisciplineId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data?.status === "approved"
 }

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GameBadge } from "@/components/learning/GameBadge";
 import { EvidenceCard } from "@/components/learning/EvidenceCard";
+import { CertificateEvidenceCard } from "@/components/learning/CertificateEvidenceCard";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useAuth } from "@/hooks/use-auth";
 import { usePortfolioEvidences } from "@/hooks/queries/usePortfolioEvidences";
@@ -152,6 +153,8 @@ const Portfolio = () => {
               >
                 {filter === "badge" ? (
                   <GameBadge evidence={evidence} />
+                ) : filter === "certificate" ? (
+                  <CertificateEvidenceCard evidence={evidence} />
                 ) : (
                   <EvidenceCard evidence={evidence} />
                 )}

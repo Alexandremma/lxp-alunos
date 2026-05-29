@@ -233,6 +233,8 @@ const MyCourse = () => {
           status: subject.status,
           grade: subject.grade,
           professor: subject.professor,
+          disciplineInactive: subject.disciplineInactive,
+          enrollmentInactive: subject.enrollmentInactive,
         })),
       })) ?? [],
     [currentCourse?.periods],
