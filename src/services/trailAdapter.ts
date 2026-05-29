@@ -5,6 +5,7 @@ import {
   matchAliceRentForLesson,
   type AliceRent,
 } from "@/services/aliceService"
+import { getDisciplinePresentation } from "@/services/disciplinePresentationService"
 
 export type Trail = {
   id: string
@@ -116,7 +117,7 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
 
   const { data: disc, error } = await supabase
     .from("lxp_course_disciplines")
-    .select("id, name, code, workload, professor")
+    .select("id, name, code, workload, professor, description, lxp_course_periods(lxp_courses(description))")
     .eq("id", trailId)
     .maybeSingle()
 
@@ -125,6 +126,11 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
 
   const externalId = await resolveExternalDisciplineId(trailId)
   const title = disc.name?.trim() || disc.code || "Disciplina"
+  const periodRow = disc.lxp_course_periods as
+    | { lxp_courses?: { description?: string | null } | null }
+    | null
+  const courseDescription = periodRow?.lxp_courses?.description?.trim() || undefined
+  const disciplineDescription = (disc.description as string | null)?.trim() || undefined
   const unidades: ExternalUnit[] = [
     { id: "u-1", nome: `${title} — Parte 1`, order: 1 },
     { id: "u-2", nome: `${title} — Parte 2`, order: 2 },
@@ -133,7 +139,7 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
   return {
     id: externalId,
     nome: title,
-    ementa: `Disciplina ${disc.code}. Com Alice (VITE_ALICE_*) ou Eadstock (VITE_EADSTOCK_BASE_URL) no deploy, as aulas refletem o catálogo vinculado no backoffice.`,
+    ementa: disciplineDescription || courseDescription,
     carga_horaria: disc.workload ?? 60,
     unidades,
     autores: disc.professor ? [{ nome: disc.professor }] : [],
@@ -269,6 +275,10 @@ export async function getTrailDetail(trailId: string): Promise<Trail | null> {
   const detail = await getExternalDisciplineDetail(trailId)
   if (!detail) return null
 
+  const presentation = TRAIL_ID_UUID_RE.test(trailId)
+    ? await getDisciplinePresentation(trailId).catch(() => null)
+    : null
+
   const aliceRents = await getAliceRentsForTrail(trailId, detail.nome?.trim() ?? undefined)
   const units = detail.unidades ?? []
   const totalLessons = aliceRents.length > 0 ? aliceRents.length : units.length
@@ -280,15 +290,19 @@ export async function getTrailDetail(trailId: string): Promise<Trail | null> {
 
   const firstAuthor = detail.autores?.[0]?.nome
     ?? units.find((unit) => (unit.autores?.length ?? 0) > 0)?.autores?.[0]?.nome
-    ?? "Biblioteca Externa"
+    ?? "Equipe Acadêmica"
+
+  const subtitle = TRAIL_ID_UUID_RE.test(trailId)
+    ? presentation?.subtitle?.trim() || undefined
+    : detail.ementa?.trim() || undefined
 
   return {
     id: trailId,
     title: detail.nome?.trim() || `Disciplina ${detail.id}`,
-    description: detail.ementa ?? "Disciplina vinculada da biblioteca externa.",
-    thumbnail: "/placeholder.svg",
+    description: subtitle,
+    thumbnail: presentation?.coverImageUrl ?? "/placeholder.svg",
     category: "Disciplina",
-    instructor: firstAuthor ?? "Biblioteca Externa",
+    instructor: firstAuthor ?? "Equipe Acadêmica",
     totalModules,
     totalLessons,
     completedLessons: 0,

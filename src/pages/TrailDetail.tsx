@@ -145,7 +145,9 @@ const TrailDetail = () => {
           <div className="absolute bottom-0 left-0 right-0 p-6">
             {trail.category && <Badge variant="secondary" className="mb-3">{trail.category}</Badge>}
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">{trail.title}</h1>
-            <p className="text-muted-foreground mt-2 max-w-2xl">{trail.description}</p>
+            {trail.description ? (
+              <p className="text-muted-foreground mt-2 max-w-2xl">{trail.description}</p>
+            ) : null}
           </div>
         </div>
 
