@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
+import { enrichCertificateSnapshot } from "@/services/certificateEnrichmentService"
 import {
   backfillIssueSnapshot,
   buildCertificateSnapshot,
@@ -27,18 +28,6 @@ type IssueRow = {
   issued_at: string
   template_id: string | null
   snapshot: CertificateSnapshot | null
-}
-
-type DisciplineProgressRow = {
-  status: string | null
-  completed_at: string | null
-  last_updated_at: string | null
-  created_at: string | null
-}
-
-function isCompleted(row: DisciplineProgressRow | null): boolean {
-  if (!row) return false
-  return row.status === "approved"
 }
 
 function snapshotToDetail(
@@ -74,17 +63,16 @@ function snapshotToDetail(
 export async function getCertificateDetail(params: {
   profileId: string
   courseDisciplineId: string
+  completedLessons?: number
+  totalLessons?: number
 }): Promise<CertificateDetail | null> {
-  const progressRes = await supabase
-    .from("lxp_student_discipline_progress")
-    .select("status,completed_at,last_updated_at,created_at")
-    .eq("student_profile_id", params.profileId)
-    .eq("course_discipline_id", params.courseDisciplineId)
-    .maybeSingle()
-
-  if (progressRes.error) throw progressRes.error
-  const progress = progressRes.data as DisciplineProgressRow | null
-  if (!isCompleted(progress)) return null
+  const ready = await isDisciplineCertificateReady({
+    profileId: params.profileId,
+    courseDisciplineId: params.courseDisciplineId,
+    completedLessons: params.completedLessons ?? 0,
+    totalLessons: params.totalLessons ?? 0,
+  })
+  if (!ready) return null
 
   let issueRes = await supabase
     .from("lxp_certificate_issues")
@@ -112,9 +100,13 @@ export async function getCertificateDetail(params: {
 
   if (!issue) return null
 
-  // Snapshot ja gravado: fonte da verdade
+  // Snapshot ja gravado: fonte da verdade (enriquecido com midia do template se ausente)
   if (issue.snapshot) {
-    return snapshotToDetail(issue, issue.snapshot)
+    const enriched = await enrichCertificateSnapshot(
+      issue.snapshot,
+      issue.template_id,
+    )
+    return snapshotToDetail(issue, enriched)
   }
 
   // Emissao legada sem snapshot: reidrata e atualiza no banco

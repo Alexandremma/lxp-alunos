@@ -89,30 +89,50 @@ function buildHeaders(): HeadersInit {
   return headers
 }
 
-export async function resolveExternalDisciplineId(trailId: string): Promise<string> {
-  if (/^\d+$/.test(trailId)) return trailId
+export async function courseDisciplineHasLibraryLink(disciplineId: string): Promise<boolean> {
+  if (/^\d+$/.test(disciplineId)) return true
+  if (!TRAIL_ID_UUID_RE.test(disciplineId)) return false
 
   const { data, error } = await supabase
     .from("lxp_course_library_links")
     .select("library_content_id")
-    .eq("course_discipline_id", trailId)
+    .eq("course_discipline_id", disciplineId)
     .eq("library_content_type", "discipline")
-    .order("linked_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (error) throw error
-  if (data?.library_content_id) return String(data.library_content_id)
+  return Boolean(data?.library_content_id)
+}
 
-  // fallback: em alguns fluxos o route param ja pode ser o proprio content_id externo.
+export async function resolveExternalDisciplineId(trailId: string): Promise<string> {
+  if (/^\d+$/.test(trailId)) return trailId
+
+  if (TRAIL_ID_UUID_RE.test(trailId)) {
+    const { data, error } = await supabase
+      .from("lxp_course_library_links")
+      .select("library_content_id")
+      .eq("course_discipline_id", trailId)
+      .eq("library_content_type", "discipline")
+      .order("linked_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data?.library_content_id) {
+      throw new Error("DISCIPLINE_NO_CONTENT_LINK")
+    }
+    return String(data.library_content_id)
+  }
+
   return trailId
 }
 
-/**
- * Quando a API Eadstock não está configurada ou falha, monta estrutura mínima a partir do LXP
- * para a UI não quebrar (aulas demo alinhadas a IDs usados no seed de progresso: u-1, u-2).
- */
-async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<ExternalDisciplineDetail | null> {
+/** Metadados LXP sem aulas placeholder — unidades vêm da API externa ou do Alice. */
+async function getDisciplineMetadataFromLxp(
+  trailId: string,
+  externalId: string,
+): Promise<ExternalDisciplineDetail | null> {
   if (!TRAIL_ID_UUID_RE.test(trailId)) return null
 
   const { data: disc, error } = await supabase
@@ -124,24 +144,19 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
   if (error) throw error
   if (!disc) return null
 
-  const externalId = await resolveExternalDisciplineId(trailId)
   const title = disc.name?.trim() || disc.code || "Disciplina"
   const periodRow = disc.lxp_course_periods as
     | { lxp_courses?: { description?: string | null } | null }
     | null
   const courseDescription = periodRow?.lxp_courses?.description?.trim() || undefined
   const disciplineDescription = (disc.description as string | null)?.trim() || undefined
-  const unidades: ExternalUnit[] = [
-    { id: "u-1", nome: `${title} — Parte 1`, order: 1 },
-    { id: "u-2", nome: `${title} — Parte 2`, order: 2 },
-  ]
 
   return {
     id: externalId,
     nome: title,
     ementa: disciplineDescription || courseDescription,
     carga_horaria: disc.workload ?? 60,
-    unidades,
+    unidades: [],
     autores: disc.professor ? [{ nome: disc.professor }] : [],
   }
 }
@@ -149,13 +164,24 @@ async function getDisciplineDetailFallbackFromLxp(trailId: string): Promise<Exte
 async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDisciplineDetail | null> {
   if (detailCache.has(trailId)) return detailCache.get(trailId) ?? null
 
-  const externalId = await resolveExternalDisciplineId(trailId)
+  if (TRAIL_ID_UUID_RE.test(trailId)) {
+    const hasLink = await courseDisciplineHasLibraryLink(trailId)
+    if (!hasLink) return null
+  }
+
+  let externalId: string
+  try {
+    externalId = await resolveExternalDisciplineId(trailId)
+  } catch {
+    return null
+  }
+
   const baseUrl = normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL)
 
   if (!baseUrl) {
-    const fallback = await getDisciplineDetailFallbackFromLxp(trailId)
-    if (fallback) detailCache.set(trailId, fallback)
-    return fallback
+    const metadata = await getDisciplineMetadataFromLxp(trailId, externalId)
+    if (metadata) detailCache.set(trailId, metadata)
+    return metadata
   }
 
   const response = await fetch(`${baseUrl}/disciplinas/get/${externalId}`, {
@@ -164,10 +190,10 @@ async function getExternalDisciplineDetail(trailId: string): Promise<ExternalDis
   })
 
   if (!response.ok) {
-    const fallback = await getDisciplineDetailFallbackFromLxp(trailId)
-    if (fallback) {
-      detailCache.set(trailId, fallback)
-      return fallback
+    const metadata = await getDisciplineMetadataFromLxp(trailId, externalId)
+    if (metadata) {
+      detailCache.set(trailId, metadata)
+      return metadata
     }
     throw new Error(`Falha ao carregar disciplina externa (${response.status}).`)
   }

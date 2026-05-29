@@ -20,17 +20,20 @@ import {
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mainCourse, type FreeCourse } from "@/data/mockData";
+import { type FreeCourse } from "@/data/mockData";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
+import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
+import { useAuth } from "@/hooks/use-auth";
 import { useContinueTrail } from "@/hooks/useContinueTrail";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type FilterType = "all" | "course" | "language" | "workshop" | "certification" | "extension";
 
 const categoryConfig = {
-  course: { label: mainCourse.name, icon: GraduationCap, color: "bg-secondary/10 text-secondary border-secondary/20" },
+  course: { label: "Graduação", icon: GraduationCap, color: "bg-secondary/10 text-secondary border-secondary/20" },
   language: { label: "Idiomas", icon: Languages, color: "bg-info/10 text-info border-info/20" },
   workshop: { label: "Workshops", icon: Lightbulb, color: "bg-warning/10 text-warning border-warning/20" },
   certification: { label: "Certificações", icon: Award, color: "bg-success/10 text-success border-success/20" },
@@ -59,6 +62,13 @@ const FreeCourseCard = ({
   isResolving?: boolean
 }) => {
   const CategoryIcon = categoryConfig[course.category].icon;
+  const categoryLabel = course.courseName ?? categoryConfig[course.category].label;
+  const showCourseNameTooltip = Boolean(course.courseName?.trim());
+  const showProgress =
+    course.status === "enrolled" ||
+    course.status === "completed" ||
+    course.status === "inactive" ||
+    course.status === "enrollment_blocked";
 
   return (
     <Card className="overflow-hidden card-hover group">
@@ -68,14 +78,37 @@ const FreeCourseCard = ({
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute top-3 left-3">
-          <Badge variant="outline" className={cn("backdrop-blur-sm", categoryConfig[course.category].color)}>
-            <CategoryIcon className="h-3 w-3 mr-1" />
-            {categoryConfig[course.category].label}
-          </Badge>
+        <div className="absolute top-3 left-3 z-10 max-w-[calc(100%-8.5rem)] min-w-0">
+          {showCourseNameTooltip ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "backdrop-blur-sm max-w-full min-w-0 gap-1",
+                    categoryConfig[course.category].color,
+                  )}
+                >
+                  <CategoryIcon className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{categoryLabel}</span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs text-left">
+                {categoryLabel}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Badge
+              variant="outline"
+              className={cn("backdrop-blur-sm gap-1", categoryConfig[course.category].color)}
+            >
+              <CategoryIcon className="h-3 w-3 shrink-0" />
+              <span>{categoryLabel}</span>
+            </Badge>
+          )}
         </div>
-        <div className="absolute top-3 right-3">
-          <Badge className={statusConfig[course.status].color}>
+        <div className="absolute top-3 right-3 z-10 shrink-0">
+          <Badge className={cn("shrink-0", statusConfig[course.status].color)}>
             {statusConfig[course.status].label}
           </Badge>
         </div>
@@ -105,13 +138,13 @@ const FreeCourseCard = ({
           )}
         </div>
 
-        {course.status === "enrolled" && course.progress !== undefined && (
-          <div className="mb-4">
+        {showProgress && (
+          <div className="mb-4 min-h-[2.25rem]">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">Progresso</span>
-              <span className="font-medium">{course.progress}%</span>
+              <span className="font-medium">{course.progress ?? 0}%</span>
             </div>
-            <Progress value={course.progress} className="h-2" />
+            <Progress value={course.progress ?? 0} className="h-2" />
           </div>
         )}
 
@@ -154,10 +187,12 @@ const FreeCourseCard = ({
 
 const FreeCourses = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { resolveNextPath } = useContinueTrail();
   const [filter, setFilter] = useState<FilterType>("all");
   const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
   const enrollInTrail = useEnrollInTrail();
+  const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
   const { items, isLoading, isFetching, error, refetch } = useStudentCatalog({
     page: 1,
     pageSize: 24,
@@ -184,9 +219,17 @@ const FreeCourses = () => {
         workload: i.workloadHours ?? 0,
         credits: i.credits ?? 0,
         instructor: i.professor?.trim() || "—",
+        courseName: i.courseName,
       };
     });
   }, [items]);
+
+  const graduationTabLabel = useMemo(() => {
+    const enrolled = enrolledCoursesData ?? [];
+    if (enrolled.length === 1) return enrolled[0].name;
+    if (enrolled.length > 1) return "Meus cursos";
+    return categoryConfig.course.label;
+  }, [enrolledCoursesData]);
 
   /** Só a grade respeita a aba; contagens e KPIs usam `allCourses`. */
   const filteredCourses = useMemo(() => {
@@ -290,7 +333,7 @@ const FreeCourses = () => {
             <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
             <TabsTrigger value="course">
               <GraduationCap className="h-3.5 w-3.5 mr-1" />
-              {mainCourse.name} ({counts.course})
+              {graduationTabLabel} ({counts.course})
             </TabsTrigger>
             <TabsTrigger value="language">Idiomas ({counts.language})</TabsTrigger>
             <TabsTrigger value="workshop">Workshops ({counts.workshop})</TabsTrigger>

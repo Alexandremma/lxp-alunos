@@ -1,7 +1,7 @@
+import { supabase } from "@/lib/supabaseClient";
 import { getDashboardStats, type DashboardStats } from "@/services/dashboardService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
-import { getTrailLessons, resolveExternalDisciplineId } from "@/services/trailAdapter";
-import { supabase } from "@/lib/supabaseClient";
+import { computeDisciplineProgressBatch } from "@/services/disciplineProgressService";
 
 export type WeeklyStudyPoint = {
   day: string;
@@ -71,33 +71,22 @@ export async function getProgressOverview(profileId: string): Promise<ProgressOv
   const lessonRows = lessonRowsResult.data ?? [];
   const weeklyStudyData = buildWeeklyStudyData(lessonRows);
 
-  const completedByExternal = new Map<string, number>();
-  for (const row of lessonRows) {
-    if (row.status !== "completed") continue;
-    const key = row.external_discipline_id;
-    completedByExternal.set(key, (completedByExternal.get(key) ?? 0) + 1);
-  }
+  const disciplineIds = (catalogResult.items ?? []).map((item) => item.id);
+  const progressByDisc = await computeDisciplineProgressBatch(profileId, disciplineIds);
 
-  const trails = (
-    await Promise.all(
-      (catalogResult.items ?? []).map(async (item) => {
-        const lessons = await getTrailLessons(item.id);
-        const externalId = await resolveExternalDisciplineId(item.id);
-        const completedLessons = completedByExternal.get(externalId) ?? 0;
-        const totalLessons = Math.max(lessons.length, completedLessons, 1);
-        const progressPercent = Math.round((completedLessons / totalLessons) * 100);
-
-        return {
-          id: item.id,
-          title: item.name,
-          thumbnail: "/placeholder.svg",
-          completedLessons,
-          totalLessons,
-          progressPercent,
-        } satisfies ProgressTrailSummary;
-      }),
-    )
-  ).sort((a, b) => b.progressPercent - a.progressPercent);
+  const trails = (catalogResult.items ?? [])
+    .map((item) => {
+      const progress = progressByDisc.get(item.id);
+      return {
+        id: item.id,
+        title: item.name,
+        thumbnail: "/placeholder.svg",
+        completedLessons: progress?.completedLessons ?? 0,
+        totalLessons: progress?.totalLessons ?? 0,
+        progressPercent: progress?.progressPercent ?? item.progressPercent ?? 0,
+      } satisfies ProgressTrailSummary;
+    })
+    .sort((a, b) => b.progressPercent - a.progressPercent);
 
   return {
     stats: {

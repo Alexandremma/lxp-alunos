@@ -108,8 +108,9 @@ const PeriodCard = ({ period }: { period: Period }) => {
 };
 
 const SubjectRow = ({ subject }: { subject: Subject }) => {
+  const noContentLink = subject.hasContentLink === false;
   const blocked =
-    subject.disciplineInactive || subject.enrollmentInactive;
+    subject.disciplineInactive || subject.enrollmentInactive || noContentLink;
   const canOpenDisciplineTrail = DISCIPLINE_UUID_RE.test(subject.id) && !blocked;
 
   const row = (
@@ -156,6 +157,11 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
             </span>
           )}
         </div>
+        {noContentLink && !subject.disciplineInactive && !subject.enrollmentInactive && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Conteúdo em preparação. As aulas ficarão disponíveis quando a instituição vincular o material externo.
+          </p>
+        )}
         {subject.disciplineInactive && (
           <p className="mt-2 text-xs text-warning">
             Esta disciplina está inativa. O acesso às aulas ficará disponível quando a instituição reativá-la.
@@ -168,15 +174,11 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        {!blocked && subject.grade !== undefined && (
-          <span className={cn(
-            "font-semibold text-sm",
-            subject.grade >= 7 ? "text-success" : subject.grade >= 5 ? "text-warning" : "text-destructive"
-          )}>
-            {subject.grade.toFixed(1)}
-          </span>
-        )}
-        {subject.disciplineInactive ? (
+        {noContentLink && !subject.disciplineInactive && !subject.enrollmentInactive ? (
+          <Badge variant="outline" className="bg-muted text-muted-foreground shrink-0">
+            Em preparação
+          </Badge>
+        ) : subject.disciplineInactive ? (
           <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 shrink-0">
             Disciplina inativa
           </Badge>
@@ -235,6 +237,7 @@ const MyCourse = () => {
           professor: subject.professor,
           disciplineInactive: subject.disciplineInactive,
           enrollmentInactive: subject.enrollmentInactive,
+          hasContentLink: subject.hasContentLink,
         })),
       })) ?? [],
     [currentCourse?.periods],
@@ -264,18 +267,6 @@ const MyCourse = () => {
     [periods],
   );
   const totalSubjects = useMemo(() => periods.reduce((acc, p) => acc + p.subjects.length, 0), [periods]);
-  const approvedWithGrades = useMemo(
-    () =>
-      periods
-        .flatMap((p) => p.subjects)
-        .filter((s) => s.status === "approved" && s.grade !== undefined),
-    [periods],
-  );
-  const averageGrade = useMemo(() => {
-    if (approvedWithGrades.length === 0) return 0;
-    return approvedWithGrades.reduce((acc, s) => acc + (s.grade ?? 0), 0) / approvedWithGrades.length;
-  }, [approvedWithGrades]);
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
@@ -371,7 +362,7 @@ const MyCourse = () => {
           </TabsContent>
 
           <TabsContent value="summary">
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-muted-foreground">Créditos Cursados</CardTitle>
@@ -411,18 +402,6 @@ const MyCourse = () => {
                   <p className="text-sm text-muted-foreground">
                     em progresso agora
                   </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-muted-foreground">Média Geral</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-primary">
-                    {averageGrade.toFixed(1)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">coeficiente de rendimento</p>
                 </CardContent>
               </Card>
             </div>

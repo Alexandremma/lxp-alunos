@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
+import { computeDisciplineProgressBatch } from "@/services/disciplineProgressService"
 
 export type LibraryContentType = "discipline"
 
@@ -21,6 +22,8 @@ export type LibraryItem = {
   professor?: string
   workloadHours?: number
   credits?: number
+  courseId?: string
+  courseName?: string
 }
 
 export type SearchLibraryParams = {
@@ -88,12 +91,6 @@ function mapCourseCategoryToLibraryTab(
   }
 }
 
-function progressPercentFromDisciplineStatus(status: string | undefined): number {
-  if (status === "approved") return 100
-  if (status === "in_progress") return 40
-  return 0
-}
-
 /**
  * Quando o catálogo Eadstock não está disponível ou vem vazio, lista disciplinas do(s) curso(s)
  * em que o aluno está matriculado e que possuem vínculo em `lxp_course_library_links`.
@@ -120,10 +117,11 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const { data: courses, error: e2 } = await supabase
     .from("lxp_courses")
-    .select("id, category")
+    .select("id, name, category")
     .in("id", courseIds)
   if (e2) throw e2
   const catByCourse = new Map((courses ?? []).map((c) => [c.id, c.category as string]))
+  const nameByCourse = new Map((courses ?? []).map((c) => [c.id, (c.name as string)?.trim() || "Curso"]))
 
   const { data: periods, error: e3 } = await supabase
     .from("lxp_course_periods")
@@ -153,19 +151,12 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const linkByDisc = new Map((links ?? []).map((l) => [l.course_discipline_id, l]))
 
-  const { data: prog, error: e6 } = await supabase
-    .from("lxp_student_discipline_progress")
-    .select("course_discipline_id, status")
-    .eq("student_profile_id", profileId)
-    .in("course_discipline_id", discIds)
-  if (e6) throw e6
-
-  const progByDisc = new Map((prog ?? []).map((p) => [p.course_discipline_id, p.status as string]))
+  const linkedDiscIds = (disciplines ?? []).filter((d) => linkByDisc.has(d.id)).map((d) => d.id)
+  const progressByDisc = await computeDisciplineProgressBatch(profileId, linkedDiscIds)
 
   const items: LibraryItem[] = []
   for (const d of disciplines ?? []) {
     if (!linkByDisc.has(d.id)) continue
-    const link = linkByDisc.get(d.id)!
     const courseId = courseByPeriod.get(d.course_period_id)
     const enrollmentStatus = courseId ? enrollmentByCourse.get(courseId) : undefined
     const tabCategory = mapCourseCategoryToLibraryTab(courseId ? catByCourse.get(courseId) : undefined)
@@ -173,9 +164,9 @@ export async function getEnrolledLinkedDisciplinesCatalog(
     const code = (d.code ?? "").toLowerCase()
     if (q && !name.toLowerCase().includes(q) && !code.includes(q)) continue
 
-    const st = progByDisc.get(d.id)
     const disciplineInactive = (d.status as string) === "inactive"
     const enrollmentInactive = enrollmentStatus === "inactive"
+    const progress = progressByDisc.get(d.id)
     items.push({
       id: d.id,
       name,
@@ -185,8 +176,10 @@ export async function getEnrolledLinkedDisciplinesCatalog(
       credits: d.credits != null && d.credits > 0 ? d.credits : undefined,
       professor: d.professor?.trim() || undefined,
       category: tabCategory,
+      courseId: courseId ?? undefined,
+      courseName: courseId ? nameByCourse.get(courseId) : undefined,
       enrolled: true,
-      progressPercent: progressPercentFromDisciplineStatus(st),
+      progressPercent: progress?.progressPercent ?? 0,
       disciplineInactive,
       enrollmentInactive,
     })

@@ -35,7 +35,7 @@ export function CertificateEvidenceCard({ evidence, className }: CertificateEvid
         toast.error("Certificado indisponível. Conclua todas as aulas primeiro.")
         return
       }
-      downloadCertificatePdf(detail)
+      await downloadCertificatePdf(detail)
       toast.success("Use a janela de impressão para salvar em PDF.")
     } catch (err) {
       console.error(err)

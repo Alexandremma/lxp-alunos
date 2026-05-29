@@ -1,7 +1,11 @@
 import type { AuthError } from "@supabase/supabase-js";
 
+import { STUDENT_BLOCKED_MESSAGE } from "@/services/studentAccessLoginService";
+
 const INVALID_CREDENTIALS =
   "Credenciais inválidas. Verifique seu email e senha.";
+
+export { STUDENT_BLOCKED_MESSAGE };
 
 function normalize(error: AuthError | null): { code: string; message: string } {
   return {
@@ -32,6 +36,15 @@ export function mapSignInErrorMessage(error: AuthError | null): string {
   }
   if (code === "too_many_requests" || message.includes("rate limit")) {
     return "Muitas tentativas em sequência. Aguarde alguns minutos e tente novamente.";
+  }
+  if (
+    code === "user_banned" ||
+    code === "user_disabled" ||
+    message.includes("banned") ||
+    message.includes("disabled") ||
+    message.includes("not allowed")
+  ) {
+    return STUDENT_BLOCKED_MESSAGE;
   }
   if (
     code === "invalid_credentials" ||

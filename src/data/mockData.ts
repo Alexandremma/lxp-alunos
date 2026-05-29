@@ -109,6 +109,7 @@ export interface Subject {
   professor?: string;
   disciplineInactive?: boolean;
   enrollmentInactive?: boolean;
+  hasContentLink?: boolean;
 }
 
 export interface Period {
@@ -144,6 +145,7 @@ export interface FreeCourse {
   instructor: string;
   startDate?: string;
   progress?: number;
+  courseName?: string;
 }
 
 // ============================================

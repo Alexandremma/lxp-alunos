@@ -12,6 +12,8 @@ export type MyCourseSubject = {
   grade?: number;
   disciplineInactive?: boolean;
   enrollmentInactive?: boolean;
+  /** Sem vínculo em lxp_course_library_links — conteúdo ainda não disponível. */
+  hasContentLink?: boolean;
 };
 
 export type MyCoursePeriod = {

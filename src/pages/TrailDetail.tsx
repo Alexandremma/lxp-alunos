@@ -11,7 +11,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
+import { useCertificateReady } from "@/hooks/queries/useCertificateReady";
 import { useContinueTrail } from "@/hooks/useContinueTrail";
+import type { TrailModule } from "@/services/trailAdapter";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -33,6 +35,16 @@ const TrailDetail = () => {
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isResolvingContinue, setIsResolvingContinue] = useState(false);
   const [isDownloadingCert, setIsDownloadingCert] = useState(false);
+
+  const totalLessonsPreview = lessons.length;
+  const completedLessonsPreview = trail?.completedLessons ?? 0;
+
+  const certificateReadyQ = useCertificateReady(
+    profile?.id,
+    id,
+    completedLessonsPreview,
+    totalLessonsPreview || trail?.totalLessons || 0,
+  );
 
   const { data: disciplineMeta } = useQuery({
     queryKey: ["lxp", "discipline-meta", id],
@@ -87,8 +99,10 @@ const TrailDetail = () => {
   const totalLessons = lessons.length || trail.totalLessons || 0;
   const completedLessons = trail.completedLessons ?? 0;
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-  const certificateReady = totalLessons > 0 && progress >= 100;
-  const moduleLessons = lessons.filter((l) => modules.some((m: any) => m.id === l.moduleId));
+  const certificateReady = certificateReadyQ.data === true;
+  const moduleLessons = lessons.filter((l) =>
+    modules.some((m: TrailModule) => m.id === l.moduleId),
+  );
 
   const handleDownloadCertificate = async () => {
     if (!profile?.id || !id) return;
@@ -97,12 +111,14 @@ const TrailDetail = () => {
       const detail = await getCertificateDetail({
         profileId: profile.id,
         courseDisciplineId: id,
+        completedLessons,
+        totalLessons,
       });
       if (!detail) {
         toast.error("Certificado indisponível. Conclua todas as aulas primeiro.");
         return;
       }
-      downloadCertificatePdf(detail);
+      await downloadCertificatePdf(detail);
       toast.success("Use a janela de impressão para salvar em PDF.");
     } catch (err) {
       console.error(err);
@@ -237,6 +253,7 @@ const TrailDetail = () => {
             <TrailCertificateCard
               trailId={trail.id}
               ready={certificateReady}
+              readyLoading={certificateReadyQ.isLoading}
               workloadHours={disciplineMeta?.workload ?? null}
               onDownload={() => void handleDownloadCertificate()}
               isDownloading={isDownloadingCert}

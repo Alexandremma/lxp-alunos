@@ -1,3 +1,5 @@
+import { embedCertificatePrintImages } from "@/lib/certificateImageEmbed"
+
 export type CertificatePrintSignature = {
   signerName: string;
   signerTitle: string;
@@ -14,9 +16,7 @@ export type CertificatePrintPayload = {
   institutionName?: string;
   institutionLogoUrl?: string | null;
   signatures?: CertificatePrintSignature[];
-  /** URL base do site público de validação (default = origin). */
   validateBaseUrl?: string;
-  /** Se true, dispara window.print() ao carregar (default). Use false em preview/iframe. */
   autoPrint?: boolean;
 };
 
@@ -75,10 +75,24 @@ export function buildCertificatePrintHtml(payload: CertificatePrintPayload): str
           <p class="sig-title">Instituição</p>
         </div>`;
 
-  const autoPrintScript =
+  const printScript =
     payload.autoPrint === false
       ? ""
-      : "<script>window.onload = function() { window.print(); };</script>";
+      : `<script>
+function waitForImages(done) {
+  var imgs = Array.prototype.slice.call(document.images || []);
+  if (!imgs.length) { done(); return; }
+  var pending = imgs.length;
+  function tick() { if (--pending <= 0) done(); }
+  imgs.forEach(function(img) {
+    if (img.complete) tick();
+    else { img.onload = tick; img.onerror = tick; }
+  });
+}
+window.onload = function() {
+  waitForImages(function() { window.print(); });
+};
+</script>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -121,20 +135,18 @@ export function buildCertificatePrintHtml(payload: CertificatePrintPayload): str
     <p class="code"><strong>Código de validação:</strong> ${escapeHtml(payload.validationCode)}</p>
     <div class="sigs">${signatureBlocks}</div>
   </div>
-  ${autoPrintScript}
+  ${printScript}
 </body>
 </html>`;
 }
 
-export function openCertificatePrintWindow(payload: CertificatePrintPayload): void {
+export async function openCertificatePrintWindow(payload: CertificatePrintPayload): Promise<void> {
+  const embedded = await embedCertificatePrintImages(payload)
   const html = buildCertificatePrintHtml({
-    ...payload,
+    ...embedded,
     autoPrint: payload.autoPrint ?? true,
     validateBaseUrl: payload.validateBaseUrl ?? window.location.origin,
   });
-  // Blob URL evita o bug de janela `about:blank` em Chromium/Edge quando se
-  // usa `window.open("", ...)` + `document.write` (especialmente com
-  // `noopener,noreferrer`). O HTML embute `window.print()` no onload.
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
   const win = window.open(blobUrl, "_blank", "width=900,height=700");
@@ -143,4 +155,28 @@ export function openCertificatePrintWindow(payload: CertificatePrintPayload): vo
     throw new Error("Não foi possível abrir a janela de impressão. Permita pop-ups para este site.");
   }
   setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+}
+
+export function certificateDetailToPrintPayload(detail: {
+  studentName: string;
+  courseTitle: string;
+  issuedAt: string;
+  codeHash: string;
+  workloadHours: number | null;
+  instructor: string;
+  institutionName: string;
+  institutionLogoUrl: string | null;
+  signatures: CertificatePrintSignature[];
+}): CertificatePrintPayload {
+  return {
+    studentName: detail.studentName,
+    disciplineName: detail.courseTitle,
+    issuedAt: detail.issuedAt,
+    validationCode: detail.codeHash,
+    workloadHours: detail.workloadHours,
+    instructorName: detail.instructor,
+    institutionName: detail.institutionName,
+    institutionLogoUrl: detail.institutionLogoUrl,
+    signatures: detail.signatures,
+  };
 }

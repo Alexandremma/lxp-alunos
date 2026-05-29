@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 type TrailCertificateCardProps = {
   trailId: string;
   ready: boolean;
+  readyLoading?: boolean;
   workloadHours?: number | null;
   onDownload: () => void;
   isDownloading?: boolean;
@@ -15,10 +16,12 @@ type TrailCertificateCardProps = {
 export function TrailCertificateCard({
   trailId,
   ready,
+  readyLoading,
   workloadHours,
   onDownload,
   isDownloading,
 }: TrailCertificateCardProps) {
+  const downloadDisabled = readyLoading || isDownloading;
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -33,7 +36,16 @@ export function TrailCertificateCard({
             Carga horária registrada: <strong>{workloadHours}h</strong>
           </p>
         )}
-        {!ready ? (
+        {readyLoading ? (
+          <>
+            <Badge variant="outline" className="text-muted-foreground">
+              Verificando elegibilidade…
+            </Badge>
+            <Button className="w-full" disabled>
+              Baixar certificado
+            </Button>
+          </>
+        ) : !ready ? (
           <>
             <Badge variant="outline" className="text-muted-foreground">
               Conclua todas as aulas para liberar
@@ -50,7 +62,7 @@ export function TrailCertificateCard({
             <Button
               className="w-full gap-2"
               onClick={onDownload}
-              disabled={isDownloading}
+              disabled={downloadDisabled}
             >
               <Download className="h-4 w-4" />
               {isDownloading ? "Gerando PDF…" : "Baixar certificado"}

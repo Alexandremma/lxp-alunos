@@ -46,17 +46,30 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
     ) ?? [];
 
   let progressByDisciplineId = new Map<string, ProgressRow>();
+  let linkByDisciplineId = new Set<string>();
   if (disciplineIds.length > 0) {
-    const { data: progressRows, error: progressError } = await supabase
-      .from("lxp_student_discipline_progress")
-      .select("course_discipline_id,status,grade")
-      .eq("student_profile_id", profileId)
-      .in("course_discipline_id", disciplineIds);
+    const [{ data: progressRows, error: progressError }, { data: linkRows, error: linksError }] =
+      await Promise.all([
+        supabase
+          .from("lxp_student_discipline_progress")
+          .select("course_discipline_id,status,grade")
+          .eq("student_profile_id", profileId)
+          .in("course_discipline_id", disciplineIds),
+        supabase
+          .from("lxp_course_library_links")
+          .select("course_discipline_id")
+          .eq("library_content_type", "discipline")
+          .in("course_discipline_id", disciplineIds),
+      ]);
 
     if (progressError) throw progressError;
+    if (linksError) throw linksError;
 
     progressByDisciplineId = new Map(
       ((progressRows ?? []) as ProgressRow[]).map((row) => [row.course_discipline_id, row]),
+    );
+    linkByDisciplineId = new Set(
+      (linkRows ?? []).map((row) => row.course_discipline_id as string),
     );
   }
 
@@ -84,6 +97,7 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
         grade: progress?.grade ?? undefined,
         disciplineInactive: (discipline.status ?? "active") === "inactive",
         enrollmentInactive,
+        hasContentLink: linkByDisciplineId.has(discipline.id),
       };
     });
 

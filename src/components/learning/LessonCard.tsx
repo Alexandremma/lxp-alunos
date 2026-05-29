@@ -11,13 +11,15 @@ import {
   ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Lesson } from "@/data/mockData";
+import type { TrailLesson } from "@/services/trailAdapter";
 
 interface LessonCardProps {
-  lesson: Lesson;
+  lesson: TrailLesson;
   trailId: string;
   className?: string;
 }
+
+const DEFAULT_LESSON_TYPE: NonNullable<TrailLesson["type"]> = "reading";
 
 const typeConfig = {
   video: {
@@ -76,7 +78,8 @@ const statusConfig = {
 };
 
 export const LessonCard = ({ lesson, trailId, className }: LessonCardProps) => {
-  const typeInfo = typeConfig[lesson.type];
+  const lessonType = lesson.type ?? DEFAULT_LESSON_TYPE;
+  const typeInfo = typeConfig[lessonType] ?? typeConfig.reading;
   const statusInfo = statusConfig[lesson.status];
   const TypeIcon = typeInfo.icon;
   const StatusIcon = statusInfo.icon;

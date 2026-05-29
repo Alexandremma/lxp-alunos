@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,9 @@ import {
   isLikelyNetworkError,
   mapResetPasswordErrorMessage,
   mapSignInErrorMessage,
+  STUDENT_BLOCKED_MESSAGE,
 } from "@/lib/authLoginMessages";
+import { signOutIfEnrollmentBlocked } from "@/hooks/useStudentAccessGate";
 
 const DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL = "https://lxp-alunos.vercel.app/definir-senha";
 const lxpAlunosSetPasswordUrl = (
@@ -33,6 +35,19 @@ export default function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { blockedMessage?: string } | null;
+    if (state?.blockedMessage) {
+      setError(state.blockedMessage);
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+    const params = new URLSearchParams(location.search);
+    if (params.get("reason") === "blocked") {
+      setError(STUDENT_BLOCKED_MESSAGE);
+    }
+  }, [location.state, location.search, location.pathname]);
 
   useEffect(() => {
     const hash = window.location.hash.startsWith("#")
@@ -89,25 +104,41 @@ export default function Login() {
 
       const currentUser = session.user;
 
+      let profileId: string | null = null;
+
       const { data: existingProfile, error: profileError } = await supabase
         .from("lxp_profiles")
-        .select("*")
+        .select("id")
         .eq("user_id", currentUser.id)
         .maybeSingle();
 
       if (profileError) {
         console.warn("[Login] Erro ao carregar perfil:", profileError.message);
       } else if (!existingProfile) {
-        const { error: insertError } = await supabase.from("lxp_profiles").insert({
-          user_id: currentUser.id,
-          email: currentUser.email,
-          name: currentUser.user_metadata?.full_name ?? currentUser.email,
-          role: "student",
-        });
+        const { data: inserted, error: insertError } = await supabase
+          .from("lxp_profiles")
+          .insert({
+            user_id: currentUser.id,
+            email: currentUser.email,
+            name: currentUser.user_metadata?.full_name ?? currentUser.email,
+            role: "student",
+          })
+          .select("id")
+          .maybeSingle();
 
         if (insertError) {
           console.warn("[Login] Erro ao criar perfil:", insertError.message);
+        } else {
+          profileId = inserted?.id ?? null;
         }
+      } else {
+        profileId = existingProfile.id as string;
+      }
+
+      const blockedMessage = await signOutIfEnrollmentBlocked(currentUser.id);
+      if (blockedMessage) {
+        setError(blockedMessage);
+        return;
       }
 
       navigate("/", { replace: true });

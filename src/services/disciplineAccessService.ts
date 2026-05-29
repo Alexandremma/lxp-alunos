@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabaseClient"
+import { courseDisciplineHasLibraryLink } from "@/services/trailAdapter"
 
-export type DisciplineAccessBlockReason = "inactive_discipline" | "enrollment_inactive"
+export type DisciplineAccessBlockReason =
+  | "inactive_discipline"
+  | "enrollment_inactive"
+  | "no_content_link"
 
 export type DisciplineAccessResult =
   | { allowed: true }
@@ -23,6 +27,17 @@ export async function getDisciplineAccessForStudent(
       reason: "inactive_discipline",
       title: "Disciplina indisponível",
       message: "Esta disciplina não foi encontrada ou não está disponível.",
+    }
+  }
+
+  const hasLink = await courseDisciplineHasLibraryLink(disciplineId)
+  if (!hasLink) {
+    return {
+      allowed: false,
+      reason: "no_content_link",
+      title: "Conteúdo em preparação",
+      message:
+        "Esta disciplina ainda não possui conteúdo vinculado pela instituição. Quando estiver disponível, você poderá acessar as aulas aqui.",
     }
   }
 
