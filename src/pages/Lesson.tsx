@@ -4,8 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  FileText,
-  Download,
   Clock,
   Award,
   BookOpen,
@@ -20,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "@/components/learning/VideoPlayer";
 import { LessonLayout } from "@/components/learning/LessonLayout";
@@ -222,9 +219,11 @@ const Lesson = () => {
               <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
                 {lesson.title}
               </h1>
-              <p className="text-muted-foreground mt-2 text-base lg:text-lg">
-                {lesson.description}
-              </p>
+              {lesson.description?.trim() ? (
+                <p className="text-muted-foreground mt-2 text-base lg:text-lg">
+                  {lesson.description}
+                </p>
+              ) : null}
             </div>
             {lesson.xpReward > 0 && (
               <Badge
@@ -239,108 +238,50 @@ const Lesson = () => {
           </div>
         </div>
 
-        {/* Content Tabs */}
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-auto inline-flex">
-            <TabsTrigger value="overview" className="gap-2">
-              <FileText className="w-4 h-4 hidden sm:block" />
-              Conteúdo
-            </TabsTrigger>
-            <TabsTrigger value="resources" className="gap-2">
-              <Download className="w-4 h-4 hidden sm:block" />
-              Recursos
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-6">
-            {lesson.type !== "video" &&
-              lesson.aliceContentId &&
-              isAliceConfigured() ? (
-              <AliceLessonFrame
-                contentId={lesson.aliceContentId}
-                user={{
-                  fullName:
-                    profile?.name?.trim() ||
-                    user?.email?.split("@")[0] ||
-                    "Aluno LXP",
-                  userId: profile?.user_id || user?.id || "",
-                  email: profile?.email || user?.email || "",
-                }}
-              />
-            ) : lesson.content ? (
-              <Card>
-                <CardContent className="p-6 prose prose-invert max-w-none">
-                  <p className="text-foreground leading-relaxed whitespace-pre-line">
-                    {lesson.content}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : lesson.type === "reading" ? (
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-muted-foreground">
-                    {isAliceConfigured()
-                      ? "Conteúdo Alice indisponível para esta aula. Verifique o vínculo no backoffice e o deploy (VITE_ALICE_*)."
-                      : "O conteúdo de leitura será exibido aqui. Configure VITE_ALICE_* no deploy para o e-book."}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">
-                    Assista ao vídeo acima para acompanhar a aula.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="resources" className="mt-6">
+        {/* Lesson content */}
+        <div className="mt-6">
+          {lesson.type !== "video" &&
+          lesson.aliceContentId &&
+          isAliceConfigured() ? (
+            <AliceLessonFrame
+              contentId={lesson.aliceContentId}
+              user={{
+                fullName:
+                  profile?.name?.trim() ||
+                  user?.email?.split("@")[0] ||
+                  "Aluno LXP",
+                userId: profile?.user_id || user?.id || "",
+                email: profile?.email || user?.email || "",
+              }}
+            />
+          ) : lesson.content ? (
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          Slides da aula
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          PDF • 2.4 MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon-sm">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-secondary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          Material complementar
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          PDF • 1.1 MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon-sm">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+              <CardContent className="p-6 prose prose-invert max-w-none">
+                <p className="text-foreground leading-relaxed whitespace-pre-line">
+                  {lesson.content}
+                </p>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          ) : lesson.type === "reading" ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">
+                  {isAliceConfigured()
+                    ? "O conteúdo desta aula não está disponível no momento. Tente novamente mais tarde ou fale com a instituição."
+                    : "O conteúdo de leitura será exibido aqui em breve."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">
+                  Assista ao vídeo acima para acompanhar a aula.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Navigation Footer */}
         <div className="flex items-center justify-between pt-6 border-t border-border">
