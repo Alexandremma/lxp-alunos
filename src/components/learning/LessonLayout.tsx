@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { X, ChevronLeft, Eye, EyeOff, StickyNote, MessageCircle, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -36,15 +36,12 @@ export const LessonLayout = ({
   externalDisciplineId,
   externalUnitId,
 }: LessonLayoutProps) => {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [leftSidebarOpen, setLeftSidebarOpen] = React.useState(true);
   const [rightPanel, setRightPanel] = React.useState<'notes' | 'discussion' | null>(null);
   const [aiTutorOpen, setAiTutorOpen] = React.useState(false);
 
-  const handleClose = () => {
-    navigate(`/trails/${trail.id}`);
-  };
+  const closeRightPanel = () => setRightPanel(null);
 
   const toggleNotes = () => {
     setRightPanel(rightPanel === 'notes' ? null : 'notes');
@@ -175,19 +172,6 @@ export const LessonLayout = ({
               </TooltipTrigger>
               <TooltipContent>Discussão</TooltipContent>
             </Tooltip>
-
-            {/* Separator */}
-            <div className="w-px h-5 bg-border mx-1" />
-
-            {/* Close Button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" onClick={handleClose}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Fechar</TooltipContent>
-            </Tooltip>
           </div>
         </header>
 
@@ -242,16 +226,26 @@ export const LessonLayout = ({
           >
             {rightPanel && (
               <div className="h-full flex flex-col">
-                <div className="p-4 border-b border-border">
-                  <h3 className="font-semibold text-foreground">
-                    {rightPanel === 'notes' ? 'Anotações' : 'Discussão'}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {rightPanel === 'notes' 
-                      ? 'Suas notas para esta aula'
-                      : 'Comentários e perguntas'
-                    }
-                  </p>
+                <div className="p-4 border-b border-border flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">
+                      {rightPanel === 'notes' ? 'Anotações' : 'Discussão'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {rightPanel === 'notes'
+                        ? 'Suas notas para esta aula'
+                        : 'Comentários e perguntas'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={closeRightPanel}
+                    aria-label="Fechar painel"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4">

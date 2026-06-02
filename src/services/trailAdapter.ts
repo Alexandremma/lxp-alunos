@@ -224,7 +224,7 @@ function mapAliceRentsToLessons(rents: AliceRent[]): TrailLesson[] {
     id: rent.contentId,
     moduleId: ALICE_MODULE_ID,
     title: rent.nomeUnidade,
-    description: "Conteúdo da aula (Alice / EaDStock).",
+    description: "",
     content: undefined,
     duration: 30,
     type: "reading" as const,

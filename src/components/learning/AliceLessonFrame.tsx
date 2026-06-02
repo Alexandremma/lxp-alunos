@@ -31,7 +31,7 @@ export function AliceLessonFrame({
 
   const submitLaunch = React.useCallback(async () => {
     if (!isAliceConfigured()) {
-      setError("Credenciais Alice não configuradas (VITE_ALICE_API_KEY / VITE_ALICE_API_SECRET).")
+      setError("Credenciais do conteúdo não configuradas neste ambiente.")
       return
     }
     if (!contentId.trim()) {
@@ -72,7 +72,7 @@ export function AliceLessonFrame({
 
       form.submit()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao iniciar material Alice.")
+      setError(e instanceof Error ? e.message : "Falha ao carregar o conteúdo da aula.")
     } finally {
       setLaunching(false)
     }
@@ -85,9 +85,9 @@ export function AliceLessonFrame({
   if (!isAliceConfigured()) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Integração Alice</AlertTitle>
+        <AlertTitle>Conteúdo indisponível</AlertTitle>
         <AlertDescription>
-          Variáveis de ambiente Alice não configuradas neste deploy.
+          Não foi possível carregar o material desta aula neste ambiente.
         </AlertDescription>
       </Alert>
     )
@@ -102,11 +102,11 @@ export function AliceLessonFrame({
         </Alert>
       )}
       {launching && (
-        <p className="text-sm text-muted-foreground mb-2">Carregando material Alice…</p>
+        <p className="text-sm text-muted-foreground mb-2">Carregando conteúdo…</p>
       )}
       <iframe
         name={IFRAME_NAME}
-        title="Conteúdo da aula (Alice)"
+        title="Conteúdo da aula"
         className="w-full rounded-xl border border-border bg-background"
         style={{ minHeight }}
       />
