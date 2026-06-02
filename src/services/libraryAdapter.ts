@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
-import { computeDisciplineProgressBatch } from "@/services/disciplineProgressService"
+import { computeDisciplineProgressBatch, reconcileDisciplineProgress } from "@/services/disciplineProgressService"
 
 export type LibraryContentType = "discipline"
 
@@ -14,6 +14,7 @@ export type LibraryItem = {
   lessonsCount?: number
   category?: "course" | "language" | "workshop" | "certification" | "extension"
   progressPercent?: number
+  isComplete?: boolean
   enrolled?: boolean
   /** Disciplina inativa no backoffice — exibe "Disciplina inativa" */
   disciplineInactive?: boolean
@@ -106,7 +107,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
     .from("lxp_enrollments")
     .select("course_id,status")
     .eq("student_profile_id", profileId)
-    .in("status", ["active", "inactive"])
+    .eq("status", "active")
   if (e1) throw e1
 
   const enrollmentByCourse = new Map(
@@ -152,6 +153,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
   const linkByDisc = new Map((links ?? []).map((l) => [l.course_discipline_id, l]))
 
   const linkedDiscIds = (disciplines ?? []).filter((d) => linkByDisc.has(d.id)).map((d) => d.id)
+  await reconcileDisciplineProgress(profileId, linkedDiscIds)
   const progressByDisc = await computeDisciplineProgressBatch(profileId, linkedDiscIds)
 
   const items: LibraryItem[] = []
@@ -180,6 +182,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
       courseName: courseId ? nameByCourse.get(courseId) : undefined,
       enrolled: true,
       progressPercent: progress?.progressPercent ?? 0,
+      isComplete: progress?.isComplete ?? false,
       disciplineInactive,
       enrollmentInactive,
     })

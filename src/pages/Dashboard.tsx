@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Zap, BookOpen, Clock, Trophy, Sparkles, BookOpenCheck, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -10,15 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
-import { useContinueTrail } from "@/hooks/useContinueTrail";
-import { toast } from "sonner";
 import { useDashboardStats } from "@/hooks/queries/useDashboardStats";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { resolveNextPath } = useContinueTrail();
-  const [resolvingTrailId, setResolvingTrailId] = useState<string | null>(null);
 
   const {
     data: enrolledCoursesData,
@@ -64,22 +60,14 @@ const Dashboard = () => {
             item.enrolled &&
             !item.disciplineInactive &&
             !item.enrollmentInactive &&
-            (item.progressPercent ?? 0) < 100,
+            (item.progressPercent ?? 0) < 100 && !item.isComplete,
         )
         .slice(0, 4),
     [catalogItems],
   );
 
-  const handleContinueTrail = async (trailId: string) => {
-    try {
-      setResolvingTrailId(trailId);
-      const nextPath = await resolveNextPath(trailId);
-      navigate(nextPath);
-    } catch {
-      toast.error("Nao foi possivel continuar a disciplina agora.");
-    } finally {
-      setResolvingTrailId(null);
-    }
+  const handleContinueTrail = (trailId: string) => {
+    navigate(`/trails/${trailId}`);
   };
 
   return (
@@ -345,10 +333,9 @@ const Dashboard = () => {
                             </div>
                             <Button
                               className="w-full"
-                              onClick={() => void handleContinueTrail(trail.id)}
-                              disabled={resolvingTrailId === trail.id}
+                              onClick={() => handleContinueTrail(trail.id)}
                             >
-                              {resolvingTrailId === trail.id ? "Abrindo..." : "Continuar"}
+                              Continuar
                             </Button>
                           </CardContent>
                         </Card>
