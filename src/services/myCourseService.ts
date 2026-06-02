@@ -1,12 +1,21 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { MyCourseData, MyCoursePeriod, SubjectStatus } from "@/types/myCourse";
-
 type EnrollmentRow = { course_id: string; created_at?: string | null; status: string };
 type CourseRow = { id: string; name: string; description: string | null; status: string; created_at: string };
-type ProgressRow = { course_discipline_id: string; status: SubjectStatus; grade: number | null };
 
-function resolvePeriodStatus(subjectStatuses: SubjectStatus[]): MyCoursePeriod["status"] {
-  if (subjectStatuses.length > 0 && subjectStatuses.every((s) => s === "approved")) return "completed";
+function deriveSubjectStatus(
+  progress: { status: SubjectStatus } | undefined,
+  hasContentLink: boolean,
+): SubjectStatus {
+  if (!hasContentLink) return "pending";
+  return progress?.status ?? "pending";
+}
+
+function resolvePeriodStatus(
+  subjectStatuses: SubjectStatus[],
+  subjectComplete: boolean[],
+): MyCoursePeriod["status"] {
+  if (subjectComplete.length > 0 && subjectComplete.every(Boolean)) return "completed";
   if (subjectStatuses.some((s) => s === "in_progress" || s === "approved")) return "current";
   return "future";
 }
@@ -42,11 +51,17 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
 
   const disciplineIds =
     (periodRows ?? []).flatMap((period) =>
-      ((period as any).lxp_course_disciplines ?? []).map((discipline: { id: string }) => discipline.id),
+      ((period as { lxp_course_disciplines?: { id: string }[] }).lxp_course_disciplines ?? []).map(
+        (discipline) => discipline.id,
+      ),
     ) ?? [];
 
-  let progressByDisciplineId = new Map<string, ProgressRow>();
+  let progressByDisciplineId = new Map<
+    string,
+    { status: SubjectStatus; grade: number | null }
+  >();
   let linkByDisciplineId = new Set<string>();
+
   if (disciplineIds.length > 0) {
     const [{ data: progressRows, error: progressError }, { data: linkRows, error: linksError }] =
       await Promise.all([
@@ -66,7 +81,9 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
     if (linksError) throw linksError;
 
     progressByDisciplineId = new Map(
-      ((progressRows ?? []) as ProgressRow[]).map((row) => [row.course_discipline_id, row]),
+      ((progressRows ?? []) as Array<{ course_discipline_id: string; status: SubjectStatus; grade: number | null }>).map(
+        (row) => [row.course_discipline_id, row],
+      ),
     );
     linkByDisciplineId = new Set(
       (linkRows ?? []).map((row) => row.course_discipline_id as string),
@@ -75,8 +92,11 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
 
   const enrollmentInactive = enrollment.status === "inactive";
 
-  const periods: MyCoursePeriod[] = (periodRows ?? []).map((period: any) => {
-    const subjects = ((period.lxp_course_disciplines ?? []) as Array<{
+  const periods: MyCoursePeriod[] = (periodRows ?? []).map((period: {
+    id: string;
+    number: number;
+    name: string;
+    lxp_course_disciplines?: Array<{
       id: string;
       name: string;
       code: string;
@@ -84,8 +104,14 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
       credits: number;
       professor?: string;
       status?: string;
-    }>).map((discipline) => {
+    }>;
+  }) => {
+    const subjects = (period.lxp_course_disciplines ?? []).map((discipline) => {
       const progress = progressByDisciplineId.get(discipline.id);
+      const hasContentLink = linkByDisciplineId.has(discipline.id);
+      const status = deriveSubjectStatus(progress, hasContentLink);
+      const isComplete = status === "approved";
+
       return {
         id: discipline.id,
         name: discipline.name,
@@ -93,11 +119,13 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
         workload: discipline.workload ?? 0,
         credits: discipline.credits ?? 0,
         professor: discipline.professor ?? undefined,
-        status: progress?.status ?? "pending",
+        status,
         grade: progress?.grade ?? undefined,
         disciplineInactive: (discipline.status ?? "active") === "inactive",
         enrollmentInactive,
-        hasContentLink: linkByDisciplineId.has(discipline.id),
+        hasContentLink,
+        progressPercent: isComplete ? 100 : status === "in_progress" ? 50 : 0,
+        isComplete,
       };
     });
 
@@ -105,7 +133,10 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
       id: period.id,
       number: period.number,
       name: period.name,
-      status: resolvePeriodStatus(subjects.map((s) => s.status)),
+      status: resolvePeriodStatus(
+        subjects.map((s) => s.status),
+        subjects.map((s) => s.isComplete),
+      ),
       subjects,
     };
   });

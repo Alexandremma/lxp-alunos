@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { computeConsecutiveLoginStreak } from "@/lib/accessDate";
 import { listStudentAccessDates } from "@/services/studentAccessService";
+import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
 
 export type DashboardStats = {
   streak: number;
@@ -36,9 +37,9 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
   const [
     xpRowsResult,
     levelsResult,
-    disciplineProgressResult,
     lessonsCountResult,
     accessDatesResult,
+    catalogResult,
   ] = await Promise.all([
     supabase.from("lxp_student_xp_events").select("xp_delta").eq("student_profile_id", profileId),
     supabase
@@ -46,17 +47,16 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
       .select("level_number,title,min_total_xp")
       .eq("is_active", true)
       .order("min_total_xp", { ascending: true }),
-    supabase.from("lxp_student_discipline_progress").select("status").eq("student_profile_id", profileId),
     supabase
       .from("lxp_student_lesson_progress")
       .select("id", { count: "exact", head: true })
       .eq("student_profile_id", profileId)
       .eq("status", "completed"),
     listStudentAccessDates(profileId).catch(() => [] as string[]),
+    getEnrolledLinkedDisciplinesCatalog(profileId).catch(() => ({ items: [], total: 0 })),
   ]);
 
   if (levelsResult.error) throw levelsResult.error;
-  if (disciplineProgressResult.error) throw disciplineProgressResult.error;
   if (lessonsCountResult.error) throw lessonsCountResult.error;
 
   const accessDates = accessDatesResult;
@@ -76,8 +76,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
   const levels = (levelsResult.data ?? []) as LevelRow[];
   const { level, title: levelTitle } = resolveLevel(totalXp, levels);
 
-  const progressRows = disciplineProgressResult.data ?? [];
-  const completedTrails = progressRows.filter((row) => (row as { status: string }).status === "approved").length;
+  const completedTrails = (catalogResult.items ?? []).filter((item) => item.isComplete).length;
   const totalLessonsCompleted = lessonsCountResult.count ?? 0;
   const totalHoursStudied = Number((totalLessonsCompleted * 0.5).toFixed(1));
   const streak = computeConsecutiveLoginStreak(accessDates);

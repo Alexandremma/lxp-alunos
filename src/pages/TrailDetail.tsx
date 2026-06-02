@@ -12,7 +12,6 @@ import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useCertificateReady } from "@/hooks/queries/useCertificateReady";
-import { useContinueTrail } from "@/hooks/useContinueTrail";
 import type { TrailModule } from "@/services/trailAdapter";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,12 +27,10 @@ import { supabase } from "@/lib/supabaseClient";
 const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { resolveNextPath } = useContinueTrail();
   const { profile } = useAuth();
   const { trail, modules, lessons, disciplineCompleteXp, isLoading, error } =
     useTrailDetail(id || undefined);
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
-  const [isResolvingContinue, setIsResolvingContinue] = useState(false);
   const [isDownloadingCert, setIsDownloadingCert] = useState(false);
 
   const totalLessonsPreview = lessons.length;
@@ -132,17 +129,8 @@ const TrailDetail = () => {
     }
   };
 
-  const handleContinue = async () => {
-    try {
-      setIsResolvingContinue(true);
-      const nextPath = await resolveNextPath(trail.id);
-      navigate(nextPath);
-    } catch {
-      toast.error("Nao foi possivel abrir a proxima disciplina agora. Tente novamente.");
-      navigate(`/trails/${trail.id}`);
-    } finally {
-      setIsResolvingContinue(false);
-    }
+  const handleContinue = () => {
+    document.getElementById("trail-modules")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -196,7 +184,7 @@ const TrailDetail = () => {
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Modules */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-4" id="trail-modules">
             <h2 className="text-xl font-semibold">Módulos</h2>
             <Accordion type="single" collapsible defaultValue={modules[0]?.id} className="space-y-3">
               {modules.map((module) => (
@@ -240,13 +228,8 @@ const TrailDetail = () => {
                 <Button
                   className="w-full"
                   onClick={totalLessons === 0 ? () => navigate("/cursos-livres") : handleContinue}
-                  disabled={isResolvingContinue}
                 >
-                  {isResolvingContinue
-                    ? "Abrindo..."
-                    : totalLessons === 0
-                      ? "Voltar para Minhas Disciplinas"
-                      : "Continuar"}
+                  {totalLessons === 0 ? "Voltar para Minhas Disciplinas" : "Continuar"}
                 </Button>
               </CardContent>
             </Card>

@@ -15,6 +15,7 @@ export type ProgressTrailSummary = {
   completedLessons: number;
   totalLessons: number;
   progressPercent: number;
+  isComplete: boolean;
 };
 
 export type ProgressOverview = {
@@ -84,6 +85,7 @@ export async function getProgressOverview(profileId: string): Promise<ProgressOv
         completedLessons: progress?.completedLessons ?? 0,
         totalLessons: progress?.totalLessons ?? 0,
         progressPercent: progress?.progressPercent ?? item.progressPercent ?? 0,
+        isComplete: progress?.isComplete ?? item.isComplete ?? false,
       } satisfies ProgressTrailSummary;
     })
     .sort((a, b) => b.progressPercent - a.progressPercent);
@@ -91,7 +93,7 @@ export async function getProgressOverview(profileId: string): Promise<ProgressOv
   return {
     stats: {
       ...stats,
-      completedTrails: trails.filter((trail) => trail.progressPercent >= 100).length,
+      completedTrails: trails.filter((trail) => trail.isComplete).length,
       totalTrails: trails.length,
     },
     weeklyStudyData,

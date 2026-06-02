@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient"
 import { enrichCertificateSnapshot } from "@/services/certificateEnrichmentService"
+import { getDisciplineProgressSnapshot } from "@/services/disciplineProgressService"
 import {
   backfillIssueSnapshot,
   buildCertificateSnapshot,
@@ -123,7 +124,7 @@ export async function getCertificateDetail(params: {
   return snapshotToDetail(issue, snapshot)
 }
 
-/** Disciplina concluída (100% das aulas ou status approved). */
+/** Disciplina concluída quando 100% das aulas do catálogo estão completed (matched). */
 export async function isDisciplineCertificateReady(params: {
   profileId: string
   courseDisciplineId: string
@@ -134,13 +135,6 @@ export async function isDisciplineCertificateReady(params: {
     return true
   }
 
-  const { data, error } = await supabase
-    .from("lxp_student_discipline_progress")
-    .select("status")
-    .eq("student_profile_id", params.profileId)
-    .eq("course_discipline_id", params.courseDisciplineId)
-    .maybeSingle()
-
-  if (error) throw error
-  return data?.status === "approved"
+  const snap = await getDisciplineProgressSnapshot(params.profileId, params.courseDisciplineId)
+  return snap.isComplete
 }

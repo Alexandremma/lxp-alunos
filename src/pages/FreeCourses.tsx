@@ -24,7 +24,6 @@ import { type FreeCourse } from "@/data/mockData";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { useAuth } from "@/hooks/use-auth";
-import { useContinueTrail } from "@/hooks/useContinueTrail";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
@@ -51,15 +50,11 @@ const statusConfig = {
 const FreeCourseCard = ({
   course,
   onEnroll,
-  onContinue,
-  onViewCertificate,
-  isResolving,
+  onOpenDiscipline,
 }: {
   course: FreeCourse
   onEnroll: (id: string) => void
-  onContinue: (id: string) => void
-  onViewCertificate: (id: string) => void
-  isResolving?: boolean
+  onOpenDiscipline: (id: string) => void
 }) => {
   const CategoryIcon = categoryConfig[course.category].icon;
   const categoryLabel = course.courseName ?? categoryConfig[course.category].label;
@@ -157,28 +152,24 @@ const FreeCourseCard = ({
                 ? "secondary"
                 : "outline"
           }
-          disabled={
-            isResolving ||
-            course.status === "inactive" ||
-            course.status === "enrollment_blocked"
-          }
+          disabled={course.status === "inactive" || course.status === "enrollment_blocked"}
           onClick={() => {
             if (course.status === "available") onEnroll(course.id);
-            else if (course.status === "enrolled") onContinue(course.id);
-            else if (course.status === "completed") onViewCertificate(course.id);
+            else if (course.status === "enrolled" || course.status === "completed") {
+              onOpenDiscipline(course.id);
+            }
           }}
         >
-          {isResolving && "Abrindo..."}
-          {!isResolving && course.status === "inactive" && "Disciplina inativa"}
-          {!isResolving && course.status === "enrollment_blocked" && "Matrícula inativa"}
-          {!isResolving && course.status === "available" && "Inscrever-se"}
-          {!isResolving && course.status === "enrolled" && (
+          {course.status === "inactive" && "Disciplina inativa"}
+          {course.status === "enrollment_blocked" && "Matrícula inativa"}
+          {course.status === "available" && "Inscrever-se"}
+          {course.status === "enrolled" && (
             <>
               Continuar
               <ChevronRight className="h-4 w-4 ml-1" />
             </>
           )}
-          {!isResolving && course.status === "completed" && "Ver Certificado"}
+          {course.status === "completed" && "Concluído"}
         </Button>
       </CardContent>
     </Card>
@@ -188,9 +179,7 @@ const FreeCourseCard = ({
 const FreeCourses = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { resolveNextPath } = useContinueTrail();
   const [filter, setFilter] = useState<FilterType>("all");
-  const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
   const enrollInTrail = useEnrollInTrail();
   const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
   const { items, isLoading, isFetching, error, refetch } = useStudentCatalog({
@@ -206,7 +195,7 @@ const FreeCourses = () => {
       } else if (i.disciplineInactive) {
         status = "inactive";
       } else if (i.enrolled) {
-        status = (i.progressPercent ?? 0) >= 100 ? "completed" : "enrolled";
+        status = i.isComplete ? "completed" : "enrolled";
       }
       return {
         id: i.id,
@@ -249,6 +238,18 @@ const FreeCourses = () => {
     [allCourses],
   );
 
+  /** Carga horária efetivamente cursada (proporcional ao progresso), não a CH total da grade. */
+  const totalHorasCursadas = useMemo(() => {
+    const hours = allCourses
+      .filter((c) => c.status === "enrolled" || c.status === "completed")
+      .reduce((acc, c) => {
+        const workload = c.workload ?? 0;
+        const pct = c.status === "completed" ? 100 : c.progress;
+        return acc + workload * (pct / 100);
+      }, 0);
+    return Number(hours.toFixed(1));
+  }, [allCourses]);
+
   const handleEnroll = (id: string) => {
     enrollInTrail.mutate(id, {
       onSuccess: () => {
@@ -261,22 +262,9 @@ const FreeCourses = () => {
     });
   }
 
-  const handleContinue = async (id: string) => {
-    try {
-      setResolvingCourseId(id);
-      const nextPath = await resolveNextPath(id);
-      navigate(nextPath);
-    } catch {
-      toast.error("Nao foi possivel abrir a proxima aula. Tente novamente.");
-      navigate(`/trails/${id}`);
-    } finally {
-      setResolvingCourseId(null);
-    }
-  }
-
-  const handleViewCertificate = (id: string) => {
-    navigate(`/certificado/${id}`)
-  }
+  const handleOpenDiscipline = (id: string) => {
+    navigate(`/trails/${id}`);
+  };
 
   return (
     <DashboardLayout>
@@ -310,9 +298,7 @@ const FreeCourses = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {allCourses
-                  .filter((c) => c.status !== "available")
-                  .reduce((acc, c) => acc + (c.workload ?? 0), 0)}h
+                {totalHorasCursadas}h
               </div>
               <p className="text-xs text-muted-foreground">Horas Cursadas</p>
             </CardContent>
@@ -366,9 +352,7 @@ const FreeCourses = () => {
                 key={course.id}
                 course={course}
                 onEnroll={handleEnroll}
-                onContinue={handleContinue}
-                onViewCertificate={handleViewCertificate}
-                isResolving={resolvingCourseId === course.id}
+                onOpenDiscipline={handleOpenDiscipline}
               />
             ))}
           </div>

@@ -110,6 +110,7 @@ export interface Subject {
   disciplineInactive?: boolean;
   enrollmentInactive?: boolean;
   hasContentLink?: boolean;
+  isComplete?: boolean;
 }
 
 export interface Period {

@@ -238,15 +238,24 @@ const MyCourse = () => {
           disciplineInactive: subject.disciplineInactive,
           enrollmentInactive: subject.enrollmentInactive,
           hasContentLink: subject.hasContentLink,
+          isComplete: subject.isComplete,
         })),
       })) ?? [],
     [currentCourse?.periods],
   );
 
-  const courseName = useMemo(() => currentCourse?.name ?? "Sem curso ativo", [currentCourse?.name]);
-  const completedPeriods = useMemo(() => periods.filter((p) => p.status === "completed").length, [periods]);
-  const totalPeriods = periods.length || 1;
-  const courseProgress = Math.round((completedPeriods / totalPeriods) * 100);
+  const courseName = useMemo(
+    () => (loadingCourse ? "Carregando..." : (currentCourse?.name ?? "Sem curso ativo")),
+    [currentCourse?.name, loadingCourse],
+  );
+  const allSubjects = useMemo(() => periods.flatMap((p) => p.subjects), [periods]);
+  const completedDisciplines = useMemo(
+    () => allSubjects.filter((s) => s.isComplete).length,
+    [allSubjects],
+  );
+  const totalDisciplines = allSubjects.length;
+  const courseProgress =
+    totalDisciplines > 0 ? Math.round((completedDisciplines / totalDisciplines) * 100) : 0;
   const totalCredits = useMemo(
     () => periods.reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0),
     [periods],
@@ -259,14 +268,14 @@ const MyCourse = () => {
     [periods],
   );
   const approvedSubjects = useMemo(
-    () => periods.reduce((acc, p) => acc + p.subjects.filter((s) => s.status === "approved").length, 0),
-    [periods],
+    () => allSubjects.filter((s) => s.isComplete).length,
+    [allSubjects],
   );
   const inProgressSubjects = useMemo(
     () => periods.reduce((acc, p) => acc + p.subjects.filter((s) => s.status === "in_progress").length, 0),
     [periods],
   );
-  const totalSubjects = useMemo(() => periods.reduce((acc, p) => acc + p.subjects.length, 0), [periods]);
+  const totalSubjects = useMemo(() => allSubjects.length, [allSubjects]);
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
@@ -316,16 +325,18 @@ const MyCourse = () => {
                   )}
                 </div>
               </div>
+              {!loadingCourse && totalDisciplines > 0 && (
               <div className="flex-1 max-w-md">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Progresso do Curso</span>
                   <span className="text-sm text-muted-foreground">
-                    {completedPeriods} de {totalPeriods} períodos
+                    {completedDisciplines} de {totalDisciplines} disciplinas
                   </span>
                 </div>
                 <Progress value={courseProgress} className="h-3" />
                 <p className="text-xs text-muted-foreground mt-1 text-right">{courseProgress}% concluído</p>
               </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -349,7 +360,13 @@ const MyCourse = () => {
           </TabsList>
 
           <TabsContent value="grade" className="space-y-4">
-            {periods.length > 0 ? (
+            {loadingCourse ? (
+              <QueryStateCard
+                state="loading"
+                title="Carregando grade curricular..."
+                description="Aguarde um instante"
+              />
+            ) : periods.length > 0 ? (
               periods.map((period) => <PeriodCard key={period.id} period={period} />)
             ) : (
               <QueryStateCard

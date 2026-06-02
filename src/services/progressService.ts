@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabaseClient"
 import { ensureCertificateIssue } from "@/services/certificateIssueService"
-import { resolveExternalDisciplineId, type TrailLesson } from "@/services/trailAdapter"
+import {
+  getTrailLessons,
+  resolveExternalDisciplineId,
+  type TrailLesson,
+} from "@/services/trailAdapter"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -96,19 +100,14 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
   const courseDiscId = await resolveCourseDisciplineId(params.trailId, externalDisciplineId)
   if (!courseDiscId) return
 
-  const { count, error: countErr } = await supabase
-    .from("lxp_student_lesson_progress")
-    .select("*", { count: "exact", head: true })
-    .eq("student_profile_id", params.studentProfileId)
-    .eq("external_discipline_id", externalDisciplineId)
-    .eq("status", "completed")
-
-  if (countErr) throw countErr
-
-  const completedCount = count ?? 0
-  const total = params.totalLessons
+  const lessons = await getTrailLessons(params.trailId)
+  const progressByUnit = await fetchLessonProgressMap(params.studentProfileId, externalDisciplineId)
+  const merged = mergeTrailLessonsWithProgress(lessons, progressByUnit)
+  const completedCount = merged.filter((l) => l.status === "completed").length
+  const total = merged.length
   const allDone = total > 0 && completedCount >= total
-  const status = allDone ? "approved" : "in_progress"
+  const status =
+    completedCount === 0 ? "pending" : allDone ? "approved" : "in_progress"
 
   const { error: discErr } = await supabase.from("lxp_student_discipline_progress").upsert(
     {
@@ -116,7 +115,7 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
       course_discipline_id: courseDiscId,
       status,
       last_updated_at: now,
-      ...(allDone ? { completed_at: now } : {}),
+      completed_at: allDone ? now : null,
     },
     { onConflict: "student_profile_id,course_discipline_id" },
   )
