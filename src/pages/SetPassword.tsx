@@ -1,42 +1,25 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
-
-function getAuthErrorMessageFromHash(): string | null {
-  const hash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  if (!hash) return null;
-
-  const params = new URLSearchParams(hash);
-  const errorCode = params.get("error_code");
-  if (!errorCode) return null;
-
-  if (errorCode === "otp_expired") {
-    return "Este link expirou ou já foi usado. Solicite um novo e-mail de ativação/redefinição.";
-  }
-
-  const description = params.get("error_description");
-  if (description) return decodeURIComponent(description.replace(/\+/g, " "));
-  return "Não foi possível validar este link de acesso.";
-}
+import { usePasswordRecoverySession } from "@/lib/authRecovery";
 
 export default function SetPassword() {
   const navigate = useNavigate();
+  const recovery = usePasswordRecoverySession();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const hashError = useMemo(() => getAuthErrorMessageFromHash(), []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (recovery.status !== "ready") return;
+
     setError(null);
     setMessage(null);
 
@@ -57,6 +40,7 @@ export default function SetPassword() {
       return;
     }
 
+    await supabase.auth.signOut();
     setLoading(false);
     setMessage("Senha definida com sucesso. Você já pode entrar no LXP Alunos.");
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -68,57 +52,72 @@ export default function SetPassword() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>Definir senha</CardTitle>
-          <CardDescription>
-            Primeiro acesso ou redefinição de senha
-          </CardDescription>
+          <CardDescription>Primeiro acesso ou redefinição de senha</CardDescription>
         </CardHeader>
         <CardContent>
-          {hashError && (
-            <p className="mb-4 text-sm text-destructive" role="alert">
-              {hashError}
+          {recovery.status === "loading" && (
+            <p className="mb-4 text-sm text-muted-foreground" role="status">
+              Validando link de acesso…
             </p>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Nova senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Digite sua nova senha"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repita sua nova senha"
-                required
-              />
-            </div>
-
-            {error && (
+          {(recovery.status === "hash_error" || recovery.status === "invalid_link") && (
+            <div className="mb-4 space-y-3">
               <p className="text-sm text-destructive" role="alert">
-                {error}
+                {recovery.message}
               </p>
-            )}
-            {message && (
-              <p className="text-sm text-success" role="status">
-                {message}
-              </p>
-            )}
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/login">Voltar ao login</Link>
+              </Button>
+            </div>
+          )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar senha"}
-            </Button>
-          </form>
+          {recovery.status === "ready" && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Nova senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repita sua nova senha"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
+              {message && (
+                <p className="text-sm text-success" role="status">
+                  {message}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Salvando..." : "Salvar senha"}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
