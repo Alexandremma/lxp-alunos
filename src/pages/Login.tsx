@@ -20,11 +20,7 @@ import {
   STUDENT_BLOCKED_MESSAGE,
 } from "@/lib/authLoginMessages";
 import { signOutIfEnrollmentBlocked } from "@/hooks/useStudentAccessGate";
-
-const DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL = "https://lxp-alunos.vercel.app/definir-senha";
-const lxpAlunosSetPasswordUrl = (
-  import.meta.env.VITE_LXP_ALUNOS_SET_PASSWORD_URL ?? DEFAULT_LXP_ALUNOS_SET_PASSWORD_URL
-).trim();
+import { lxpAlunosSetPasswordUrl } from "@/lib/authRedirectUrls";
 
 export default function Login() {
   const [email, setEmail] = useState("");
