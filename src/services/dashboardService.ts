@@ -8,6 +8,8 @@ export type DashboardStats = {
   level: number;
   levelTitle: string;
   totalXp: number;
+  levelProgressPercent: number;
+  xpToNextLevel: number | null;
   completedTrails: number;
   totalLessonsCompleted: number;
   totalHoursStudied: number;
@@ -31,6 +33,39 @@ function resolveLevel(totalXp: number, levels: LevelRow[]): { level: number; tit
   }
   const first = [...levels].sort((a, b) => a.level_number - b.level_number)[0];
   return { level: first?.level_number ?? 1, title: first?.title ?? "Iniciante" };
+}
+
+function resolveLevelProgress(
+  totalXp: number,
+  levels: LevelRow[],
+  level: number,
+): Pick<DashboardStats, "levelProgressPercent" | "xpToNextLevel"> {
+  if (!levels.length) {
+    const floor = Math.max(0, Math.floor(totalXp / 100) * 100);
+    const ceiling = floor + 100;
+    const span = ceiling - floor;
+    return {
+      levelProgressPercent: span > 0 ? Math.min(100, ((totalXp - floor) / span) * 100) : 0,
+      xpToNextLevel: Math.max(0, ceiling - totalXp),
+    };
+  }
+
+  const sorted = [...levels].sort((a, b) => a.min_total_xp - b.min_total_xp);
+  const idx = Math.max(0, sorted.findIndex((row) => row.level_number === level));
+  const currentMin = sorted[idx]?.min_total_xp ?? 0;
+  const next = sorted[idx + 1];
+
+  if (!next) {
+    return { levelProgressPercent: 100, xpToNextLevel: null };
+  }
+
+  const span = next.min_total_xp - currentMin;
+  const progress = span > 0 ? ((totalXp - currentMin) / span) * 100 : 0;
+
+  return {
+    levelProgressPercent: Math.min(100, Math.max(0, progress)),
+    xpToNextLevel: Math.max(0, next.min_total_xp - totalXp),
+  };
 }
 
 export async function getDashboardStats(profileId: string): Promise<DashboardStats> {
@@ -75,6 +110,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
 
   const levels = (levelsResult.data ?? []) as LevelRow[];
   const { level, title: levelTitle } = resolveLevel(totalXp, levels);
+  const { levelProgressPercent, xpToNextLevel } = resolveLevelProgress(totalXp, levels, level);
 
   const completedTrails = (catalogResult.items ?? []).filter((item) => item.isComplete).length;
   const totalLessonsCompleted = lessonsCountResult.count ?? 0;
@@ -86,6 +122,8 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
     level,
     levelTitle,
     totalXp,
+    levelProgressPercent,
+    xpToNextLevel,
     completedTrails,
     totalLessonsCompleted,
     totalHoursStudied,

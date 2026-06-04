@@ -1,4 +1,4 @@
-import { Bell, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -9,10 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { useTheme } from "next-themes"
-import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { useMemo } from "react"
+import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import { useLogout } from "@/hooks/use-logout"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -32,8 +30,6 @@ interface TopBarProps {
 }
 
 const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
   const { logout } = useLogout()
   const { profile, user } = useAuth()
 
@@ -57,10 +53,6 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
     [menuName, menuEmail],
   )
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   return (
     <header className="h-16 border-b border-border bg-card px-4 flex items-center justify-between gap-4">
       <Button
@@ -78,57 +70,7 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
       </Button>
 
       <div className="flex items-center gap-2">
-        {/* Theme Toggle */}
-        {mounted && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <Badge
-                variant="destructive"
-                size="sm"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0"
-              >
-                3
-              </Badge>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium">Novo conteúdo disponível</span>
-              <span className="text-xs text-muted-foreground">
-                Aula 6 de Metodologia Científica liberada
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium">Prazo se aproximando</span>
-              <span className="text-xs text-muted-foreground">
-                Entrega do projeto em 3 dias
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="font-medium">Certificado disponível</span>
-              <span className="text-xs text-muted-foreground">
-                Você completou o curso de Comunicação
-              </span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ThemeToggle />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -150,12 +92,6 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/portfolio?tab=certificados" className="cursor-pointer">
-                Meus Certificados
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"

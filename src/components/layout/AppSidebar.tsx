@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { NavLink } from "@/components/NavLink"
 import { Separator } from "@/components/ui/separator"
 import { useLogout } from "@/hooks/use-logout"
+import { SidebarStudentGamification } from "@/components/layout/SidebarStudentGamification"
 
 interface NavItem {
   title: string
@@ -89,41 +90,47 @@ const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-thin">
-        {navSections.map((section, sectionIndex) => (
-          <div key={section.label}>
-            {!collapsed && (
-              <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {section.label}
-              </p>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.url}
-                  to={item.url}
-                  end={item.url === "/"}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                    collapsed && "justify-center px-2"
-                  )}
-                  activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              ))}
+      <nav className="flex flex-1 flex-col min-h-0 p-3">
+        <div className="flex-1 space-y-4 overflow-y-auto scrollbar-thin">
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.label}>
+              {!collapsed && (
+                <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.url}
+                    to={item.url}
+                    end={item.url === "/"}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                      "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                      collapsed && "justify-center px-2"
+                    )}
+                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </NavLink>
+                ))}
+              </div>
+              {sectionIndex < navSections.length - 1 && (
+                <Separator className="mt-4 bg-sidebar-border" />
+              )}
             </div>
-            {sectionIndex < navSections.length - 1 && (
-              <Separator className="mt-4 bg-sidebar-border" />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
+
+        <div className={cn("shrink-0 pt-3", collapsed ? "flex justify-center" : "")}>
+          <SidebarStudentGamification collapsed={collapsed} />
+        </div>
       </nav>
 
-      {/* Bottom Section */}
-      <div className="p-3 space-y-1 border-t border-sidebar-border">
+      {/* Logout */}
+      <div className="p-3 border-t border-sidebar-border shrink-0">
         <button
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full",
