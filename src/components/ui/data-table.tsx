@@ -89,9 +89,14 @@ function DataTable<T extends { id?: string | number }>({
 
   const getValue = (item: T, key: keyof T | string) => {
     const keys = (key as string).split(".")
-    let value: any = item
+    let value: unknown = item
     for (const k of keys) {
-      value = value?.[k]
+      if (value != null && typeof value === "object" && k in value) {
+        value = (value as Record<string, unknown>)[k]
+      } else {
+        value = undefined
+        break
+      }
     }
     return value
   }

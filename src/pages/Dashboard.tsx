@@ -48,6 +48,8 @@ const Dashboard = () => {
     level: 1,
     levelTitle: "Iniciante",
     totalXp: 0,
+    levelProgressPercent: 0,
+    xpToNextLevel: 100,
     completedTrails: 0,
     totalLessonsCompleted: 0,
     totalHoursStudied: 0,

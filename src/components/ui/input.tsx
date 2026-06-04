@@ -25,7 +25,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = "Input";
 
 // Search Input Component
-export interface SearchInputProps extends React.ComponentProps<"input"> {}
+export type SearchInputProps = React.ComponentProps<"input">
 
 const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   ({ className, ...props }, ref) => {
@@ -48,7 +48,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 SearchInput.displayName = "SearchInput";
 
 // Password Input Component
-export interface PasswordInputProps extends Omit<React.ComponentProps<"input">, "type"> {}
+export type PasswordInputProps = Omit<React.ComponentProps<"input">, "type">
 
 const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ className, ...props }, ref) => {
