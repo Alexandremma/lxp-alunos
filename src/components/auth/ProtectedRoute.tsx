@@ -8,6 +8,11 @@ type ProtectedRouteProps = {
   requiredRole?: "student" | "admin" | "staff" | string;
 };
 
+function resolveWrongRoleRedirect(role: string | undefined): string {
+  if (role === "admin") return "/admin/cursos";
+  return "/login";
+}
+
 export const ProtectedRoute = ({ element, requiredRole }: ProtectedRouteProps) => {
   const { session, profile, loading } = useAuth();
   const { checking: checkingAccess } = useStudentAccessGate(
@@ -27,10 +32,18 @@ export const ProtectedRoute = ({ element, requiredRole }: ProtectedRouteProps) =
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && (!profile || profile.role !== requiredRole)) {
-    return <Navigate to="/" replace />;
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
+        <p>Não foi possível carregar seu perfil.</p>
+        <p>Faça logout e entre novamente. Se o problema persistir, contate o suporte.</p>
+      </div>
+    );
+  }
+
+  if (requiredRole && profile.role !== requiredRole) {
+    return <Navigate to={resolveWrongRoleRedirect(profile.role)} replace />;
   }
 
   return element;
 };
-

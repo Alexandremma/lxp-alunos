@@ -37,12 +37,22 @@ function snapshotToDetail(
 ): CertificateDetail {
   const signatures = (snapshot.signatures ?? [])
     .slice()
-    .sort((a, b) => a.slot - b.slot)
-    .map((s) => ({
-      signerName: s.signer_name,
-      signerTitle: s.signer_title,
-      imageUrl: s.image_url,
-    }))
+    .sort((a, b) => {
+      const slotA = typeof a.slot === "number" ? a.slot : Number(a.slot) || 0
+      const slotB = typeof b.slot === "number" ? b.slot : Number(b.slot) || 0
+      return slotA - slotB
+    })
+    .map((s) => {
+      const entry = s as Record<string, unknown>
+      return {
+        signerName: String(entry.signer_name ?? entry.signerName ?? ""),
+        signerTitle: String(entry.signer_title ?? entry.signerTitle ?? ""),
+        imageUrl:
+          (entry.image_url as string | null | undefined) ??
+          (entry.imageUrl as string | null | undefined) ??
+          null,
+      }
+    })
 
   const validationPath = `/validar-certificado?code=${encodeURIComponent(issue.validation_code)}`
 

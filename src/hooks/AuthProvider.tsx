@@ -1,44 +1,18 @@
-import {
-  PropsWithChildren,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { PropsWithChildren, useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/consts/queryKeys";
+import { AuthContext, type LxpProfile } from "@/hooks/auth-context";
+import { shouldRefetchAuthProfile } from "@/hooks/auth-events";
+import { supabase } from "@/lib/supabaseClient";
 import { recordStudentDailyAccess } from "@/services/studentAccessService";
-
-type ProfileRole = "student" | "admin" | "staff" | string;
-
-export type LxpProfile = {
-  id: string;
-  user_id: string;
-  name: string | null;
-  email: string | null;
-  role: ProfileRole;
-  created_at: string;
-  updated_at: string;
-};
-
-type AuthContextValue = {
-  user: User | null;
-  session: Session | null;
-  profile: LxpProfile | null;
-  loading: boolean;
-};
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function trackStudentDailyAccess(profile: LxpProfile | null, invalidateStats?: (id: string) => void) {
   if (!profile || profile.role !== "student") return;
   void recordStudentDailyAccess(profile.id).then(() => invalidateStats?.(profile.id));
 }
 
-export const AuthProvider = ({ children }: PropsWithChildren) => {
+export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const invalidateGamificationQueries = useCallback((profileId: string) => {
@@ -89,13 +63,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
       if (!nextSession?.user) {
         setProfile(null);
         setLoading(false);
+        queryClient.clear();
+        return;
+      }
+
+      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || !shouldRefetchAuthProfile(event)) {
         return;
       }
 
@@ -127,9 +106,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [invalidateGamificationQueries]);
+  }, [invalidateGamificationQueries, queryClient]);
 
-  const value: AuthContextValue = {
+  const value = {
     user,
     session,
     profile,
@@ -137,13 +116,4 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth deve ser usado dentro de AuthProvider");
-  }
-  return ctx;
 }
-
