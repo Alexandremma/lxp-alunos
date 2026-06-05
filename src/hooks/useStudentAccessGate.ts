@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabaseClient"
 import {
   isStudentEnrollmentBlocked,
@@ -9,14 +9,16 @@ import {
 
 /**
  * Redireciona aluno com todas as matrículas bloqueadas para o login.
+ * Roda uma vez por perfil na sessão (não bloqueia cada troca de rota).
  */
 export function useStudentAccessGate(profileId: string | undefined, enabled: boolean) {
   const navigate = useNavigate()
-  const location = useLocation()
   const [checking, setChecking] = useState(false)
+  const checkedProfileRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!enabled || !profileId) return
+    if (checkedProfileRef.current === profileId) return
 
     let cancelled = false
     setChecking(true)
@@ -33,14 +35,17 @@ export function useStudentAccessGate(profileId: string | undefined, enabled: boo
       } catch (err) {
         console.warn("[useStudentAccessGate]", err)
       } finally {
-        if (!cancelled) setChecking(false)
+        if (!cancelled) {
+          setChecking(false)
+          checkedProfileRef.current = profileId
+        }
       }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [enabled, profileId, navigate, location.pathname])
+  }, [enabled, profileId, navigate])
 
   return { checking }
 }
