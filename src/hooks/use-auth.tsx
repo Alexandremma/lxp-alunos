@@ -1,6 +1,7 @@
 import {
   PropsWithChildren,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -40,11 +41,11 @@ function trackStudentDailyAccess(profile: LxpProfile | null, invalidateStats?: (
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
-  const invalidateGamificationQueries = (profileId: string) => {
+  const invalidateGamificationQueries = useCallback((profileId: string) => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profileId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.evidences(profileId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profileId) });
-  };
+  }, [queryClient]);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<LxpProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,12 +100,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
 
       setLoading(true);
-      supabase
-        .from("lxp_profiles")
-        .select("*")
-        .eq("user_id", nextSession.user.id)
-        .maybeSingle()
-        .then(({ data, error }) => {
+      void (async () => {
+        try {
+          const { data, error } = await supabase
+            .from("lxp_profiles")
+            .select("*")
+            .eq("user_id", nextSession.user.id)
+            .maybeSingle();
+
           if (error) {
             console.warn(
               "[use-auth] Erro ao buscar lxp_profiles (onAuthStateChange):",
@@ -114,15 +117,17 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           const nextProfile = (data as LxpProfile) ?? null;
           setProfile(nextProfile);
           trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
-        })
-        .finally(() => setLoading(false));
+        } finally {
+          setLoading(false);
+        }
+      })();
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [invalidateGamificationQueries]);
 
   const value: AuthContextValue = {
     user,

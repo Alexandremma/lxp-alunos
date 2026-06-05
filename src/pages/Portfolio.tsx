@@ -84,7 +84,7 @@ const Portfolio = () => {
     [syncTabToUrl],
   );
 
-  const evidences = data ?? [];
+  const evidences = useMemo(() => data ?? [], [data]);
 
   const filtered = useMemo(() => evidences.filter((e) => e.type === filter), [evidences, filter]);
 
