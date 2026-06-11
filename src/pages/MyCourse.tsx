@@ -351,13 +351,6 @@ const MyCourse = () => {
               </div>
               {!loadingCourse && totalDisciplines > 0 && (
                 <div className="flex flex-col gap-3 flex-1 max-w-md w-full">
-                {courseId && courseSummaries && courseSummaries.length > 1 && (
-                  <CourseSwitcher
-                    courses={courseSummaries}
-                    currentCourseId={courseId}
-                    className="w-full"
-                  />
-                )}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">Progresso do Curso</span>
