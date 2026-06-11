@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient"
-import { computeDisciplineProgressBatch, reconcileDisciplineProgress } from "@/services/disciplineProgressService"
+import { fetchDisciplineProgressFromDb } from "@/services/disciplineProgressService"
 
 export type LibraryContentType = "discipline"
 
@@ -153,8 +153,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
   const linkByDisc = new Map((links ?? []).map((l) => [l.course_discipline_id, l]))
 
   const linkedDiscIds = (disciplines ?? []).filter((d) => linkByDisc.has(d.id)).map((d) => d.id)
-  await reconcileDisciplineProgress(profileId, linkedDiscIds)
-  const progressByDisc = await computeDisciplineProgressBatch(profileId, linkedDiscIds)
+  const progressByDisc = await fetchDisciplineProgressFromDb(profileId, linkedDiscIds)
 
   const items: LibraryItem[] = []
   for (const d of disciplines ?? []) {

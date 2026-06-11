@@ -10,6 +10,8 @@ import { XpRulesRealtimeSync } from "@/components/gamification/XpRulesRealtimeSy
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import MyCourse from "./pages/MyCourse";
+import MyCourses from "./pages/MyCourses";
+import MyCourseRedirect from "./pages/MyCourseRedirect";
 import FreeCourses from "./pages/FreeCourses";
 import TrailDetail from "./pages/TrailDetail";
 import Lesson from "./pages/Lesson";
@@ -56,7 +58,15 @@ const App = () => (
                 element={<ProtectedRoute element={<Dashboard />} requiredRole="student" />}
               />
               <Route
+                path="/meus-cursos"
+                element={<ProtectedRoute element={<MyCourses />} requiredRole="student" />}
+              />
+              <Route
                 path="/meu-curso"
+                element={<ProtectedRoute element={<MyCourseRedirect />} requiredRole="student" />}
+              />
+              <Route
+                path="/meu-curso/:courseId"
                 element={<ProtectedRoute element={<MyCourse />} requiredRole="student" />}
               />
               <Route

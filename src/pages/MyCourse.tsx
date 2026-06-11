@@ -1,16 +1,16 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  CheckCircle, 
-  Clock, 
-  BookOpen, 
-  ChevronDown, 
+import {
+  CheckCircle,
+  Clock,
+  BookOpen,
+  ChevronDown,
   ChevronRight,
   GraduationCap,
   Calendar,
@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetMyCourseOverview } from "@/hooks/queries/useGetMyCourseOverview";
+import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
+import { CourseSwitcher } from "@/components/my-course/CourseSwitcher";
+import { setLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 
 const statusConfig = {
@@ -211,13 +214,25 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
 
 const MyCourse = () => {
   const navigate = useNavigate();
+  const { courseId } = useParams<{ courseId: string }>();
   const { profile } = useAuth();
+  const { data: courseSummaries } = useListMyCourseSummaries(profile?.id);
   const {
     data: currentCourse,
     isLoading: loadingCourse,
     error: courseError,
     refetch: refetchCourse,
-  } = useGetMyCourseOverview(profile?.id);
+  } = useGetMyCourseOverview(profile?.id, courseId);
+
+  useEffect(() => {
+    if (courseId) setLastCourseId(courseId);
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!courseId && profile?.id) {
+      navigate("/meu-curso", { replace: true });
+    }
+  }, [courseId, profile?.id, navigate]);
 
   const periods = useMemo<Period[]>(
     () =>
@@ -282,6 +297,15 @@ const MyCourse = () => {
         <PageHeader
           title="Meu Curso"
           description="Visualize sua grade curricular completa e acompanhe seu progresso acadêmico."
+          actions={
+            courseId && courseSummaries && courseSummaries.length > 1 ? (
+              <CourseSwitcher
+                courses={courseSummaries}
+                currentCourseId={courseId}
+                className="w-full sm:w-[280px]"
+              />
+            ) : undefined
+          }
         />
         {courseError && (
           <QueryStateCard
@@ -326,15 +350,24 @@ const MyCourse = () => {
                 </div>
               </div>
               {!loadingCourse && totalDisciplines > 0 && (
-              <div className="flex-1 max-w-md">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Progresso do Curso</span>
-                  <span className="text-sm text-muted-foreground">
-                    {completedDisciplines} de {totalDisciplines} disciplinas
-                  </span>
+                <div className="flex flex-col gap-3 flex-1 max-w-md w-full">
+                {courseId && courseSummaries && courseSummaries.length > 1 && (
+                  <CourseSwitcher
+                    courses={courseSummaries}
+                    currentCourseId={courseId}
+                    className="w-full"
+                  />
+                )}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Progresso do Curso</span>
+                    <span className="text-sm text-muted-foreground">
+                      {completedDisciplines} de {totalDisciplines} disciplinas
+                    </span>
+                  </div>
+                  <Progress value={courseProgress} className="h-3" />
+                  <p className="text-xs text-muted-foreground mt-1 text-right">{courseProgress}% concluído</p>
                 </div>
-                <Progress value={courseProgress} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1 text-right">{courseProgress}% concluído</p>
               </div>
               )}
             </div>

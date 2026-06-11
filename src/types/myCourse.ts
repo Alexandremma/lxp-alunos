@@ -34,3 +34,14 @@ export type MyCourseData = {
   created_at: string;
   periods: MyCoursePeriod[];
 };
+
+export type MyCourseSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  totalDisciplines: number;
+  completedDisciplines: number;
+  progressPercent: number;
+};

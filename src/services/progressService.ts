@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient"
 import { ensureCertificateIssue } from "@/services/certificateIssueService"
 import {
+  getDisciplineLessonAccessMode,
   getTrailLessons,
   resolveExternalDisciplineId,
   type TrailLesson,
@@ -100,9 +101,12 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
   const courseDiscId = await resolveCourseDisciplineId(params.trailId, externalDisciplineId)
   if (!courseDiscId) return
 
-  const lessons = await getTrailLessons(params.trailId)
+  const [lessons, accessMode] = await Promise.all([
+    getTrailLessons(params.trailId),
+    getDisciplineLessonAccessMode(params.trailId),
+  ])
   const progressByUnit = await fetchLessonProgressMap(params.studentProfileId, externalDisciplineId)
-  const merged = mergeTrailLessonsWithProgress(lessons, progressByUnit)
+  const merged = mergeTrailLessonsWithProgress(lessons, progressByUnit, accessMode)
   const completedCount = merged.filter((l) => l.status === "completed").length
   const total = merged.length
   const allDone = total > 0 && completedCount >= total
@@ -151,9 +155,12 @@ export async function fetchLessonProgressMap(
   return map
 }
 
+export type LessonAccessMode = "free" | "sequential"
+
 export function mergeTrailLessonsWithProgress(
   lessons: TrailLesson[],
   progressByUnitId: Record<string, LessonProgressStatus>,
+  accessMode: LessonAccessMode = "free",
 ): TrailLesson[] {
   let assignedFirstIncomplete = false
   return lessons.map((lesson) => {
@@ -164,6 +171,9 @@ export function mergeTrailLessonsWithProgress(
     if (!assignedFirstIncomplete) {
       assignedFirstIncomplete = true
       return { ...lesson, status: "in_progress" }
+    }
+    if (accessMode === "sequential") {
+      return { ...lesson, status: "locked" }
     }
     return { ...lesson, status: "available" }
   })

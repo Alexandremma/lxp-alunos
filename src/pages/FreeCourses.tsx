@@ -2,133 +2,138 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { EmptyLearning } from "@/components/states/EmptyLearning";
-import { 
-  Languages, 
-  Lightbulb, 
-  Award, 
-  BookMarked,
+import {
   Clock,
   Users,
   ChevronRight,
   GraduationCap,
   BookOpen,
+  BookMarked,
+  ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type FreeCourse } from "@/data/mockData";
-import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
+import { useStudentCatalog, useStudentCatalogStats } from "@/hooks/queries/useStudentCatalog";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  CourseCategory,
+  DisciplineProgressStatus,
+  StudentDisciplineCatalogItem,
+} from "@/types/studentCatalog";
 
-type FilterType = "all" | "course" | "language" | "workshop" | "certification" | "extension";
+const PAGE_SIZE = 15;
 
-const categoryConfig = {
-  course: { label: "Graduação", icon: GraduationCap, color: "bg-secondary/10 text-secondary border-secondary/20" },
-  language: { label: "Idiomas", icon: Languages, color: "bg-info/10 text-info border-info/20" },
-  workshop: { label: "Workshops", icon: Lightbulb, color: "bg-warning/10 text-warning border-warning/20" },
-  certification: { label: "Certificações", icon: Award, color: "bg-success/10 text-success border-success/20" },
-  extension: { label: "Extensão", icon: BookMarked, color: "bg-primary/10 text-primary border-primary/20" },
+const categoryConfig: Record<
+  CourseCategory,
+  { label: string; icon: typeof GraduationCap; color: string }
+> = {
+  graduation: {
+    label: "Graduação",
+    icon: GraduationCap,
+    color: "bg-secondary/10 text-secondary border-secondary/20",
+  },
+  postgraduate: {
+    label: "Pós-Graduação",
+    icon: GraduationCap,
+    color: "bg-info/10 text-info border-info/20",
+  },
+  extension: {
+    label: "Extensão",
+    icon: BookMarked,
+    color: "bg-primary/10 text-primary border-primary/20",
+  },
+  free_course: {
+    label: "Curso livre",
+    icon: BookOpen,
+    color: "bg-warning/10 text-warning border-warning/20",
+  },
 };
 
-const statusConfig = {
+const statusConfig: Record<
+  DisciplineProgressStatus,
+  { label: string; color: string }
+> = {
   available: { label: "Disponível", color: "bg-muted text-muted-foreground" },
-  enrolled: { label: "Matriculado", color: "bg-primary/10 text-primary" },
+  enrolled: { label: "Cursando", color: "bg-primary/10 text-primary" },
   completed: { label: "Concluído", color: "bg-success/10 text-success" },
-  inactive: { label: "Disciplina inativa", color: "bg-warning/10 text-warning border-warning/30" },
-  enrollment_blocked: { label: "Matrícula inativa", color: "bg-destructive/10 text-destructive" },
+  discipline_inactive: { label: "Disciplina inativa", color: "bg-warning/10 text-warning border-warning/30" },
+  enrollment_inactive: { label: "Matrícula inativa", color: "bg-destructive/10 text-destructive" },
 };
 
-const FreeCourseCard = ({
-  course,
+const DisciplineCard = ({
+  item,
   onEnroll,
   onOpenDiscipline,
 }: {
-  course: FreeCourse
-  onEnroll: (id: string) => void
-  onOpenDiscipline: (id: string) => void
+  item: StudentDisciplineCatalogItem;
+  onEnroll: (id: string) => void;
+  onOpenDiscipline: (id: string) => void;
 }) => {
-  const CategoryIcon = categoryConfig[course.category].icon;
-  const categoryLabel = course.courseName ?? categoryConfig[course.category].label;
-  const showCourseNameTooltip = Boolean(course.courseName?.trim());
+  const category = categoryConfig[item.courseCategory];
+  const CategoryIcon = category.icon;
+  const status = statusConfig[item.progressStatus];
   const showProgress =
-    course.status === "enrolled" ||
-    course.status === "completed" ||
-    course.status === "inactive" ||
-    course.status === "enrollment_blocked";
+    item.progressStatus === "enrolled" ||
+    item.progressStatus === "completed" ||
+    item.progressStatus === "discipline_inactive" ||
+    item.progressStatus === "enrollment_inactive";
+
+  const isBlocked =
+    item.progressStatus === "discipline_inactive" ||
+    item.progressStatus === "enrollment_inactive";
 
   return (
     <Card className="overflow-hidden card-hover group">
-      <div className="relative h-40">
-        <img
-          src={course.thumbnail}
-          alt={course.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center">
+        <CategoryIcon className="h-12 w-12 text-primary/40" />
         <div className="absolute top-3 left-3 z-10 max-w-[calc(100%-8.5rem)] min-w-0">
-          {showCourseNameTooltip ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "backdrop-blur-sm max-w-full min-w-0 gap-1",
-                    categoryConfig[course.category].color,
-                  )}
-                >
-                  <CategoryIcon className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{categoryLabel}</span>
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs text-left">
-                {categoryLabel}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Badge
-              variant="outline"
-              className={cn("backdrop-blur-sm gap-1", categoryConfig[course.category].color)}
-            >
-              <CategoryIcon className="h-3 w-3 shrink-0" />
-              <span>{categoryLabel}</span>
-            </Badge>
-          )}
+          <Badge variant="outline" className={cn("backdrop-blur-sm gap-1", category.color)}>
+            <CategoryIcon className="h-3 w-3 shrink-0" />
+            <span className="truncate">{category.label}</span>
+          </Badge>
         </div>
         <div className="absolute top-3 right-3 z-10 shrink-0">
-          <Badge className={cn("shrink-0", statusConfig[course.status].color)}>
-            {statusConfig[course.status].label}
-          </Badge>
+          <Badge className={cn("shrink-0", status.color)}>{status.label}</Badge>
         </div>
       </div>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base line-clamp-1">{course.title}</CardTitle>
+        <CardTitle className="text-base line-clamp-1">{item.name}</CardTitle>
+        <p className="text-xs text-muted-foreground line-clamp-1">{item.courseName}</p>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-          {course.workload > 0 && (
+          {(item.workloadHours ?? 0) > 0 && (
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4 shrink-0" />
-              {course.workload}h
+              {item.workloadHours}h
             </span>
           )}
-          {(course.credits ?? 0) > 0 && (
+          {(item.credits ?? 0) > 0 && (
             <span className="flex items-center gap-1">
               <BookOpen className="h-4 w-4 shrink-0" />
-              {course.credits} créditos
+              {item.credits} créditos
             </span>
           )}
-          {course.instructor && course.instructor !== "—" && (
+          {item.professor && item.professor !== "—" && (
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4 shrink-0" />
-              {course.instructor}
+              {item.professor}
             </span>
           )}
         </div>
@@ -137,39 +142,39 @@ const FreeCourseCard = ({
           <div className="mb-4 min-h-[2.25rem]">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">Progresso</span>
-              <span className="font-medium">{course.progress ?? 0}%</span>
+              <span className="font-medium">{item.progressPercent}%</span>
             </div>
-            <Progress value={course.progress ?? 0} className="h-2" />
+            <Progress value={item.progressPercent} className="h-2" />
           </div>
         )}
 
         <Button
           className="w-full"
           variant={
-            course.status === "available"
+            item.canSelfEnroll
               ? "default"
-              : course.status === "enrolled"
+              : item.progressStatus === "enrolled"
                 ? "secondary"
                 : "outline"
           }
-          disabled={course.status === "inactive" || course.status === "enrollment_blocked"}
+          disabled={isBlocked}
           onClick={() => {
-            if (course.status === "available") onEnroll(course.id);
-            else if (course.status === "enrolled" || course.status === "completed") {
-              onOpenDiscipline(course.id);
+            if (item.canSelfEnroll) onEnroll(item.id);
+            else if (item.progressStatus === "enrolled" || item.progressStatus === "completed") {
+              onOpenDiscipline(item.id);
             }
           }}
         >
-          {course.status === "inactive" && "Disciplina inativa"}
-          {course.status === "enrollment_blocked" && "Matrícula inativa"}
-          {course.status === "available" && "Inscrever-se"}
-          {course.status === "enrolled" && (
+          {item.progressStatus === "discipline_inactive" && "Disciplina inativa"}
+          {item.progressStatus === "enrollment_inactive" && "Matrícula inativa"}
+          {item.canSelfEnroll && "Inscrever-se"}
+          {item.progressStatus === "enrolled" && (
             <>
               Continuar
               <ChevronRight className="h-4 w-4 ml-1" />
             </>
           )}
-          {course.status === "completed" && "Concluído"}
+          {item.progressStatus === "completed" && "Concluído"}
         </Button>
       </CardContent>
     </Card>
@@ -179,88 +184,55 @@ const FreeCourseCard = ({
 const FreeCourses = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [search, setSearch] = useState("");
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState<CourseCategory | "all">("all");
+  const [progressFilter, setProgressFilter] = useState<DisciplineProgressStatus | "all">("all");
+  const [page, setPage] = useState(1);
+
   const enrollInTrail = useEnrollInTrail();
   const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
-  const { items, isLoading, isFetching, error, refetch } = useStudentCatalog({
-    page: 1,
-    pageSize: 24,
+  const { data: stats } = useStudentCatalogStats();
+  const { items, total, isLoading, isFetching, error, refetch } = useStudentCatalog({
+    q: search,
+    courseId: courseFilter === "all" ? undefined : courseFilter,
+    category: categoryFilter,
+    progressStatus: progressFilter,
+    page,
+    pageSize: PAGE_SIZE,
   });
 
-  const allCourses: FreeCourse[] = useMemo(() => {
-    return items.map((i) => {
-      let status: FreeCourse["status"] = "available";
-      if (i.enrollmentInactive) {
-        status = "enrollment_blocked";
-      } else if (i.disciplineInactive) {
-        status = "inactive";
-      } else if (i.enrolled) {
-        status = i.isComplete ? "completed" : "enrolled";
-      }
-      return {
-        id: i.id,
-        title: i.name,
-        description: "",
-        thumbnail: "/placeholder.svg",
-        category: (i.category ?? "extension") as FreeCourse["category"],
-        status,
-        progress: i.progressPercent ?? 0,
-        workload: i.workloadHours ?? 0,
-        credits: i.credits ?? 0,
-        instructor: i.professor?.trim() || "—",
-        courseName: i.courseName,
-      };
-    });
-  }, [items]);
+  const enrolledCourses = enrolledCoursesData ?? [];
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const graduationTabLabel = useMemo(() => {
-    const enrolled = enrolledCoursesData ?? [];
-    if (enrolled.length === 1) return enrolled[0].name;
-    if (enrolled.length > 1) return "Meus cursos";
-    return categoryConfig.course.label;
-  }, [enrolledCoursesData]);
-
-  /** Só a grade respeita a aba; contagens e KPIs usam `allCourses`. */
-  const filteredCourses = useMemo(() => {
-    if (filter === "all") return allCourses;
-    return allCourses.filter((c) => c.category === filter);
-  }, [allCourses, filter]);
-
-  const counts = useMemo(
-    () => ({
-      all: allCourses.length,
-      course: allCourses.filter((c) => c.category === "course").length,
-      language: allCourses.filter((c) => c.category === "language").length,
-      workshop: allCourses.filter((c) => c.category === "workshop").length,
-      certification: allCourses.filter((c) => c.category === "certification").length,
-      extension: allCourses.filter((c) => c.category === "extension").length,
-    }),
-    [allCourses],
+  const hasActiveFilters = useMemo(
+    () =>
+      search.trim().length > 0 ||
+      courseFilter !== "all" ||
+      categoryFilter !== "all" ||
+      progressFilter !== "all",
+    [search, courseFilter, categoryFilter, progressFilter],
   );
 
-  /** Carga horária efetivamente cursada (proporcional ao progresso), não a CH total da grade. */
-  const totalHorasCursadas = useMemo(() => {
-    const hours = allCourses
-      .filter((c) => c.status === "enrolled" || c.status === "completed")
-      .reduce((acc, c) => {
-        const workload = c.workload ?? 0;
-        const pct = c.status === "completed" ? 100 : c.progress;
-        return acc + workload * (pct / 100);
-      }, 0);
-    return Number(hours.toFixed(1));
-  }, [allCourses]);
+  const clearFilters = () => {
+    setSearch("");
+    setCourseFilter("all");
+    setCategoryFilter("all");
+    setProgressFilter("all");
+    setPage(1);
+  };
 
   const handleEnroll = (id: string) => {
     enrollInTrail.mutate(id, {
       onSuccess: () => {
-        toast.success("Matricula realizada com sucesso.");
+        toast.success("Matrícula realizada com sucesso.");
       },
       onError: (err) => {
-        const message = err instanceof Error ? err.message : "Nao foi possivel concluir a matricula.";
+        const message = err instanceof Error ? err.message : "Não foi possível concluir a matrícula.";
         toast.error(message);
       },
     });
-  }
+  };
 
   const handleOpenDiscipline = (id: string) => {
     navigate(`/trails/${id}`);
@@ -271,64 +243,112 @@ const FreeCourses = () => {
       <div className="space-y-6 animate-fade-up">
         <PageHeader
           title="Minhas Disciplinas"
-          description="Acompanhe e continue suas disciplinas, organizadas por tipo de curso."
+          description="Acompanhe e continue suas disciplinas. Filtre por curso, categoria ou progresso."
         />
         {isFetching && !isLoading && (
           <p className="text-xs text-muted-foreground">Atualizando catálogo...</p>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">
-                {allCourses.filter((c) => c.status === "enrolled").length}
-              </div>
+              <div className="text-2xl font-bold text-primary">{stats?.enrolled ?? 0}</div>
               <p className="text-xs text-muted-foreground">Cursando</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-success">
-                {allCourses.filter((c) => c.status === "completed").length}
-              </div>
+              <div className="text-2xl font-bold text-success">{stats?.completed ?? 0}</div>
               <p className="text-xs text-muted-foreground">Concluídos</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                {totalHorasCursadas}h
-              </div>
+              <div className="text-2xl font-bold">{stats?.hoursStudied ?? 0}h</div>
               <p className="text-xs text-muted-foreground">Horas Cursadas</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">
-                {allCourses.filter((c) => c.status === "available").length}
-              </div>
+              <div className="text-2xl font-bold">{stats?.available ?? 0}</div>
               <p className="text-xs text-muted-foreground">Disponíveis</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-            <TabsTrigger value="course">
-              <GraduationCap className="h-3.5 w-3.5 mr-1" />
-              {graduationTabLabel} ({counts.course})
-            </TabsTrigger>
-            <TabsTrigger value="language">Idiomas ({counts.language})</TabsTrigger>
-            <TabsTrigger value="workshop">Workshops ({counts.workshop})</TabsTrigger>
-            <TabsTrigger value="certification">Certificações ({counts.certification})</TabsTrigger>
-            <TabsTrigger value="extension">Extensão ({counts.extension})</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-col md:flex-row gap-3">
+          <Input
+            placeholder="Buscar disciplina..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="md:flex-1"
+          />
+          <Select
+            value={courseFilter}
+            onValueChange={(v) => {
+              setCourseFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full md:w-[220px]">
+              <SelectValue placeholder="Curso" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os cursos</SelectItem>
+              {enrolledCourses.map((course) => (
+                <SelectItem key={course.id} value={course.id}>
+                  {course.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={categoryFilter}
+            onValueChange={(v) => {
+              setCategoryFilter(v as CourseCategory | "all");
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              <SelectItem value="graduation">Graduação</SelectItem>
+              <SelectItem value="postgraduate">Pós-Graduação</SelectItem>
+              <SelectItem value="extension">Extensão</SelectItem>
+              <SelectItem value="free_course">Curso livre</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={progressFilter}
+            onValueChange={(v) => {
+              setProgressFilter(v as DisciplineProgressStatus | "all");
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Progresso" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="available">Disponível</SelectItem>
+              <SelectItem value="enrolled">Cursando</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
+              <SelectItem value="discipline_inactive">Disciplina inativa</SelectItem>
+              <SelectItem value="enrollment_inactive">Matrícula inativa</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button variant="outline" onClick={clearFilters}>
+              Limpar
+            </Button>
+          )}
+        </div>
 
-        {/* Courses Grid */}
         {isLoading ? (
           <QueryStateCard
             state="loading"
@@ -345,22 +365,49 @@ const FreeCourses = () => {
             onAction={() => void refetch()}
             icon={BookMarked}
           />
-        ) : filteredCourses.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map((course) => (
-              <FreeCourseCard
-                key={course.id}
-                course={course}
-                onEnroll={handleEnroll}
-                onOpenDiscipline={handleOpenDiscipline}
-              />
-            ))}
-          </div>
+        ) : items.length > 0 ? (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {items.map((item) => (
+                <DisciplineCard
+                  key={item.id}
+                  item={item}
+                  onEnroll={handleEnroll}
+                  onOpenDiscipline={handleOpenDiscipline}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {page} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <EmptyLearning
             type="trails"
             title="Nenhuma disciplina encontrada"
-            description="Nao ha disciplinas nesta categoria. Tente outra."
+            description="Não há disciplinas com os filtros selecionados. Tente ajustar a busca."
           />
         )}
       </div>

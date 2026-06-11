@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { MyCourseData, MyCoursePeriod, SubjectStatus } from "@/types/myCourse";
+import type { MyCourseData, MyCoursePeriod, MyCourseSummary, SubjectStatus } from "@/types/myCourse";
+
 type EnrollmentRow = { course_id: string; created_at?: string | null; status: string };
 type CourseRow = { id: string; name: string; description: string | null; status: string; created_at: string };
 
@@ -20,20 +21,10 @@ function resolvePeriodStatus(
   return "future";
 }
 
-export async function getMyCourseOverview(profileId: string): Promise<MyCourseData | null> {
-  const { data: enrollmentsData, error: enrollmentsError } = await supabase
-    .from("lxp_enrollments")
-    .select("course_id,created_at,status")
-    .eq("student_profile_id", profileId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (enrollmentsError) throw enrollmentsError;
-
-  const enrollment = (enrollmentsData as EnrollmentRow[] | null)?.[0];
-  if (!enrollment?.course_id) return null;
-
+async function buildCourseOverview(
+  profileId: string,
+  enrollment: EnrollmentRow,
+): Promise<MyCourseData | null> {
   const { data: courseData, error: courseError } = await supabase
     .from("lxp_courses")
     .select("id,name,description,status,created_at")
@@ -56,10 +47,7 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
       ),
     ) ?? [];
 
-  let progressByDisciplineId = new Map<
-    string,
-    { status: SubjectStatus; grade: number | null }
-  >();
+  let progressByDisciplineId = new Map<string, { status: SubjectStatus; grade: number | null }>();
   let linkByDisciplineId = new Set<string>();
 
   if (disciplineIds.length > 0) {
@@ -145,4 +133,63 @@ export async function getMyCourseOverview(profileId: string): Promise<MyCourseDa
     ...(courseData as CourseRow),
     periods,
   };
+}
+
+function summarizeCourse(course: MyCourseData): Pick<MyCourseSummary, "totalDisciplines" | "completedDisciplines" | "progressPercent"> {
+  const linkedSubjects = course.periods.flatMap((p) =>
+    p.subjects.filter((s) => s.hasContentLink),
+  );
+  const totalDisciplines = linkedSubjects.length;
+  const completedDisciplines = linkedSubjects.filter((s) => s.isComplete).length;
+  const progressPercent =
+    totalDisciplines > 0 ? Math.round((completedDisciplines / totalDisciplines) * 100) : 0;
+  return { totalDisciplines, completedDisciplines, progressPercent };
+}
+
+export async function listMyCourseSummaries(profileId: string): Promise<MyCourseSummary[]> {
+  const { data: enrollmentsData, error: enrollmentsError } = await supabase
+    .from("lxp_enrollments")
+    .select("course_id,created_at,status")
+    .eq("student_profile_id", profileId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (enrollmentsError) throw enrollmentsError;
+
+  const enrollments = (enrollmentsData as EnrollmentRow[] | null) ?? [];
+  const summaries: MyCourseSummary[] = [];
+
+  for (const enrollment of enrollments) {
+    const overview = await buildCourseOverview(profileId, enrollment);
+    if (!overview) continue;
+    const stats = summarizeCourse(overview);
+    summaries.push({
+      id: overview.id,
+      name: overview.name,
+      description: overview.description,
+      status: overview.status,
+      created_at: overview.created_at,
+      ...stats,
+    });
+  }
+
+  return summaries;
+}
+
+export async function getMyCourseOverview(
+  profileId: string,
+  courseId: string,
+): Promise<MyCourseData | null> {
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("lxp_enrollments")
+    .select("course_id,created_at,status")
+    .eq("student_profile_id", profileId)
+    .eq("course_id", courseId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (enrollmentError) throw enrollmentError;
+  if (!enrollment?.course_id) return null;
+
+  return buildCourseOverview(profileId, enrollment as EnrollmentRow);
 }
