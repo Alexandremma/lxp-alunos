@@ -29,7 +29,7 @@ const navSections: NavSection[] = [
     label: "Ensino",
     items: [
       { title: "Início", url: "/", icon: LayoutDashboard },
-      { title: "Meu Curso", url: "/meu-curso", icon: GraduationCap },
+      { title: "Meus Cursos", url: "/meus-cursos", icon: GraduationCap },
       { title: "Minhas Disciplinas", url: "/cursos-livres", icon: Sparkles },
       { title: "Progresso", url: "/progress", icon: BarChart3 },
       { title: "Portfólio", url: "/portfolio", icon: Trophy },

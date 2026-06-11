@@ -16,6 +16,8 @@ export const queryKeys = {
     activeCourses: (profileId: string) => ["enrollments", "active-courses", profileId] as const,
   },
   myCourse: {
-    overview: (profileId: string) => ["my-course", "overview", profileId] as const,
+    overview: (profileId: string, courseId: string) =>
+      ["my-course", "overview", profileId, courseId] as const,
+    summaries: (profileId: string) => ["my-course", "summaries", profileId] as const,
   },
 } as const;

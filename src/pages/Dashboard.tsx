@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
+import { getLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
 import { useDashboardStats } from "@/hooks/queries/useDashboardStats";
@@ -28,7 +29,7 @@ const Dashboard = () => {
     isLoading: loadingCatalog,
     error: catalogError,
     refetch: refetchCatalog,
-  } = useStudentCatalog({ page: 1, pageSize: 8 });
+  } = useStudentCatalog({ page: 1, pageSize: 100 });
   const {
     data: dashboardStats,
     error: statsError,
@@ -41,7 +42,22 @@ const Dashboard = () => {
     return candidate.split(" ")[0];
   }, [profile?.name]);
 
-  const currentCourse = enrolledCourses[0];
+  const currentCourse = useMemo(() => {
+    if (enrolledCourses.length === 0) return undefined;
+    const lastId = getLastCourseId();
+    if (lastId) {
+      const match = enrolledCourses.find((c) => c.id === lastId);
+      if (match) return match;
+    }
+    return enrolledCourses[0];
+  }, [enrolledCourses]);
+
+  const myCourseLink = useMemo(() => {
+    if (enrolledCourses.length === 0) return "/meus-cursos";
+    if (enrolledCourses.length === 1) return `/meu-curso/${enrolledCourses[0].id}`;
+    if (currentCourse) return `/meu-curso/${currentCourse.id}`;
+    return "/meus-cursos";
+  }, [enrolledCourses, currentCourse]);
   const hasNoEnrolledCourses = !loadingEnrollments && enrolledCourses.length === 0;
   const stats = dashboardStats ?? {
     streak: 0,
@@ -57,13 +73,7 @@ const Dashboard = () => {
   const inProgressTrails = useMemo(
     () =>
       catalogItems
-        .filter(
-          (item) =>
-            item.enrolled &&
-            !item.disciplineInactive &&
-            !item.enrollmentInactive &&
-            (item.progressPercent ?? 0) < 100 && !item.isComplete,
-        )
+        .filter((item) => item.progressStatus === "enrolled")
         .slice(0, 4),
     [catalogItems],
   );
@@ -139,7 +149,7 @@ const Dashboard = () => {
               </div>
 
               <div className="flex gap-3">
-                <Link to="/meu-curso">
+                <Link to={myCourseLink}>
                   <Button className="glow-sm">Ver no Meu Curso</Button>
                 </Link>
               </div>
@@ -323,7 +333,7 @@ const Dashboard = () => {
                             <div>
                               <p className="font-semibold text-foreground line-clamp-1">{trail.name}</p>
                               <p className="text-xs text-muted-foreground line-clamp-2">
-                                {trail.description ?? "Disciplina em andamento"}
+                                {trail.courseName}
                               </p>
                             </div>
                             <div className="space-y-1">
