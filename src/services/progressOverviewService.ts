@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { getDashboardStats, type DashboardStats } from "@/services/dashboardService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
-import { computeDisciplineProgressBatch } from "@/services/disciplineProgressService";
 
 export type WeeklyStudyPoint = {
   day: string;
@@ -73,19 +72,50 @@ export async function getProgressOverview(profileId: string): Promise<ProgressOv
   const weeklyStudyData = buildWeeklyStudyData(lessonRows);
 
   const disciplineIds = (catalogResult.items ?? []).map((item) => item.id);
-  const progressByDisc = await computeDisciplineProgressBatch(profileId, disciplineIds);
+  let externalByDiscipline = new Map<string, string>();
+  if (disciplineIds.length > 0) {
+    const { data: linkRows, error: linksError } = await supabase
+      .from("lxp_course_library_links")
+      .select("course_discipline_id,library_content_id")
+      .eq("library_content_type", "discipline")
+      .in("course_discipline_id", disciplineIds);
+    if (linksError) throw linksError;
+    externalByDiscipline = new Map(
+      (linkRows ?? []).map((row) => [
+        row.course_discipline_id as string,
+        String(row.library_content_id),
+      ]),
+    );
+  }
+
+  const lessonCountsByExternal = new Map<string, { completed: number; total: number }>();
+  for (const row of lessonRows) {
+    const externalId = row.external_discipline_id as string | null;
+    if (!externalId) continue;
+    const current = lessonCountsByExternal.get(externalId) ?? { completed: 0, total: 0 };
+    current.total += 1;
+    if (row.status === "completed") current.completed += 1;
+    lessonCountsByExternal.set(externalId, current);
+  }
 
   const trails = (catalogResult.items ?? [])
     .map((item) => {
-      const progress = progressByDisc.get(item.id);
+      const externalId = externalByDiscipline.get(item.id);
+      const lessonCounts = externalId ? lessonCountsByExternal.get(externalId) : undefined;
+      const completedLessons = lessonCounts?.completed ?? 0;
+      const totalLessons = lessonCounts?.total ?? 0;
+      const progressPercent =
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : (item.progressPercent ?? 0);
       return {
         id: item.id,
         title: item.name,
         thumbnail: "/placeholder.svg",
-        completedLessons: progress?.completedLessons ?? 0,
-        totalLessons: progress?.totalLessons ?? 0,
-        progressPercent: progress?.progressPercent ?? item.progressPercent ?? 0,
-        isComplete: progress?.isComplete ?? item.isComplete ?? false,
+        completedLessons,
+        totalLessons,
+        progressPercent,
+        isComplete: item.isComplete ?? progressPercent >= 100,
       } satisfies ProgressTrailSummary;
     })
     .sort((a, b) => b.progressPercent - a.progressPercent);

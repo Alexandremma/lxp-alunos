@@ -6,6 +6,7 @@ import {
   getTrailModules,
   getTrailLessons,
   resolveExternalDisciplineId,
+  getDisciplineLessonAccessMode,
   type Trail,
   type TrailLesson,
   type TrailModule,
@@ -52,6 +53,12 @@ export function useTrailDetail(trailId?: string) {
     enabled,
   })
 
+  const lessonAccessMode = useQuery({
+    queryKey: ["lxp", "trail", "lesson-access-mode", trailId],
+    queryFn: () => getDisciplineLessonAccessMode(trailId!),
+    enabled,
+  })
+
   const progressMap = useQuery({
     queryKey: ["lxp", "trail", "lesson-progress-map", trailId, profile?.id],
     queryFn: async () => {
@@ -61,12 +68,17 @@ export function useTrailDetail(trailId?: string) {
     enabled: enabled && Boolean(profile?.id),
   })
 
+  const accessMode = lessonAccessMode.data ?? "free"
+
   const mergedLessons = React.useMemo(() => {
     const base = applyLessonXpToLessons(lessons.data ?? [], lessonXp)
     const map = progressMap.data
     if (!map) return base
-    return applyLessonXpToLessons(mergeTrailLessonsWithProgress(base, map), lessonXp)
-  }, [lessons.data, progressMap.data, lessonXp])
+    return applyLessonXpToLessons(
+      mergeTrailLessonsWithProgress(base, map, accessMode),
+      lessonXp,
+    )
+  }, [lessons.data, progressMap.data, lessonXp, accessMode])
 
   const mergedTrail = React.useMemo(() => {
     const t = trail.data
@@ -88,13 +100,14 @@ export function useTrailDetail(trailId?: string) {
     lessons: mergedLessons,
     lessonXp,
     disciplineCompleteXp,
+    lessonAccessMode: accessMode,
     isLoading:
       trail.isLoading ||
       modules.isLoading ||
       lessons.isLoading ||
+      lessonAccessMode.isLoading ||
       xpRulesQ.isLoading ||
       (Boolean(profile?.id) && progressMap.isLoading),
     error: trail.error || modules.error || lessons.error || progressMap.error,
   }
 }
-

@@ -106,6 +106,22 @@ const Lesson = () => {
     );
   }
 
+  if (lesson.status === "locked") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full">
+          <QueryStateCard
+            state="empty"
+            title="Aula bloqueada"
+            description="Conclua a aula anterior para desbloquear este conteúdo."
+            actionLabel="Voltar para a disciplina"
+            onAction={() => navigate(`/trails/${trailId}`)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const isCompleting = completeLesson.isPending;
 
   const handleComplete = async () => {

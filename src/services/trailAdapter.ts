@@ -89,6 +89,24 @@ function buildHeaders(): HeadersInit {
   return headers
 }
 
+export type LessonAccessMode = "free" | "sequential"
+
+export async function getDisciplineLessonAccessMode(
+  disciplineId: string,
+): Promise<LessonAccessMode> {
+  if (!TRAIL_ID_UUID_RE.test(disciplineId)) return "free"
+
+  const { data, error } = await supabase
+    .from("lxp_course_disciplines")
+    .select("lesson_access_mode")
+    .eq("id", disciplineId)
+    .maybeSingle()
+
+  if (error) throw error
+  const mode = (data as { lesson_access_mode?: string } | null)?.lesson_access_mode
+  return mode === "sequential" ? "sequential" : "free"
+}
+
 export async function courseDisciplineHasLibraryLink(disciplineId: string): Promise<boolean> {
   if (/^\d+$/.test(disciplineId)) return true
   if (!TRAIL_ID_UUID_RE.test(disciplineId)) return false
