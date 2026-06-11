@@ -5,6 +5,7 @@ export type DisciplineAccessBlockReason =
   | "inactive_discipline"
   | "enrollment_inactive"
   | "no_content_link"
+  | "not_enrolled"
 
 export type DisciplineAccessResult =
   | { allowed: true }
@@ -71,7 +72,17 @@ export async function getDisciplineAccessForStudent(
 
   if (enrollmentError) throw enrollmentError
 
-  if (enrollment?.status === "inactive") {
+  if (!enrollment) {
+    return {
+      allowed: false,
+      reason: "not_enrolled",
+      title: "Matrícula necessária",
+      message:
+        "Inscreva-se nesta disciplina em Minhas Disciplinas para acessar o conteúdo.",
+    }
+  }
+
+  if (enrollment.status === "inactive") {
     return {
       allowed: false,
       reason: "enrollment_inactive",

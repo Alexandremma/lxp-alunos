@@ -22,7 +22,8 @@ export function useEnrollInTrail() {
       queryClient.invalidateQueries({ queryKey: ["lxp", "catalog"] })
       if (profile?.id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.enrollments.activeCourses(profile.id) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.overview(profile.id) })
+        queryClient.invalidateQueries({ queryKey: ["my-course", "overview", profile.id] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.summaries(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profile.id) })
       }

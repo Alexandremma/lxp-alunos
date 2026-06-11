@@ -95,6 +95,19 @@ export async function enrollStudentByCatalogContent(params: {
     throw new Error("Nao foi possivel localizar o curso desta disciplina para matricula.");
   }
 
+  const { data: course, error: courseError } = await supabase
+    .from("lxp_courses")
+    .select("category,status")
+    .eq("id", courseId)
+    .maybeSingle();
+  if (courseError) throw courseError;
+
+  const category = (course as { category?: string } | null)?.category;
+  const status = (course as { status?: string } | null)?.status;
+  if (category !== "free_course" || status !== "active") {
+    throw new Error("A matricula neste curso deve ser realizada pela instituicao.");
+  }
+
   const now = new Date().toISOString();
   const { error } = await supabase.from("lxp_enrollments").upsert(
     {

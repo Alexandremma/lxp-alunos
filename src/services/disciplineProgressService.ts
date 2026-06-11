@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabaseClient"
-import { getTrailLessons, resolveExternalDisciplineId } from "@/services/trailAdapter"
+import {
+  getDisciplineLessonAccessMode,
+  getTrailLessons,
+  resolveExternalDisciplineId,
+} from "@/services/trailAdapter"
 import {
   fetchLessonProgressMap,
   mergeTrailLessonsWithProgress,
@@ -20,14 +24,42 @@ export type DisciplineProgressInput = {
   disciplineId: string
 }
 
+export async function fetchDisciplineProgressFromDb(
+  profileId: string,
+  disciplineIds: string[],
+): Promise<Map<string, { progressPercent: number; isComplete: boolean }>> {
+  const map = new Map<string, { progressPercent: number; isComplete: boolean }>()
+  if (disciplineIds.length === 0) return map
+
+  const { data, error } = await supabase
+    .from("lxp_student_discipline_progress")
+    .select("course_discipline_id,status")
+    .eq("student_profile_id", profileId)
+    .in("course_discipline_id", disciplineIds)
+
+  if (error) throw error
+
+  for (const row of data ?? []) {
+    const status = row.status as string
+    const isComplete = status === "approved"
+    const progressPercent = isComplete ? 100 : status === "in_progress" ? 50 : 0
+    map.set(row.course_discipline_id as string, { progressPercent, isComplete })
+  }
+
+  return map
+}
+
 async function resolveDisciplineLessonProgress(
   profileId: string,
   disciplineId: string,
 ): Promise<DisciplineProgressSnapshot> {
-  const lessons = await getTrailLessons(disciplineId)
-  const externalId = await resolveExternalDisciplineId(disciplineId)
+  const [lessons, externalId, accessMode] = await Promise.all([
+    getTrailLessons(disciplineId),
+    resolveExternalDisciplineId(disciplineId),
+    getDisciplineLessonAccessMode(disciplineId),
+  ])
   const progressByUnit = await fetchLessonProgressMap(profileId, externalId)
-  const merged = mergeTrailLessonsWithProgress(lessons, progressByUnit)
+  const merged = mergeTrailLessonsWithProgress(lessons, progressByUnit, accessMode)
 
   const totalLessons = merged.length
   const completedLessons = merged.filter((l) => l.status === "completed").length
