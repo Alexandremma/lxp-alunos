@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Clock, BookOpen, Trophy, User, Calendar } from "lucide-react";
+import { ChevronLeft, Clock, BookOpen, Trophy, User } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +13,6 @@ import { LessonCard } from "@/components/learning/LessonCard";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useCertificateReady } from "@/hooks/queries/useCertificateReady";
 import type { TrailModule } from "@/services/trailAdapter";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
@@ -163,48 +161,40 @@ const TrailDetail = () => {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card><CardContent className="p-4 flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-primary" />
-            <div><p className="text-lg font-bold">{trail.totalLessons}</p><p className="text-xs text-muted-foreground">Aulas</p></div>
+            <BookOpen className="w-5 h-5 text-primary shrink-0" />
+            <div className="min-w-0"><p className="text-lg font-bold">{trail.totalLessons}</p><p className="text-xs text-muted-foreground">Aulas</p></div>
           </CardContent></Card>
           <Card><CardContent className="p-4 flex items-center gap-3">
-            <Clock className="w-5 h-5 text-secondary" />
-            <div><p className="text-lg font-bold">{trail.estimatedHours}h</p><p className="text-xs text-muted-foreground">Duração</p></div>
+            <Clock className="w-5 h-5 text-secondary shrink-0" />
+            <div className="min-w-0"><p className="text-lg font-bold">{trail.estimatedHours}h</p><p className="text-xs text-muted-foreground">Duração</p></div>
           </CardContent></Card>
           <Card><CardContent className="p-4 flex items-center gap-3">
-            <Trophy className="w-5 h-5 text-warning" />
-            <div><p className="text-lg font-bold">+{trail.xpReward}</p><p className="text-xs text-muted-foreground">XP</p></div>
+            <Trophy className="w-5 h-5 text-warning shrink-0" />
+            <div className="min-w-0"><p className="text-lg font-bold">+{trail.xpReward}</p><p className="text-xs text-muted-foreground">XP</p></div>
           </CardContent></Card>
           <Card><CardContent className="p-4 flex items-center gap-3">
-            <User className="w-5 h-5 text-info" />
-            <div><p className="text-sm font-medium truncate">{trail.instructor}</p><p className="text-xs text-muted-foreground">Instrutor</p></div>
+            <User className="w-5 h-5 text-info shrink-0" />
+            <div className="min-w-0"><p className="text-sm font-medium truncate">{trail.instructor}</p><p className="text-xs text-muted-foreground">Instrutor</p></div>
           </CardContent></Card>
-          {trail.deadline && (
-            <Card><CardContent className="p-4 flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-destructive" />
-              <div><p className="text-sm font-medium">{format(parseISO(trail.deadline), "dd MMM", { locale: ptBR })}</p><p className="text-xs text-muted-foreground">Prazo</p></div>
-            </CardContent></Card>
-          )}
         </div>
-
-        {lessonsUnavailable && contentStatus?.state === "unavailable" && (
-          <QueryStateCard
-            state="empty"
-            title={contentStatus.title}
-            description={contentStatus.description}
-            actionLabel="Voltar para Minhas Disciplinas"
-            onAction={() => navigate("/cursos-livres")}
-            className="border-warning/30 bg-warning/5"
-          />
-        )}
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Modules */}
           <div className="lg:col-span-2 space-y-4" id="trail-modules">
             <h2 className="text-xl font-semibold">Módulos</h2>
-            {lessonsUnavailable ? null : modules.length === 0 ? (
+            {lessonsUnavailable && contentStatus?.state === "unavailable" ? (
+              <QueryStateCard
+                state="empty"
+                title={contentStatus.title}
+                description={contentStatus.description}
+                actionLabel="Voltar para Disciplinas"
+                onAction={() => navigate("/cursos-livres")}
+                className="border-warning/30 bg-warning/5"
+              />
+            ) : modules.length === 0 ? (
               <QueryStateCard
                 state="empty"
                 title="Carregando módulos..."
@@ -259,10 +249,10 @@ const TrailDetail = () => {
                       : completedLessons > 0
                         ? handleContinue
                         : () => {
-                            const first = lessons.find((l) => l.status !== "locked") ?? lessons[0];
-                            if (first) navigate(`/trails/${trail.id}/lesson/${first.id}`);
-                            else handleContinue();
-                          }
+                          const first = lessons.find((l) => l.status !== "locked") ?? lessons[0];
+                          if (first) navigate(`/trails/${trail.id}/lesson/${first.id}`);
+                          else handleContinue();
+                        }
                   }
                 >
                   {primaryActionLabel}

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,11 @@ import type {
 } from "@/types/studentCatalog";
 
 const PAGE_SIZE = 15;
+
+function parsePageParam(raw: string | null): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
+}
 
 const categoryConfig: Record<
   CourseCategory,
@@ -183,17 +188,42 @@ const DisciplineCard = ({
 
 const FreeCourses = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile } = useAuth();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CourseCategory | "all">("all");
   const [progressFilter, setProgressFilter] = useState<DisciplineProgressStatus | "all">("all");
-  const [page, setPage] = useState(1);
+
+  const page = parsePageParam(searchParams.get("page"));
+
+  const setPage = useCallback(
+    (next: number | ((current: number) => number)) => {
+      setSearchParams(
+        (prev) => {
+          const current = parsePageParam(prev.get("page"));
+          const resolved = typeof next === "function" ? next(current) : next;
+          const safePage = Math.max(1, resolved);
+          const params = new URLSearchParams(prev);
+
+          if (safePage <= 1) {
+            params.delete("page");
+          } else {
+            params.set("page", String(safePage));
+          }
+
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const enrollInTrail = useEnrollInTrail();
   const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
   const { data: stats } = useStudentCatalogStats();
-  const { items, total, isLoading, isFetching, error, refetch } = useStudentCatalog({
+  const { items, total, from, to, isLoading, isFetching, error, refetch } = useStudentCatalog({
     q: search,
     courseId: courseFilter === "all" ? undefined : courseFilter,
     category: categoryFilter,
@@ -204,6 +234,12 @@ const FreeCourses = () => {
 
   const enrolledCourses = enrolledCoursesData ?? [];
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  useEffect(() => {
+    if (!isLoading && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [isLoading, page, totalPages, setPage]);
 
   const hasActiveFilters = useMemo(
     () =>
@@ -377,8 +413,11 @@ const FreeCourses = () => {
                 />
               ))}
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-border/60">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {from}–{to} de {total} disciplina{total === 1 ? "" : "s"}
+              </p>
+              <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -388,7 +427,7 @@ const FreeCourses = () => {
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Anterior
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
                   Página {page} de {totalPages}
                 </span>
                 <Button
@@ -401,7 +440,7 @@ const FreeCourses = () => {
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
-            )}
+            </div>
           </>
         ) : (
           <EmptyLearning

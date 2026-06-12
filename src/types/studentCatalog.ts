@@ -36,4 +36,8 @@ export type StudentDisciplinesCatalogResponse = {
   total: number;
   page: number;
   pageSize: number;
+  /** 1-based index of first item on this page (0 when empty). */
+  from: number;
+  /** 1-based index of last item on this page (0 when empty). */
+  to: number;
 };

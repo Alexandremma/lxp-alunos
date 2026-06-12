@@ -19,6 +19,11 @@ type RawDisciplineRow = {
   course_period_id: string;
 };
 
+export type StudentCatalogFilterParams = Omit<
+  StudentDisciplinesCatalogParams,
+  "page" | "pageSize"
+>;
+
 function resolveProgressStatus(params: {
   disciplineInactive: boolean;
   enrollmentInactive: boolean;
@@ -34,12 +39,36 @@ function resolveProgressStatus(params: {
   return "available";
 }
 
-export async function getStudentDisciplinesCatalog(
+export function paginateCatalogItems<T>(
+  items: T[],
+  page: number,
+  pageSize: number,
+): { items: T[]; total: number; page: number; pageSize: number; from: number; to: number } {
+  const total = items.length;
+  const safePageSize = Math.max(1, pageSize);
+  const maxPage = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.min(Math.max(1, page), maxPage);
+  const start = (safePage - 1) * safePageSize;
+  const paged = items.slice(start, start + safePageSize);
+
+  return {
+    items: paged,
+    total,
+    page: safePage,
+    pageSize: safePageSize,
+    from: total === 0 ? 0 : start + 1,
+    to: total === 0 ? 0 : start + paged.length,
+  };
+}
+
+/**
+ * Monta o catálogo completo do aluno (filtros aplicados, ordenado).
+ * Paginação é aplicada em getStudentDisciplinesCatalog — o cliente recebe só a página pedida.
+ */
+export async function fetchFilteredStudentCatalogItems(
   profileId: string,
-  params: StudentDisciplinesCatalogParams = {},
-): Promise<StudentDisciplinesCatalogResponse> {
-  const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 15;
+  params: StudentCatalogFilterParams = {},
+): Promise<StudentDisciplineCatalogItem[]> {
   const q = params.q?.trim().toLowerCase() ?? "";
   const categoryFilter = params.category ?? "all";
   const progressFilter = params.progressStatus ?? "all";
@@ -90,7 +119,7 @@ export async function getStudentDisciplinesCatalog(
 
   const visibleCourseIds = new Set(courseMeta.keys());
   if (visibleCourseIds.size === 0) {
-    return { items: [], total: 0, page, pageSize };
+    return [];
   }
 
   const courseIds = [...visibleCourseIds];
@@ -103,7 +132,7 @@ export async function getStudentDisciplinesCatalog(
   const periodIds = (periods ?? []).map((p) => p.id as string);
   const courseByPeriod = new Map((periods ?? []).map((p) => [p.id as string, p.course_id as string]));
   if (periodIds.length === 0) {
-    return { items: [], total: 0, page, pageSize };
+    return [];
   }
 
   const { data: disciplines, error: e4 } = await supabase
@@ -115,7 +144,7 @@ export async function getStudentDisciplinesCatalog(
   const disciplineRows = (disciplines ?? []) as RawDisciplineRow[];
   const discIds = disciplineRows.map((d) => d.id);
   if (discIds.length === 0) {
-    return { items: [], total: 0, page, pageSize };
+    return [];
   }
 
   const { data: links, error: e5 } = await supabase
@@ -208,20 +237,32 @@ export async function getStudentDisciplinesCatalog(
   }
 
   filtered.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return filtered;
+}
 
-  const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  const paged = filtered.slice(start, start + pageSize);
+export async function getStudentDisciplinesCatalog(
+  profileId: string,
+  params: StudentDisciplinesCatalogParams = {},
+): Promise<StudentDisciplinesCatalogResponse> {
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 15;
 
-  return { items: paged, total, page, pageSize };
+  const filtered = await fetchFilteredStudentCatalogItems(profileId, params);
+  const paged = paginateCatalogItems(filtered, page, pageSize);
+
+  return {
+    items: paged.items,
+    total: paged.total,
+    page: paged.page,
+    pageSize: paged.pageSize,
+    from: paged.from,
+    to: paged.to,
+  };
 }
 
 /** KPI stats sobre o conjunto completo (sem paginação). */
 export async function getStudentDisciplinesCatalogStats(profileId: string) {
-  const { items } = await getStudentDisciplinesCatalog(profileId, {
-    page: 1,
-    pageSize: Number.MAX_SAFE_INTEGER,
-  });
+  const items = await fetchFilteredStudentCatalogItems(profileId);
 
   const hours = items
     .filter((i) => i.progressStatus === "enrolled" || i.progressStatus === "completed")
