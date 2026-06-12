@@ -7,7 +7,9 @@ import {
   getTrailLessons,
   resolveExternalDisciplineId,
   getDisciplineLessonAccessMode,
+  resolveTrailContentStatus,
   type Trail,
+  type TrailContentStatus,
   type TrailLesson,
   type TrailModule,
 } from "@/services/trailAdapter"
@@ -68,6 +70,16 @@ export function useTrailDetail(trailId?: string) {
     enabled: enabled && Boolean(profile?.id),
   })
 
+  const lessonsLoaded = lessons.isSuccess && !lessons.isFetching
+  const lessonsEmpty = lessonsLoaded && (lessons.data?.length ?? 0) === 0
+
+  const contentStatus = useQuery<TrailContentStatus>({
+    queryKey: ["lxp", "trail", "content-status", trailId],
+    queryFn: () => resolveTrailContentStatus(trailId!),
+    enabled: enabled && lessonsEmpty,
+    staleTime: 30_000,
+  })
+
   const accessMode = lessonAccessMode.data ?? "free"
 
   const mergedLessons = React.useMemo(() => {
@@ -98,6 +110,8 @@ export function useTrailDetail(trailId?: string) {
     trail: mergedTrail,
     modules: modules.data ?? [],
     lessons: mergedLessons,
+    contentStatus: contentStatus.data,
+    contentStatusLoading: lessonsEmpty && contentStatus.isLoading,
     lessonXp,
     disciplineCompleteXp,
     lessonAccessMode: accessMode,
@@ -107,7 +121,8 @@ export function useTrailDetail(trailId?: string) {
       lessons.isLoading ||
       lessonAccessMode.isLoading ||
       xpRulesQ.isLoading ||
-      (Boolean(profile?.id) && progressMap.isLoading),
+      (Boolean(profile?.id) && progressMap.isLoading) ||
+      (lessonsEmpty && contentStatus.isLoading),
     error: trail.error || modules.error || lessons.error || progressMap.error,
   }
 }

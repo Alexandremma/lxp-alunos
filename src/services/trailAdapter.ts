@@ -5,6 +5,20 @@ import {
   matchAliceRentForLesson,
   type AliceRent,
 } from "@/services/aliceService"
+
+export type TrailContentIssueReason =
+  | "no_integration"
+  | "external_error"
+  | "empty_catalog"
+
+export type TrailContentStatus =
+  | { state: "ready" }
+  | {
+      state: "unavailable"
+      reason: TrailContentIssueReason
+      title: string
+      description: string
+    }
 import { getDisciplinePresentation } from "@/services/disciplinePresentationService"
 
 export type Trail = {
@@ -77,6 +91,10 @@ function normalizeBaseUrl(baseUrl?: string): string {
   if (!baseUrl) return ""
   if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) return baseUrl
   return `https://${baseUrl}`
+}
+
+function isEadstockConfigured(): boolean {
+  return Boolean(normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL))
 }
 
 function buildHeaders(): HeadersInit {
@@ -313,6 +331,107 @@ export async function getTrailLessons(trailId: string): Promise<TrailLesson[]> {
       aliceContentId: rent?.contentId,
     }
   })
+}
+
+/**
+ * Diagnóstico quando a disciplina carrega metadados mas a lista de aulas vem vazia.
+ * Diferencia integração ausente, falha na API externa e catálogo vazio/desalinhado.
+ */
+export async function resolveTrailContentStatus(trailId: string): Promise<TrailContentStatus> {
+  const lessons = await getTrailLessons(trailId)
+  if (lessons.length > 0) return { state: "ready" }
+
+  const hasLink = TRAIL_ID_UUID_RE.test(trailId)
+    ? await courseDisciplineHasLibraryLink(trailId)
+    : true
+
+  if (!hasLink) {
+    return {
+      state: "unavailable",
+      reason: "empty_catalog",
+      title: "Conteúdo em preparação",
+      description:
+        "Esta disciplina ainda não possui conteúdo vinculado pela instituição. Quando estiver disponível, as aulas aparecerão aqui.",
+    }
+  }
+
+  const aliceConfigured = isAliceConfigured()
+  const eadstockConfigured = isEadstockConfigured()
+
+  if (!aliceConfigured && !eadstockConfigured) {
+    return {
+      state: "unavailable",
+      reason: "no_integration",
+      title: "Aulas indisponíveis neste ambiente",
+      description:
+        "As aulas desta disciplina dependem da biblioteca externa (Alice/Eadstock), que não está configurada. Avise a instituição ou tente novamente no portal oficial.",
+    }
+  }
+
+  let externalError = false
+  let foundLessons = false
+
+  let externalId: string
+  try {
+    externalId = await resolveExternalDisciplineId(trailId)
+  } catch {
+    return {
+      state: "unavailable",
+      reason: "empty_catalog",
+      title: "Vínculo de conteúdo incompleto",
+      description:
+        "Não foi possível localizar o conteúdo externo desta disciplina. A instituição pode precisar revisar o vínculo na biblioteca.",
+    }
+  }
+
+  if (eadstockConfigured) {
+    const baseUrl = normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL)
+    try {
+      const response = await fetch(`${baseUrl}/disciplinas/get/${externalId}`, {
+        method: "GET",
+        headers: buildHeaders(),
+      })
+      if (!response.ok) {
+        externalError = true
+      } else {
+        const payload = (await response.json()) as ExternalDisciplineDetail
+        if ((payload.unidades ?? []).length > 0) foundLessons = true
+      }
+    } catch {
+      externalError = true
+    }
+  }
+
+  if (aliceConfigured) {
+    try {
+      const rents = await fetchAliceRentsForDiscipline(externalId)
+      if (rents.length > 0) foundLessons = true
+    } catch {
+      externalError = true
+    }
+  }
+
+  if (foundLessons) {
+    return { state: "ready" }
+  }
+
+  if (externalError) {
+    return {
+      state: "unavailable",
+      reason: "external_error",
+      title: "Não foi possível carregar as aulas",
+      description:
+        "Houve um problema ao consultar a biblioteca externa. Verifique sua conexão e tente novamente em instantes.",
+    }
+  }
+
+  return {
+    state: "unavailable",
+    reason: "empty_catalog",
+    title: "Nenhuma aula disponível",
+    description:
+      "O vínculo com a biblioteca externa existe, mas não há aulas publicadas para esta disciplina — ou o vínculo aponta para um conteúdo sem unidades. A instituição pode revisar o catálogo ou escolher outra disciplina externa.",
+  }
 }
 
 export async function getTrailDetail(trailId: string): Promise<Trail | null> {

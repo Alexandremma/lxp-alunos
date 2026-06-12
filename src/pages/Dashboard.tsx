@@ -347,7 +347,7 @@ const Dashboard = () => {
                               className="w-full"
                               onClick={() => handleContinueTrail(trail.id)}
                             >
-                              Continuar
+                              {progress > 0 ? "Continuar" : "Iniciar"}
                             </Button>
                           </CardContent>
                         </Card>
