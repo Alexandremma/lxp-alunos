@@ -28,7 +28,7 @@ const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
-  const { trail, modules, lessons, disciplineCompleteXp, isLoading, error } =
+  const { trail, modules, lessons, contentStatus, disciplineCompleteXp, isLoading, error } =
     useTrailDetail(id || undefined);
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isDownloadingCert, setIsDownloadingCert] = useState(false);
@@ -96,10 +96,17 @@ const TrailDetail = () => {
   const totalLessons = lessons.length || trail.totalLessons || 0;
   const completedLessons = trail.completedLessons ?? 0;
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const lessonsUnavailable = totalLessons === 0 && contentStatus?.state === "unavailable";
   const certificateReady = certificateReadyQ.data === true;
   const moduleLessons = lessons.filter((l) =>
     modules.some((m: TrailModule) => m.id === l.moduleId),
   );
+  const primaryActionLabel =
+    totalLessons === 0
+      ? "Voltar para Minhas Disciplinas"
+      : completedLessons > 0
+        ? "Continuar"
+        : "Iniciar";
 
   const handleDownloadCertificate = async () => {
     if (!profile?.id || !id) return;
@@ -181,33 +188,52 @@ const TrailDetail = () => {
           )}
         </div>
 
+        {lessonsUnavailable && contentStatus?.state === "unavailable" && (
+          <QueryStateCard
+            state="empty"
+            title={contentStatus.title}
+            description={contentStatus.description}
+            actionLabel="Voltar para Minhas Disciplinas"
+            onAction={() => navigate("/cursos-livres")}
+            className="border-warning/30 bg-warning/5"
+          />
+        )}
+
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Modules */}
           <div className="lg:col-span-2 space-y-4" id="trail-modules">
             <h2 className="text-xl font-semibold">Módulos</h2>
-            <Accordion type="single" collapsible defaultValue={modules[0]?.id} className="space-y-3">
-              {modules.map((module) => (
-                <AccordionItem key={module.id} value={module.id} className="border rounded-lg bg-card px-4">
-                  <AccordionTrigger className="hover:no-underline py-4">
-                    <div className="flex items-center gap-3 text-left">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${module.status === 'completed' ? 'bg-success text-success-foreground' : module.status === 'in_progress' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                        {module.order}
+            {lessonsUnavailable ? null : modules.length === 0 ? (
+              <QueryStateCard
+                state="empty"
+                title="Carregando módulos..."
+                description="Aguarde enquanto organizamos as aulas desta disciplina."
+              />
+            ) : (
+              <Accordion type="single" collapsible defaultValue={modules[0]?.id} className="space-y-3">
+                {modules.map((module) => (
+                  <AccordionItem key={module.id} value={module.id} className="border rounded-lg bg-card px-4">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3 text-left">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${module.status === 'completed' ? 'bg-success text-success-foreground' : module.status === 'in_progress' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                          {module.order}
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold">{module.title}</p>
+                          <p className="text-sm text-muted-foreground">{module.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-lg font-semibold">{module.title}</p>
-                        <p className="text-sm text-muted-foreground">{module.description}</p>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-4 space-y-2">
-                    {moduleLessons.filter((l) => l.moduleId === module.id).map((lesson) => (
-                      <LessonCard key={lesson.id} lesson={lesson} trailId={trail.id} />
-                    ))}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4 space-y-2">
+                      {moduleLessons.filter((l) => l.moduleId === module.id).map((lesson) => (
+                        <LessonCard key={lesson.id} lesson={lesson} trailId={trail.id} />
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -227,9 +253,19 @@ const TrailDetail = () => {
                 )}
                 <Button
                   className="w-full"
-                  onClick={totalLessons === 0 ? () => navigate("/cursos-livres") : handleContinue}
+                  onClick={
+                    totalLessons === 0
+                      ? () => navigate("/cursos-livres")
+                      : completedLessons > 0
+                        ? handleContinue
+                        : () => {
+                            const first = lessons.find((l) => l.status !== "locked") ?? lessons[0];
+                            if (first) navigate(`/trails/${trail.id}/lesson/${first.id}`);
+                            else handleContinue();
+                          }
+                  }
                 >
-                  {totalLessons === 0 ? "Voltar para Minhas Disciplinas" : "Continuar"}
+                  {primaryActionLabel}
                 </Button>
               </CardContent>
             </Card>

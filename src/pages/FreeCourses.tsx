@@ -170,7 +170,7 @@ const DisciplineCard = ({
           {item.canSelfEnroll && "Inscrever-se"}
           {item.progressStatus === "enrolled" && (
             <>
-              Continuar
+              {item.progressPercent > 0 ? "Continuar" : "Iniciar"}
               <ChevronRight className="h-4 w-4 ml-1" />
             </>
           )}
