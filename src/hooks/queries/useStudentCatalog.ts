@@ -1,7 +1,9 @@
+import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
-  getStudentDisciplinesCatalog,
+  fetchFilteredStudentCatalogItems,
   getStudentDisciplinesCatalogStats,
+  paginateCatalogItems,
 } from "@/services/studentDisciplinesCatalogService"
 import { useAuth } from "@/hooks/use-auth"
 import type { StudentDisciplinesCatalogParams } from "@/types/studentCatalog"
@@ -10,32 +12,39 @@ export function useStudentCatalog(params: StudentDisciplinesCatalogParams) {
   const { profile } = useAuth()
   const { q = "", courseId, category = "all", progressStatus = "all", page = 1, pageSize = 15 } = params
 
-  const query = useQuery({
-    queryKey: ["lxp", "catalog", { q, courseId, category, progressStatus, page, pageSize, profileId: profile?.id }],
+  const filterKey = { q, courseId, category, progressStatus, profileId: profile?.id }
+
+  const datasetQuery = useQuery({
+    queryKey: ["lxp", "catalog", "dataset", filterKey],
     queryFn: async () => {
-      if (!profile?.id) return { items: [], total: 0, page, pageSize }
-      return getStudentDisciplinesCatalog(profile.id, {
+      if (!profile?.id) return []
+      return fetchFilteredStudentCatalogItems(profile.id, {
         q,
         courseId,
         category,
         progressStatus,
-        page,
-        pageSize,
       })
     },
     enabled: !!profile?.id,
+    staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   })
 
+  const paged = useMemo(() => {
+    return paginateCatalogItems(datasetQuery.data ?? [], page, pageSize)
+  }, [datasetQuery.data, page, pageSize])
+
   return {
-    items: query.data?.items ?? [],
-    total: query.data?.total ?? 0,
-    page: query.data?.page ?? page,
-    pageSize: query.data?.pageSize ?? pageSize,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    error: query.error,
-    refetch: query.refetch,
+    items: paged.items,
+    total: paged.total,
+    page: paged.page,
+    pageSize: paged.pageSize,
+    from: paged.from,
+    to: paged.to,
+    isLoading: datasetQuery.isLoading,
+    isFetching: datasetQuery.isFetching,
+    error: datasetQuery.error,
+    refetch: datasetQuery.refetch,
   }
 }
 
@@ -51,5 +60,6 @@ export function useStudentCatalogStats() {
       return getStudentDisciplinesCatalogStats(profile.id)
     },
     enabled: !!profile?.id,
+    staleTime: 60_000,
   })
 }

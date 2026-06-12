@@ -351,7 +351,7 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
       reason: "empty_catalog",
       title: "Conteúdo em preparação",
       description:
-        "Esta disciplina ainda não possui conteúdo vinculado pela instituição. Quando estiver disponível, as aulas aparecerão aqui.",
+        "Esta disciplina ainda está em preparação. Quando as aulas estiverem disponíveis, elas aparecerão aqui.",
     }
   }
 
@@ -362,9 +362,9 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
     return {
       state: "unavailable",
       reason: "no_integration",
-      title: "Aulas indisponíveis neste ambiente",
+      title: "Aulas indisponíveis no momento",
       description:
-        "As aulas desta disciplina dependem da biblioteca externa (Alice/Eadstock), que não está configurada. Avise a instituição ou tente novamente no portal oficial.",
+        "Não foi possível carregar as aulas desta disciplina agora. Tente novamente mais tarde ou entre em contato com a instituição.",
     }
   }
 
@@ -378,9 +378,9 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
     return {
       state: "unavailable",
       reason: "empty_catalog",
-      title: "Vínculo de conteúdo incompleto",
+      title: "Aulas indisponíveis no momento",
       description:
-        "Não foi possível localizar o conteúdo externo desta disciplina. A instituição pode precisar revisar o vínculo na biblioteca.",
+        "Não foi possível carregar as aulas desta disciplina agora. Tente novamente mais tarde ou entre em contato com a instituição.",
     }
   }
 
@@ -421,7 +421,7 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
       reason: "external_error",
       title: "Não foi possível carregar as aulas",
       description:
-        "Houve um problema ao consultar a biblioteca externa. Verifique sua conexão e tente novamente em instantes.",
+        "Verifique sua conexão com a internet e tente novamente em instantes.",
     }
   }
 
@@ -430,7 +430,7 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
     reason: "empty_catalog",
     title: "Nenhuma aula disponível",
     description:
-      "O vínculo com a biblioteca externa existe, mas não há aulas publicadas para esta disciplina — ou o vínculo aponta para um conteúdo sem unidades. A instituição pode revisar o catálogo ou escolher outra disciplina externa.",
+      "Ainda não há aulas publicadas para esta disciplina. A instituição pode estar atualizando o conteúdo.",
   }
 }
 
