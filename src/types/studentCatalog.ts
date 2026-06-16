@@ -20,6 +20,8 @@ export type StudentDisciplineCatalogItem = {
   workloadHours?: number;
   credits?: number;
   professor?: string;
+  /** Capa da disciplina (`cover_image_path` → bucket `discipline-covers`). */
+  coverImageUrl?: string | null;
 };
 
 export type StudentDisciplinesCatalogParams = {

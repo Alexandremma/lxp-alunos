@@ -2,8 +2,9 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { X, ChevronLeft, Eye, EyeOff, StickyNote, MessageCircle, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Award } from "lucide-react";
 import { LessonSidebar } from "./LessonSidebar";
 import { AiTutorFab } from "./AiTutorFab";
 import { AiTutorSidebar } from "./AiTutorSidebar";
@@ -14,6 +15,12 @@ import { LessonDiscussionPanel } from "@/components/learning/LessonDiscussionPan
 import { LessonNotesPanel } from "@/components/learning/LessonNotesPanel";
 import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
 
+export interface LessonHeaderInfo {
+  title: string;
+  description?: string | null;
+  xpReward?: number;
+}
+
 interface LessonLayoutProps {
   children: React.ReactNode;
   trail: Trail;
@@ -21,6 +28,10 @@ interface LessonLayoutProps {
   currentLesson: Lesson;
   allLessons: Lesson[];
   progress: number;
+  /** Título, descrição e XP exibidos no header central (substituem a barra de progresso). */
+  headerLessonInfo?: LessonHeaderInfo;
+  /** E-book imersivo: main sem scroll da página — só o iframe rola. */
+  immersiveContent?: boolean;
   /** IDs usados em progresso/comentários (trailId + lessonId). */
   externalDisciplineId?: string;
   externalUnitId?: string;
@@ -33,6 +44,8 @@ export const LessonLayout = ({
   currentLesson,
   allLessons,
   progress,
+  headerLessonInfo,
+  immersiveContent = false,
   externalDisciplineId,
   externalUnitId,
 }: LessonLayoutProps) => {
@@ -64,7 +77,12 @@ export const LessonLayout = ({
     <TooltipProvider>
       <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
+        <header
+          className={cn(
+            "border-b border-border bg-card flex items-center justify-between px-4 shrink-0",
+            headerLessonInfo?.description?.trim() ? "py-2 min-h-14" : "h-14",
+          )}
+        >
           <div className="flex items-center gap-4">
             {/* Mobile menu trigger */}
             {isMobile && (
@@ -80,6 +98,7 @@ export const LessonLayout = ({
                     modules={modules}
                     currentLesson={currentLesson}
                     allLessons={allLessons}
+                    progress={progress}
                     onLessonClick={() => {}}
                   />
                 </SheetContent>
@@ -99,15 +118,31 @@ export const LessonLayout = ({
             </Link>
           </div>
 
-          {/* Progress */}
-          <div className="flex-1 max-w-md mx-4 hidden sm:block">
-            <div className="flex items-center gap-3">
-              <Progress value={progress} className="h-2 flex-1" />
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {progress}% concluído
-              </span>
+          {/* Lesson title / description / XP (barra de progresso ficou na sidebar) */}
+          {headerLessonInfo && (
+            <div className="flex-1 min-w-0 mx-3 sm:mx-4 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm font-semibold text-foreground truncate sm:whitespace-normal sm:line-clamp-1">
+                  {headerLessonInfo.title}
+                </h1>
+                {headerLessonInfo.description?.trim() ? (
+                  <p className="hidden sm:block text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                    {headerLessonInfo.description}
+                  </p>
+                ) : null}
+              </div>
+              {(headerLessonInfo.xpReward ?? 0) > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 hidden sm:flex items-center gap-1 text-xs"
+                  title="Valor configurado em Gamificação → Aula Assistida"
+                >
+                  <Award className="w-3 h-3" />
+                  +{headerLessonInfo.xpReward} XP
+                </Badge>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-1">
@@ -191,6 +226,7 @@ export const LessonLayout = ({
                   modules={modules}
                   currentLesson={currentLesson}
                   allLessons={allLessons}
+                  progress={progress}
                   onLessonClick={() => {}}
                 />
               )}
@@ -198,12 +234,22 @@ export const LessonLayout = ({
           )}
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto scrollbar-thin relative">
+          <main
+            className={cn(
+              "flex-1 relative min-h-0",
+              immersiveContent
+                ? "flex flex-col overflow-hidden"
+                : "overflow-y-auto scrollbar-thin",
+            )}
+          >
             {children}
             
             {/* AI Tutor FAB */}
             {!aiTutorOpen && (
-              <AiTutorFab onClick={toggleAiTutor} />
+              <AiTutorFab
+                onClick={toggleAiTutor}
+                className={immersiveContent ? "bottom-20" : undefined}
+              />
             )}
           </main>
 

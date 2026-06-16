@@ -106,6 +106,26 @@ const TrailDetail = () => {
         ? "Continuar"
         : "Iniciar";
 
+  const getNextLessonToStudy = () => {
+    const inProgress = lessons.find((l) => l.status === "in_progress");
+    if (inProgress) return inProgress;
+    return (
+      lessons.find((l) => l.status !== "completed" && l.status !== "locked") ??
+      lessons.find((l) => l.status !== "locked") ??
+      lessons[0] ??
+      null
+    );
+  };
+
+  const handleStartOrContinue = () => {
+    const target = getNextLessonToStudy();
+    if (target) {
+      navigate(`/trails/${trail.id}/lesson/${target.id}`);
+      return;
+    }
+    document.getElementById("trail-modules")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleDownloadCertificate = async () => {
     if (!profile?.id || !id) return;
     try {
@@ -132,10 +152,6 @@ const TrailDetail = () => {
     } finally {
       setIsDownloadingCert(false);
     }
-  };
-
-  const handleContinue = () => {
-    document.getElementById("trail-modules")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -246,13 +262,7 @@ const TrailDetail = () => {
                   onClick={
                     totalLessons === 0
                       ? () => navigate("/cursos-livres")
-                      : completedLessons > 0
-                        ? handleContinue
-                        : () => {
-                          const first = lessons.find((l) => l.status !== "locked") ?? lessons[0];
-                          if (first) navigate(`/trails/${trail.id}/lesson/${first.id}`);
-                          else handleContinue();
-                        }
+                      : handleStartOrContinue
                   }
                 >
                   {primaryActionLabel}
