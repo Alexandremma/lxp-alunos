@@ -6,6 +6,7 @@ export type MyCourseSubject = {
   name: string;
   code: string;
   credits: number;
+  creditsEnabled: boolean;
   workload: number;
   professor?: string;
   status: SubjectStatus;

@@ -103,6 +103,7 @@ export interface Subject {
   name: string;
   code: string;
   credits: number;
+  creditsEnabled?: boolean;
   workload: number;
   status: 'approved' | 'in_progress' | 'pending' | 'failed';
   grade?: number;

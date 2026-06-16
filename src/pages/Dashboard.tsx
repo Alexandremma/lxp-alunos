@@ -4,8 +4,8 @@ import { Zap, BookOpen, Clock, Trophy, Sparkles, BookOpenCheck, ArrowRight } fro
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
+import { DisciplineCatalogCard } from "@/components/learning/DisciplineCatalogCard";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { getLastCourseId } from "@/lib/lastCourseStorage";
@@ -301,7 +301,7 @@ const Dashboard = () => {
                     Ver todas
                   </Link>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-6">
                   {loadingCatalog ? (
                     <QueryStateCard
                       state="loading"
@@ -325,50 +325,14 @@ const Dashboard = () => {
                       className="md:col-span-2"
                     />
                   ) : (
-                    inProgressTrails.map((trail) => {
-                      const progress = Math.max(0, Math.min(100, trail.progressPercent ?? 0));
-                      return (
-                        <Card key={trail.id} className="card-hover overflow-hidden group">
-                          <div className="relative h-32 overflow-hidden bg-muted">
-                            {trail.coverImageUrl ? (
-                              <>
-                                <img
-                                  src={trail.coverImageUrl}
-                                  alt={trail.name}
-                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
-                              </>
-                            ) : (
-                              <div className="h-full bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center">
-                                <BookOpen className="h-8 w-8 text-primary/40" />
-                              </div>
-                            )}
-                          </div>
-                          <CardContent className="p-4 space-y-3">
-                            <div>
-                              <p className="font-semibold text-foreground line-clamp-1">{trail.name}</p>
-                              <p className="text-xs text-muted-foreground line-clamp-2">
-                                {trail.courseName}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Progresso</span>
-                                <span className="font-medium">{progress}%</span>
-                              </div>
-                              <Progress value={progress} className="h-2" />
-                            </div>
-                            <Button
-                              className="w-full"
-                              onClick={() => handleContinueTrail(trail.id)}
-                            >
-                              {progress > 0 ? "Continuar" : "Iniciar"}
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      );
-                    })
+                    inProgressTrails.map((item) => (
+                      <DisciplineCatalogCard
+                        key={item.id}
+                        item={item}
+                        compactAction
+                        onOpenDiscipline={handleContinueTrail}
+                      />
+                    ))
                   )}
                 </div>
             </div>

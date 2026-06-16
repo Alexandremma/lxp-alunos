@@ -46,11 +46,16 @@ const subjectStatusConfig = {
 /** Disciplinas vindas do Supabase usam UUID; o mock antigo não — só linkamos quando for UUID. */
 const DISCIPLINE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const subjectUsesCredits = (subject: Subject) => subject.creditsEnabled !== false;
+
 const PeriodCard = ({ period }: { period: Period }) => {
   const [isOpen, setIsOpen] = useState(period.status === "current");
   const StatusIcon = statusConfig[period.status].icon;
 
-  const totalCredits = period.subjects.reduce((acc, s) => acc + s.credits, 0);
+  const totalCredits = period.subjects.reduce(
+    (acc, s) => acc + (subjectUsesCredits(s) ? s.credits : 0),
+    0,
+  );
   const approvedSubjects = period.subjects.filter((s) => s.status === "approved").length;
 
   return (
@@ -72,7 +77,8 @@ const PeriodCard = ({ period }: { period: Period }) => {
                 <div>
                   <CardTitle className="text-base">{period.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {period.subjects.length} disciplinas • {totalCredits} créditos
+                    {period.subjects.length} disciplinas
+                    {totalCredits > 0 && ` • ${totalCredits} créditos`}
                   </p>
                 </div>
               </div>
@@ -146,7 +152,9 @@ const SubjectRow = ({ subject }: { subject: Subject }) => {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
-          <span>{subject.credits} créditos</span>
+          {subjectUsesCredits(subject) && (
+            <span>{subject.credits} créditos</span>
+          )}
           {subject.workload > 0 && (
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5 shrink-0" />
@@ -246,6 +254,7 @@ const MyCourse = () => {
           name: subject.name,
           code: subject.code,
           credits: subject.credits,
+          creditsEnabled: subject.creditsEnabled,
           workload: subject.workload,
           status: subject.status,
           grade: subject.grade,
@@ -272,15 +281,28 @@ const MyCourse = () => {
   const courseProgress =
     totalDisciplines > 0 ? Math.round((completedDisciplines / totalDisciplines) * 100) : 0;
   const totalCredits = useMemo(
-    () => periods.reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0),
+    () =>
+      periods.reduce(
+        (acc, p) =>
+          acc + p.subjects.reduce((a, s) => a + (subjectUsesCredits(s) ? s.credits : 0), 0),
+        0,
+      ),
     [periods],
   );
   const completedCredits = useMemo(
     () =>
       periods
         .filter((p) => p.status === "completed")
-        .reduce((acc, p) => acc + p.subjects.reduce((a, s) => a + s.credits, 0), 0),
+        .reduce(
+          (acc, p) =>
+            acc + p.subjects.reduce((a, s) => a + (subjectUsesCredits(s) ? s.credits : 0), 0),
+          0,
+        ),
     [periods],
+  );
+  const hasCreditsInCourse = useMemo(
+    () => allSubjects.some((s) => subjectUsesCredits(s)),
+    [allSubjects],
   );
   const approvedSubjects = useMemo(
     () => allSubjects.filter((s) => s.isComplete).length,
@@ -405,20 +427,22 @@ const MyCourse = () => {
           </TabsContent>
 
           <TabsContent value="summary">
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-muted-foreground">Créditos Cursados</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">
-                    {completedCredits}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    de {totalCredits} totais
-                  </p>
-                </CardContent>
-              </Card>
+            <div className={cn("grid gap-4", hasCreditsInCourse ? "md:grid-cols-3" : "md:grid-cols-2")}>
+              {hasCreditsInCourse && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base text-muted-foreground">Créditos Cursados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {completedCredits}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      de {totalCredits} totais
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader className="pb-2">

@@ -2,22 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { EmptyLearning } from "@/components/states/EmptyLearning";
-import {
-  Clock,
-  Users,
-  ChevronRight,
-  GraduationCap,
-  BookOpen,
-  BookMarked,
-  ChevronLeft,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BookMarked, ChevronLeft, ChevronRight } from "lucide-react";
+import { DisciplineCatalogCard } from "@/components/learning/DisciplineCatalogCard";
 import { useStudentCatalog, useStudentCatalogStats } from "@/hooks/queries/useStudentCatalog";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { useAuth } from "@/hooks/use-auth";
@@ -31,11 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  CourseCategory,
-  DisciplineProgressStatus,
-  StudentDisciplineCatalogItem,
-} from "@/types/studentCatalog";
+import type { CourseCategory, DisciplineProgressStatus } from "@/types/studentCatalog";
 
 const PAGE_SIZE = 15;
 
@@ -43,159 +29,6 @@ function parsePageParam(raw: string | null): number {
   const parsed = Number.parseInt(raw ?? "", 10);
   return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
 }
-
-const categoryConfig: Record<
-  CourseCategory,
-  { label: string; icon: typeof GraduationCap; color: string }
-> = {
-  graduation: {
-    label: "Graduação",
-    icon: GraduationCap,
-    color: "bg-secondary/10 text-secondary border-secondary/20",
-  },
-  postgraduate: {
-    label: "Pós-Graduação",
-    icon: GraduationCap,
-    color: "bg-info/10 text-info border-info/20",
-  },
-  extension: {
-    label: "Extensão",
-    icon: BookMarked,
-    color: "bg-primary/10 text-primary border-primary/20",
-  },
-  free_course: {
-    label: "Curso livre",
-    icon: BookOpen,
-    color: "bg-warning/10 text-warning border-warning/20",
-  },
-};
-
-const statusConfig: Record<
-  DisciplineProgressStatus,
-  { label: string; color: string }
-> = {
-  available: { label: "Disponível", color: "bg-muted text-muted-foreground" },
-  enrolled: { label: "Cursando", color: "bg-primary/10 text-primary" },
-  completed: { label: "Concluído", color: "bg-success/10 text-success" },
-  discipline_inactive: { label: "Disciplina inativa", color: "bg-warning/10 text-warning border-warning/30" },
-  enrollment_inactive: { label: "Matrícula inativa", color: "bg-destructive/10 text-destructive" },
-};
-
-const DisciplineCard = ({
-  item,
-  onEnroll,
-  onOpenDiscipline,
-}: {
-  item: StudentDisciplineCatalogItem;
-  onEnroll: (id: string) => void;
-  onOpenDiscipline: (id: string) => void;
-}) => {
-  const category = categoryConfig[item.courseCategory];
-  const CategoryIcon = category.icon;
-  const status = statusConfig[item.progressStatus];
-  const showProgress =
-    item.progressStatus === "enrolled" ||
-    item.progressStatus === "completed" ||
-    item.progressStatus === "discipline_inactive" ||
-    item.progressStatus === "enrollment_inactive";
-
-  const isBlocked =
-    item.progressStatus === "discipline_inactive" ||
-    item.progressStatus === "enrollment_inactive";
-
-  return (
-    <Card className="overflow-hidden card-hover group">
-      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center overflow-hidden">
-        {item.coverImageUrl ? (
-          <>
-            <img
-              src={item.coverImageUrl}
-              alt={item.name}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
-          </>
-        ) : (
-          <CategoryIcon className="h-12 w-12 text-primary/40" />
-        )}
-        <div className="absolute top-3 left-3 z-10 max-w-[calc(100%-8.5rem)] min-w-0">
-          <Badge variant="outline" className={cn("backdrop-blur-sm gap-1", category.color)}>
-            <CategoryIcon className="h-3 w-3 shrink-0" />
-            <span className="truncate">{category.label}</span>
-          </Badge>
-        </div>
-        <div className="absolute top-3 right-3 z-10 shrink-0">
-          <Badge className={cn("shrink-0", status.color)}>{status.label}</Badge>
-        </div>
-      </div>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base line-clamp-1">{item.name}</CardTitle>
-        <p className="text-xs text-muted-foreground line-clamp-1">{item.courseName}</p>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-          {(item.workloadHours ?? 0) > 0 && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4 shrink-0" />
-              {item.workloadHours}h
-            </span>
-          )}
-          {(item.credits ?? 0) > 0 && (
-            <span className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4 shrink-0" />
-              {item.credits} créditos
-            </span>
-          )}
-          {item.professor && item.professor !== "—" && (
-            <span className="flex items-center gap-1">
-              <Users className="h-4 w-4 shrink-0" />
-              {item.professor}
-            </span>
-          )}
-        </div>
-
-        {showProgress && (
-          <div className="mb-4 min-h-[2.25rem]">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Progresso</span>
-              <span className="font-medium">{item.progressPercent}%</span>
-            </div>
-            <Progress value={item.progressPercent} className="h-2" />
-          </div>
-        )}
-
-        <Button
-          className="w-full"
-          variant={
-            item.canSelfEnroll
-              ? "default"
-              : item.progressStatus === "enrolled"
-                ? "secondary"
-                : "outline"
-          }
-          disabled={isBlocked}
-          onClick={() => {
-            if (item.canSelfEnroll) onEnroll(item.id);
-            else if (item.progressStatus === "enrolled" || item.progressStatus === "completed") {
-              onOpenDiscipline(item.id);
-            }
-          }}
-        >
-          {item.progressStatus === "discipline_inactive" && "Disciplina inativa"}
-          {item.progressStatus === "enrollment_inactive" && "Matrícula inativa"}
-          {item.canSelfEnroll && "Inscrever-se"}
-          {item.progressStatus === "enrolled" && (
-            <>
-              {item.progressPercent > 0 ? "Continuar" : "Iniciar"}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </>
-          )}
-          {item.progressStatus === "completed" && "Concluído"}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-};
 
 const FreeCourses = () => {
   const navigate = useNavigate();
@@ -416,7 +249,7 @@ const FreeCourses = () => {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map((item) => (
-                <DisciplineCard
+                <DisciplineCatalogCard
                   key={item.id}
                   item={item}
                   onEnroll={handleEnroll}
