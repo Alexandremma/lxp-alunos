@@ -18,6 +18,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import type { Trail, TrailModule as Module, TrailLesson as Lesson } from "@/services/trailAdapter";
 
 interface LessonSidebarProps {
@@ -25,6 +27,7 @@ interface LessonSidebarProps {
   modules: Module[];
   currentLesson: Lesson;
   allLessons: Lesson[];
+  progress?: number;
   onLessonClick?: () => void;
 }
 
@@ -72,6 +75,7 @@ export const LessonSidebar = ({
   modules,
   currentLesson,
   allLessons,
+  progress = 0,
   onLessonClick,
 }: LessonSidebarProps) => {
   const navigate = useNavigate();
@@ -98,16 +102,36 @@ export const LessonSidebar = ({
     onLessonClick?.();
   };
 
+  const totalLessons = allLessons.length || trail.totalLessons;
+  const currentLessonIndex = allLessons.findIndex((l) => l.id === currentLesson.id);
+  const lessonPosition = currentLessonIndex >= 0 ? currentLessonIndex + 1 : null;
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <h2 className="font-semibold text-sm text-foreground line-clamp-2">
-          {trail.title}
-        </h2>
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="font-semibold text-sm text-foreground line-clamp-2 min-w-0 flex-1">
+            {trail.title}
+          </h2>
+          {lessonPosition != null && totalLessons > 0 && (
+            <Badge
+              variant="outline"
+              className="shrink-0 text-[10px] px-1.5 py-0 h-5 font-normal whitespace-nowrap"
+            >
+              Aula {lessonPosition} de {totalLessons}
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground mt-1">
           {trail.totalModules} módulos • {trail.totalLessons} aulas
         </p>
+        <div className="mt-3">
+          <Progress value={progress} className="h-1.5" />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            {progress}% concluído
+          </p>
+        </div>
       </div>
 
       {/* Modules List */}

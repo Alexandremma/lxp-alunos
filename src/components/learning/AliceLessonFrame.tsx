@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { cn } from "@/lib/utils"
 import {
   buildAliceLaunchUrl,
   getAliceLaunchKeyForApp,
@@ -15,6 +16,8 @@ export type AliceLessonFrameProps = {
   user: AliceLaunchUser
   className?: string
   minHeight?: number | string
+  /** Preenche 100% da altura do container pai (modo imersivo). */
+  fillHeight?: boolean
   useHttp?: boolean
 }
 
@@ -23,6 +26,7 @@ export function AliceLessonFrame({
   user,
   className,
   minHeight = "70vh",
+  fillHeight = false,
   useHttp,
 }: AliceLessonFrameProps) {
   const [error, setError] = React.useState<string | null>(null)
@@ -94,21 +98,26 @@ export function AliceLessonFrame({
   }
 
   return (
-    <div className={className}>
+    <div className={cn(fillHeight && "h-full flex flex-col min-h-0", className)}>
       {error && (
-        <Alert variant="destructive" className="mb-3">
+        <Alert variant="destructive" className="mb-3 shrink-0">
           <AlertTitle>Material indisponível</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       {launching && (
-        <p className="text-sm text-muted-foreground mb-2">Carregando conteúdo…</p>
+        <p className="text-sm text-muted-foreground mb-2 shrink-0">Carregando conteúdo…</p>
       )}
       <iframe
         name={IFRAME_NAME}
         title="Conteúdo da aula"
-        className="w-full rounded-xl border border-border bg-background"
-        style={{ minHeight }}
+        className={cn(
+          "w-full bg-background",
+          fillHeight
+            ? "flex-1 min-h-0 h-full border-0"
+            : "rounded-xl border border-border",
+        )}
+        style={fillHeight ? undefined : { minHeight }}
       />
       <form
         ref={formRef}

@@ -328,7 +328,23 @@ const Dashboard = () => {
                     inProgressTrails.map((trail) => {
                       const progress = Math.max(0, Math.min(100, trail.progressPercent ?? 0));
                       return (
-                        <Card key={trail.id} className="card-hover">
+                        <Card key={trail.id} className="card-hover overflow-hidden group">
+                          <div className="relative h-32 overflow-hidden bg-muted">
+                            {trail.coverImageUrl ? (
+                              <>
+                                <img
+                                  src={trail.coverImageUrl}
+                                  alt={trail.name}
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+                              </>
+                            ) : (
+                              <div className="h-full bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center">
+                                <BookOpen className="h-8 w-8 text-primary/40" />
+                              </div>
+                            )}
+                          </div>
                           <CardContent className="p-4 space-y-3">
                             <div>
                               <p className="font-semibold text-foreground line-clamp-1">{trail.name}</p>

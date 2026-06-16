@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { getDisciplineCoverPublicUrl } from "@/services/disciplinePresentationService";
 import { fetchDisciplineProgressFromDb } from "@/services/disciplineProgressService";
 import type {
   CourseCategory,
@@ -17,6 +18,7 @@ type RawDisciplineRow = {
   professor: string | null;
   status: string;
   course_period_id: string;
+  cover_image_path: string | null;
 };
 
 export type StudentCatalogFilterParams = Omit<
@@ -137,7 +139,7 @@ export async function fetchFilteredStudentCatalogItems(
 
   const { data: disciplines, error: e4 } = await supabase
     .from("lxp_course_disciplines")
-    .select("id,name,code,workload,credits,professor,course_period_id,status")
+    .select("id,name,code,workload,credits,professor,course_period_id,status,cover_image_path")
     .in("course_period_id", periodIds);
   if (e4) throw e4;
 
@@ -213,6 +215,7 @@ export async function fetchFilteredStudentCatalogItems(
       workloadHours: d.workload != null && d.workload > 0 ? d.workload : undefined,
       credits: d.credits != null && d.credits > 0 ? d.credits : undefined,
       professor: d.professor?.trim() || undefined,
+      coverImageUrl: getDisciplineCoverPublicUrl(d.cover_image_path),
     });
   }
 

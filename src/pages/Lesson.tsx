@@ -4,9 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  Clock,
-  Award,
-  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,10 +50,6 @@ const Lesson = () => {
   const lesson = React.useMemo(
     () => allLessons.find((item) => String(item.id) === String(lessonId)) ?? null,
     [allLessons, lessonId],
-  );
-  const currentModule = React.useMemo(
-    () => modules.find((item) => item.id === lesson?.moduleId) ?? null,
-    [modules, lesson?.moduleId],
   );
   const currentLessonIndex = allLessons.findIndex((l) => String(l.id) === String(lessonId));
   const prev = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
@@ -169,11 +162,45 @@ const Lesson = () => {
     navigate(`/trails/${trailId}`);
   };
 
-  const totalLessons = allLessons.length;
+  const isImmersiveEbook =
+    lesson.type !== "video" &&
+    Boolean(lesson.aliceContentId) &&
+    isAliceConfigured();
 
-  // Calculate remaining time
-  const remainingLessons = currentLessonIndex >= 0 ? allLessons.slice(currentLessonIndex) : allLessons;
-  const remainingTime = remainingLessons.reduce((acc, l) => acc + l.duration, 0);
+  const navigationFooter = (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border bg-card shrink-0">
+      <Button
+        variant="outline"
+        onClick={handlePrev}
+        disabled={!prev}
+        className="gap-2"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Anterior</span>
+      </Button>
+
+      {lesson.status === "completed" ? (
+        <Badge variant="outline" className="gap-2 px-3 py-1.5 text-success border-success/30 bg-success/10">
+          <CheckCircle2 className="w-4 h-4" />
+          Aula concluída
+        </Badge>
+      ) : (
+        <Button onClick={handleComplete} disabled={isCompleting} className="gap-2">
+          <CheckCircle2 className="w-4 h-4" />
+          {isCompleting ? "Concluindo..." : "Concluir aula"}
+        </Button>
+      )}
+
+      <Button
+        variant="outline"
+        onClick={handleNext}
+        className="gap-2"
+      >
+        <span className="hidden sm:inline">{next ? "Próxima" : "Finalizar Disciplina"}</span>
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+    </div>
+  );
 
   return (
     <LessonLayout
@@ -182,85 +209,22 @@ const Lesson = () => {
       currentLesson={lesson as unknown as LegacyLesson}
       allLessons={allLessons as unknown as LegacyLesson[]}
       progress={progress}
+      headerLessonInfo={{
+        title: lesson.title,
+        description: lesson.description,
+        xpReward: lesson.xpReward,
+      }}
+      immersiveContent={isImmersiveEbook}
       externalDisciplineId={String(trailId)}
       externalUnitId={String(lessonId)}
     >
-      <div className="max-w-5xl mx-auto p-6 lg:p-8 space-y-6 animate-fade-up">
-        {/* Lesson Header Info */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          {currentModule && (
-            <Badge variant="outline" className="font-normal">
-              {currentModule.title}
-            </Badge>
-          )}
-          <span className="flex items-center gap-1">
-            <BookOpen className="w-4 h-4" />
-            Aula {currentLessonIndex + 1} de {totalLessons}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {remainingTime} min restantes
-          </span>
-        </div>
-
-        {/* Video Player (if video type) */}
-        {lesson.type === "video" && (
-          <div className="rounded-xl overflow-hidden shadow-lg">
-            <VideoPlayer
-              title={lesson.title}
-              duration={lesson.duration}
-              onComplete={handleComplete}
-              className="w-full"
-            />
-          </div>
-        )}
-
-        {lesson.type !== "video" &&
-          !lesson.aliceContentId &&
-          lesson.ebookPath && (
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Conteudo de e-book disponivel para esta aula (caderno digital).
-                </p>
-                <p className="text-xs break-all text-muted-foreground">{lesson.ebookPath}</p>
-              </CardContent>
-            </Card>
-          )}
-
-        {/* Lesson Title & Description */}
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
-                {lesson.title}
-              </h1>
-              {lesson.description?.trim() ? (
-                <p className="text-muted-foreground mt-2 text-base lg:text-lg">
-                  {lesson.description}
-                </p>
-              ) : null}
-            </div>
-            {lesson.xpReward > 0 && (
-              <Badge
-                variant="secondary"
-                className="shrink-0 flex items-center gap-1"
-                title="Valor configurado em Gamificação → Aula Assistida"
-              >
-                <Award className="w-3.5 h-3.5" />
-                +{lesson.xpReward} XP ao concluir
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Lesson content */}
-        <div className="mt-6">
-          {lesson.type !== "video" &&
-          lesson.aliceContentId &&
-          isAliceConfigured() ? (
+      {isImmersiveEbook ? (
+        <div className="h-full flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <AliceLessonFrame
-              contentId={lesson.aliceContentId}
+              contentId={lesson.aliceContentId!}
+              fillHeight
+              className="h-full"
               user={{
                 fullName:
                   profile?.name?.trim() ||
@@ -270,69 +234,68 @@ const Lesson = () => {
                 email: profile?.email || user?.email || "",
               }}
             />
-          ) : lesson.content ? (
-            <Card>
-              <CardContent className="p-6 prose prose-invert max-w-none">
-                <p className="text-foreground leading-relaxed whitespace-pre-line">
-                  {lesson.content}
-                </p>
-              </CardContent>
-            </Card>
-          ) : lesson.type === "reading" ? (
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">
-                  {isAliceConfigured()
-                    ? "O conteúdo desta aula não está disponível no momento. Tente novamente mais tarde ou fale com a instituição."
-                    : "O conteúdo de leitura será exibido aqui em breve."}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">
-                  Assista ao vídeo acima para acompanhar a aula.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          </div>
+          {navigationFooter}
         </div>
-
-        {/* Navigation Footer */}
-        <div className="flex items-center justify-between pt-6 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={handlePrev}
-            disabled={!prev}
-            className="gap-2"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Anterior</span>
-          </Button>
-
-          {lesson.status === "completed" ? (
-            <Badge variant="outline" className="gap-2 px-3 py-1.5 text-success border-success/30 bg-success/10">
-              <CheckCircle2 className="w-4 h-4" />
-              Aula concluída
-            </Badge>
-          ) : (
-            <Button onClick={handleComplete} disabled={isCompleting} className="gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              {isCompleting ? "Concluindo..." : "Concluir aula"}
-            </Button>
+      ) : (
+        <div className="max-w-5xl mx-auto p-6 lg:p-8 space-y-6 animate-fade-up">
+          {lesson.type === "video" && (
+            <div className="rounded-xl overflow-hidden shadow-lg">
+              <VideoPlayer
+                title={lesson.title}
+                duration={lesson.duration}
+                onComplete={handleComplete}
+                className="w-full"
+              />
+            </div>
           )}
 
-          <Button
-            variant="outline"
-            onClick={handleNext}
-            className="gap-2"
-          >
-            <span className="hidden sm:inline">{next ? "Próxima" : "Finalizar Disciplina"}</span>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+          {lesson.type !== "video" &&
+            !lesson.aliceContentId &&
+            lesson.ebookPath && (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Conteudo de e-book disponivel para esta aula (caderno digital).
+                  </p>
+                  <p className="text-xs break-all text-muted-foreground">{lesson.ebookPath}</p>
+                </CardContent>
+              </Card>
+            )}
+
+          <div>
+            {lesson.content ? (
+              <Card>
+                <CardContent className="p-6 prose prose-invert max-w-none">
+                  <p className="text-foreground leading-relaxed whitespace-pre-line">
+                    {lesson.content}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : lesson.type === "reading" ? (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-muted-foreground">
+                    {isAliceConfigured()
+                      ? "O conteúdo desta aula não está disponível no momento. Tente novamente mais tarde ou fale com a instituição."
+                      : "O conteúdo de leitura será exibido aqui em breve."}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : lesson.type !== "video" ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-muted-foreground">
+                    Assista ao vídeo acima para acompanhar a aula.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+
+          {navigationFooter}
         </div>
-      </div>
+      )}
 
       <Dialog open={completionDialogOpen} onOpenChange={setCompletionDialogOpen}>
         <DialogContent className="sm:max-w-md">

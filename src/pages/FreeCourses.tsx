@@ -105,8 +105,19 @@ const DisciplineCard = ({
 
   return (
     <Card className="overflow-hidden card-hover group">
-      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center">
-        <CategoryIcon className="h-12 w-12 text-primary/40" />
+      <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center overflow-hidden">
+        {item.coverImageUrl ? (
+          <>
+            <img
+              src={item.coverImageUrl}
+              alt={item.name}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
+          </>
+        ) : (
+          <CategoryIcon className="h-12 w-12 text-primary/40" />
+        )}
         <div className="absolute top-3 left-3 z-10 max-w-[calc(100%-8.5rem)] min-w-0">
           <Badge variant="outline" className={cn("backdrop-blur-sm gap-1", category.color)}>
             <CategoryIcon className="h-3 w-3 shrink-0" />
