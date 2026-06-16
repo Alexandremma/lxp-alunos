@@ -136,7 +136,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const { data: disciplines, error: e4 } = await supabase
     .from("lxp_course_disciplines")
-    .select("id, name, code, workload, credits, professor, course_period_id, status")
+    .select("id, name, code, workload, credits, credits_enabled, professor, course_period_id, status")
     .in("course_period_id", periodIds)
   if (e4) throw e4
 
@@ -174,7 +174,12 @@ export async function getEnrolledLinkedDisciplinesCatalog(
       type: "discipline",
       duration: d.workload != null && d.workload > 0 ? `${d.workload}h` : undefined,
       workloadHours: d.workload != null && d.workload > 0 ? d.workload : undefined,
-      credits: d.credits != null && d.credits > 0 ? d.credits : undefined,
+      credits:
+        (d as { credits_enabled?: boolean }).credits_enabled !== false &&
+        d.credits != null &&
+        d.credits > 0
+          ? d.credits
+          : undefined,
       professor: d.professor?.trim() || undefined,
       category: tabCategory,
       courseId: courseId ?? undefined,

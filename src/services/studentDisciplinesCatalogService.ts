@@ -15,6 +15,7 @@ type RawDisciplineRow = {
   code: string;
   workload: number | null;
   credits: number | null;
+  credits_enabled: boolean | null;
   professor: string | null;
   status: string;
   course_period_id: string;
@@ -139,7 +140,7 @@ export async function fetchFilteredStudentCatalogItems(
 
   const { data: disciplines, error: e4 } = await supabase
     .from("lxp_course_disciplines")
-    .select("id,name,code,workload,credits,professor,course_period_id,status,cover_image_path")
+    .select("id,name,code,workload,credits,credits_enabled,professor,course_period_id,status,cover_image_path")
     .in("course_period_id", periodIds);
   if (e4) throw e4;
 
@@ -213,7 +214,10 @@ export async function fetchFilteredStudentCatalogItems(
       progressPercent: progress?.progressPercent ?? 0,
       canSelfEnroll,
       workloadHours: d.workload != null && d.workload > 0 ? d.workload : undefined,
-      credits: d.credits != null && d.credits > 0 ? d.credits : undefined,
+      credits:
+        d.credits_enabled !== false && d.credits != null && d.credits > 0
+          ? d.credits
+          : undefined,
       professor: d.professor?.trim() || undefined,
       coverImageUrl: getDisciplineCoverPublicUrl(d.cover_image_path),
     });

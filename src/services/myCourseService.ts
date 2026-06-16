@@ -35,7 +35,7 @@ async function buildCourseOverview(
 
   const { data: periodRows, error: periodsError } = await supabase
     .from("lxp_course_periods")
-    .select("id,number,name,lxp_course_disciplines(id,name,code,workload,credits,professor,status)")
+    .select("id,number,name,lxp_course_disciplines(id,name,code,workload,credits,credits_enabled,professor,status)")
     .eq("course_id", enrollment.course_id)
     .order("number", { ascending: true });
   if (periodsError) throw periodsError;
@@ -90,6 +90,7 @@ async function buildCourseOverview(
       code: string;
       workload: number;
       credits: number;
+      credits_enabled?: boolean;
       professor?: string;
       status?: string;
     }>;
@@ -99,13 +100,15 @@ async function buildCourseOverview(
       const hasContentLink = linkByDisciplineId.has(discipline.id);
       const status = deriveSubjectStatus(progress, hasContentLink);
       const isComplete = status === "approved";
+      const creditsEnabled = discipline.credits_enabled ?? true;
 
       return {
         id: discipline.id,
         name: discipline.name,
         code: discipline.code,
         workload: discipline.workload ?? 0,
-        credits: discipline.credits ?? 0,
+        credits: creditsEnabled ? (discipline.credits ?? 0) : 0,
+        creditsEnabled,
         professor: discipline.professor ?? undefined,
         status,
         grade: progress?.grade ?? undefined,
