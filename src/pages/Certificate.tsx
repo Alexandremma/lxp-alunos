@@ -18,9 +18,9 @@ export default function Certificate() {
     if (!data) return;
     try {
       await downloadCertificatePdf(data);
-      toast.success("Use a janela de impressão para salvar em PDF.");
+      toast.success("Certificado baixado.");
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Não foi possível abrir a impressão.";
+      const message = e instanceof Error ? e.message : "Não foi possível baixar o certificado.";
       toast.error(message);
     }
   };
@@ -80,6 +80,8 @@ export default function Certificate() {
                   instructor: data.instructor,
                   institutionName: data.institutionName,
                   institutionLogoUrl: data.institutionLogoUrl,
+                  layoutKind: data.layoutKind,
+                  backgroundImageUrl: data.backgroundImageUrl,
                   signatures: data.signatures,
                   validationUrl: data.validationUrl,
                 }}

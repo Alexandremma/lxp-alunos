@@ -1,12 +1,7 @@
-import {
-  certificateDetailToPrintPayload,
-  openCertificatePrintWindow,
-} from "@/lib/certificatePrint";
-import type { CertificateDetail } from "@/services/certificateService";
+import { certificateDetailToPrintPayload } from "@/lib/certificatePrint"
+import { downloadCertificatePdfFile } from "@/lib/certificatePdfDownload"
+import type { CertificateDetail } from "@/services/certificateService"
 
 export async function downloadCertificatePdf(detail: CertificateDetail): Promise<void> {
-  await openCertificatePrintWindow({
-    ...certificateDetailToPrintPayload(detail),
-    autoPrint: true,
-  });
+  await downloadCertificatePdfFile(certificateDetailToPrintPayload(detail))
 }

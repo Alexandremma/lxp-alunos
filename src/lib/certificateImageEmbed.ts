@@ -26,6 +26,10 @@ export async function embedCertificatePrintImages(
     ? (await urlToDataUrl(payload.institutionLogoUrl)) ?? payload.institutionLogoUrl
     : payload.institutionLogoUrl
 
+  const backgroundImageUrl = payload.backgroundImageUrl?.trim()
+    ? (await urlToDataUrl(payload.backgroundImageUrl)) ?? payload.backgroundImageUrl
+    : payload.backgroundImageUrl
+
   const signatures = payload.signatures
     ? await Promise.all(
         payload.signatures.map(async (sig) => {
@@ -47,6 +51,7 @@ export async function embedCertificatePrintImages(
   return {
     ...payload,
     institutionLogoUrl,
+    backgroundImageUrl,
     signatures,
     validationUrl,
     qrCodeDataUrl,

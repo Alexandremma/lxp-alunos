@@ -8,7 +8,7 @@ import {
   type CertificateSnapshot,
 } from "@/services/certificateIssueService"
 import { buildCertificateValidationUrl } from "@/lib/certificatePublicUrls"
-import type { CertificatePrintSignature } from "@/lib/certificatePrint"
+import type { CertificatePrintSignature, CertificateLayoutKind } from "@/lib/certificatePrint"
 
 export type CertificateDetail = {
   id: string
@@ -20,6 +20,8 @@ export type CertificateDetail = {
   workloadHours: number | null
   institutionName: string
   institutionLogoUrl: string | null
+  layoutKind: CertificateLayoutKind
+  backgroundImageUrl: string | null
   signatures: CertificatePrintSignature[]
   validationUrl: string
 }
@@ -67,6 +69,8 @@ function snapshotToDetail(
     workloadHours: snapshot.workload_hours,
     institutionName: snapshot.institution_name || "B42 Edtech",
     institutionLogoUrl: snapshot.institution_logo_url ?? null,
+    layoutKind: snapshot.layout_kind === "custom" ? "custom" : "default",
+    backgroundImageUrl: snapshot.background_image_url ?? null,
     signatures,
     validationUrl,
   }

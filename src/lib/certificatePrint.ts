@@ -6,6 +6,8 @@ export type CertificatePrintSignature = {
   imageUrl?: string | null;
 };
 
+export type CertificateLayoutKind = "default" | "custom"
+
 export type CertificatePrintPayload = {
   studentName: string;
   disciplineName: string;
@@ -15,6 +17,8 @@ export type CertificatePrintPayload = {
   instructorName?: string | null;
   institutionName?: string;
   institutionLogoUrl?: string | null;
+  layoutKind?: CertificateLayoutKind;
+  backgroundImageUrl?: string | null;
   signatures?: CertificatePrintSignature[];
   /** URL absoluta de validação pública (portal aluno) */
   validationUrl?: string;
@@ -22,6 +26,8 @@ export type CertificatePrintPayload = {
   /** @deprecated use validationUrl — mantido por compatibilidade */
   validateBaseUrl?: string;
   autoPrint?: boolean;
+  /** page = A4 fixo (PDF); compact = altura pelo conteúdo (preview iframe) */
+  viewportMode?: "page" | "compact";
 };
 
 function formatIssuedDate(iso: string): string {
@@ -46,7 +52,6 @@ function escapeHtml(value: string): string {
 
 function buildVerifyBlock(payload: CertificatePrintPayload): string {
   if (!payload.qrCodeDataUrl) return "";
-  // data URL gerada localmente — não passar por escapeHtml (base64 é seguro em aspas duplas)
   return `
     <div class="verify-block">
       <img src="${payload.qrCodeDataUrl}" alt="Validação" class="verify-qr" />
@@ -82,6 +87,16 @@ export function buildCertificatePrintHtml(payload: CertificatePrintPayload): str
   const footerRow = sigsBlock ? `<div class="footer-row">${sigsBlock}</div>` : "";
   const verifyBlock = buildVerifyBlock(payload);
 
+  const isCustom =
+    payload.layoutKind === "custom" && Boolean(payload.backgroundImageUrl?.trim());
+  const bgUrl = payload.backgroundImageUrl?.trim() ?? "";
+  const frameClass = isCustom ? "frame frame--custom" : "frame";
+  const frameStyle = isCustom ? ` style="background-image:url('${bgUrl}')"` : "";
+  const sheetClass = isCustom ? "sheet sheet--custom" : "sheet";
+
+  const isCompact = payload.viewportMode === "compact";
+  const htmlClass = isCompact ? "compact" : "";
+
   const printScript =
     payload.autoPrint === false
       ? ""
@@ -102,39 +117,53 @@ window.onload = function() {
 </script>`;
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="${htmlClass}">
 <head>
   <meta charset="utf-8" />
   <title>Certificado — ${escapeHtml(payload.disciplineName)}</title>
   <style>
     @page { size: A4 landscape; margin: 10mm; }
     * { box-sizing: border-box; }
-    body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 18px 22px; color: #111; background: #fff; }
-    .frame { position: relative; border: 3px double #4c1d95; padding: 24px 40px 32px; width: 100%; margin: 0 auto; page-break-inside: avoid; }
+    html, body { margin: 0; padding: 0; width: 1122px; height: 794px; overflow: hidden; background: #fff; font-family: Georgia, "Times New Roman", serif; color: #111; }
+    html.compact, html.compact body { height: auto; overflow: visible; }
+    .sheet { width: 100%; height: 100%; padding: 10px 16px; box-sizing: border-box; display: flex; flex-direction: column; }
+    .sheet--custom { padding: 0; }
+    html.compact .sheet { height: auto; }
+    .frame { position: relative; border: 3px double #4c1d95; padding: 16px 28px 20px; width: 100%; height: 100%; flex: 1; min-height: 0; margin: 0; page-break-inside: avoid; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: stretch; }
+    html.compact .frame { height: auto; flex: none; justify-content: flex-start; }
+    .content-col { flex: 0 0 auto; width: 100%; }
+    .frame--custom { border: none; height: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: stretch; padding: 220px 56px 168px; background-size: cover; background-position: center; background-repeat: no-repeat; }
+    .frame--custom h1 { display: none; }
+    .frame--custom .verify-block { left: 20px; bottom: 20px; right: auto; }
+    html.compact .frame--custom { min-height: 520px; }
+    .frame--custom::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.05); pointer-events: none; }
+    .frame--custom > * { position: relative; z-index: 1; }
     .main { text-align: center; }
-    .logo { text-align: center; margin: 0 0 8px; }
+    .logo { text-align: center; margin: 0 0 10px; }
     .logo img { max-height: 48px; max-width: 180px; object-fit: contain; }
-    .institution { text-align: center; font-size: 12px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 10px; font-weight: 600; }
-    h1 { font-size: 24px; text-align: center; margin: 0 0 4px; letter-spacing: 0.04em; }
-    .subtitle { text-align: center; color: #555; margin: 4px 0 8px; font-size: 14px; }
-    .student { font-size: 28px; text-align: center; color: #4c1d95; margin: 8px 0; font-weight: bold; }
-    .discipline { font-size: 18px; text-align: center; margin: 4px 0 10px; }
-    .meta { text-align: center; font-size: 12px; color: #444; margin: 2px 0; }
-    .footer-row { margin-top: 16px; }
+    .institution { text-align: center; font-size: 12px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 12px; font-weight: 600; }
+    h1 { font-size: 24px; text-align: center; margin: 0 0 8px; letter-spacing: 0.04em; }
+    .subtitle { text-align: center; color: #555; margin: 5px 0 8px; font-size: 14px; }
+    .student { font-size: 28px; text-align: center; color: #4c1d95; margin: 10px 0; font-weight: bold; }
+    .discipline { font-size: 18px; text-align: center; margin: 5px 0 10px; }
+    .meta { text-align: center; font-size: 12px; color: #444; margin: 4px 0; }
+    .footer-row { margin-top: 18px; }
     .sigs { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; align-items: flex-end; gap: 48px; }
     .sig { flex: 0 0 auto; width: 150px; text-align: center; }
     .sig-line { height: 36px; border-bottom: 2px solid #333; margin-bottom: 6px; }
     .sig-img { max-height: 44px; max-width: 140px; object-fit: contain; margin-bottom: 6px; }
     .sig-name { font-size: 12px; font-weight: 600; margin: 0; }
     .sig-title { font-size: 10px; color: #666; margin: 2px 0 0; }
-    .verify-block { position: absolute; right: 14px; bottom: 10px; text-align: center; }
-    .verify-qr { width: 58px; height: 58px; display: block; margin: 0 auto 3px; image-rendering: pixelated; image-rendering: crisp-edges; }
-    .verify-code { font-family: monospace; font-size: 8px; color: #555; margin: 0; line-height: 1.2; word-break: break-all; max-width: 88px; }
-    @media print { body { padding: 0; } .frame { border-width: 2px; padding: 20px 32px 28px; } .verify-qr { width: 15mm; height: 15mm; } }
+    .verify-block { position: absolute; left: 14px; bottom: 10px; right: auto; text-align: center; }
+    .verify-qr { width: 66px; height: 66px; display: block; margin: 0 auto 3px; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .verify-code { font-family: monospace; font-size: 8px; color: #555; margin: 0; line-height: 1.2; word-break: break-all; max-width: 120px; }
+    @media print { .sheet { padding: 12px 20px; } .frame { border-width: 2px; padding: 14px 24px 18px; } .verify-qr { width: 17mm; height: 17mm; } }
   </style>
 </head>
 <body>
-  <div class="frame">
+  <div class="${sheetClass}">
+  <div class="${frameClass}"${frameStyle}>
+    <div class="content-col">
     <div class="main">
       ${logoBlock}
       <p class="institution">${escapeHtml(institution)}</p>
@@ -147,7 +176,9 @@ window.onload = function() {
       <p class="meta"><strong>Data de emissão:</strong> ${formatIssuedDate(payload.issuedAt)}</p>
     </div>
     ${footerRow}
+    </div>
     ${verifyBlock}
+  </div>
   </div>
   ${printScript}
 </body>
@@ -179,6 +210,8 @@ export function certificateDetailToPrintPayload(detail: {
   instructor: string;
   institutionName: string;
   institutionLogoUrl: string | null;
+  layoutKind?: CertificateLayoutKind;
+  backgroundImageUrl?: string | null;
   signatures: CertificatePrintSignature[];
   validationUrl: string;
 }): CertificatePrintPayload {
@@ -190,6 +223,8 @@ export function certificateDetailToPrintPayload(detail: {
     workloadHours: detail.workloadHours,
     institutionName: detail.institutionName,
     institutionLogoUrl: detail.institutionLogoUrl,
+    layoutKind: detail.layoutKind,
+    backgroundImageUrl: detail.backgroundImageUrl,
     signatures: detail.signatures,
     validationUrl: detail.validationUrl,
   };

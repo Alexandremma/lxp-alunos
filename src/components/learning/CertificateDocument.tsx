@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { generateValidationQrDataUrl, QR_DISPLAY_PX } from "@/lib/certificateQr"
-import type { CertificatePrintSignature } from "@/lib/certificatePrint"
+import type { CertificatePrintSignature, CertificateLayoutKind } from "@/lib/certificatePrint"
 
 export type CertificateDocumentData = {
   studentName: string
@@ -12,6 +12,8 @@ export type CertificateDocumentData = {
   instructor: string
   institutionName: string
   institutionLogoUrl: string | null
+  layoutKind?: CertificateLayoutKind
+  backgroundImageUrl?: string | null
   signatures: CertificatePrintSignature[]
   validationUrl?: string
 }
@@ -35,8 +37,10 @@ function formatIssuedDate(iso: string): string {
 }
 
 /**
- * Layout unificado do certificado (tela e impressão) — A4 paisagem compacto.
- * Assinaturas: somente slots do template. Verificação: QR + código discretos à direita do rodapé.
+ * Layout unificado do certificado (tela e impressão) — A4 paisagem.
+ * Padrão: moldura preenche A4; bloco texto+assinaturas centralizado como unidade.
+ * Personalizado: fundo em tela cheia com conteúdo centralizado.
+ * Verificação: QR + código no canto inferior esquerdo (66px).
  */
 export function CertificateDocument({
   data,
@@ -44,6 +48,7 @@ export function CertificateDocument({
   className,
 }: CertificateDocumentProps) {
   const isPrint = mode === "print"
+  const isCustom = data.layoutKind === "custom" && Boolean(data.backgroundImageUrl?.trim())
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -60,6 +65,121 @@ export function CertificateDocument({
     }
   }, [data.validationUrl])
 
+  const contentBlock = (
+    <>
+      {data.institutionLogoUrl && (
+        <img
+          src={data.institutionLogoUrl}
+          alt={data.institutionName}
+          className="h-10 mx-auto object-contain mb-2.5"
+        />
+      )}
+
+      <p
+        className={cn(
+          "text-[11px] uppercase tracking-widest font-semibold mb-3",
+          isPrint ? "text-[#4c1d95]" : "text-primary",
+        )}
+      >
+        {data.institutionName}
+      </p>
+
+      {!isCustom && (
+        <h1
+          className={cn(
+            "font-semibold tracking-wide",
+            isPrint ? "text-[24px] text-[#111]" : "text-xl md:text-2xl font-display font-bold",
+          )}
+        >
+          Certificado de Conclusão
+        </h1>
+      )}
+      <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
+        Certificamos que
+      </p>
+
+      <h2
+        className={cn(
+          "font-bold my-3",
+          isPrint ? "text-[28px] text-[#4c1d95]" : "text-xl md:text-2xl font-display text-primary",
+        )}
+      >
+        {data.studentName}
+      </h2>
+
+      <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
+        concluiu com sucesso a disciplina
+      </p>
+      <h3
+        className={cn(
+          "font-semibold",
+          isPrint ? "text-[18px] text-[#111]" : "text-lg md:text-xl font-display",
+        )}
+      >
+        {data.courseTitle}
+      </h3>
+
+      {data.workloadHours != null && data.workloadHours > 0 && (
+        <p className={cn("text-xs mt-1.5", isPrint ? "text-[#444]" : "text-muted-foreground")}>
+          Carga horária: <strong>{data.workloadHours} horas</strong>
+        </p>
+      )}
+
+      <p className={cn("text-xs mt-1.5", isPrint ? "text-[#444]" : "text-muted-foreground")}>
+        Data de emissão:{" "}
+        <span className={cn("font-medium", !isPrint && "text-foreground")}>
+          {formatIssuedDate(data.issuedAt)}
+        </span>
+      </p>
+
+      {data.signatures.length > 0 && (
+        <div className="mt-4 flex flex-row flex-nowrap justify-center items-end gap-10 md:gap-14">
+          {data.signatures.map((sig) => (
+            <div key={`${sig.signerName}-${sig.signerTitle}`} className="w-[130px] shrink-0 space-y-0.5">
+              {sig.imageUrl ? (
+                <img src={sig.imageUrl} alt="" className="h-11 mx-auto object-contain" />
+              ) : (
+                <div
+                  className={cn(
+                    "h-9 border-b-2 mx-2",
+                    isPrint ? "border-[#333]" : "border-foreground/20",
+                  )}
+                />
+              )}
+              <p className={cn("text-[11px] font-semibold", isPrint ? "text-[#333]" : "text-foreground")}>
+                {sig.signerName}
+              </p>
+              <p className={cn("text-[10px]", isPrint ? "text-[#666]" : "text-muted-foreground")}>
+                {sig.signerTitle}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+
+  const verifyBlock = data.validationUrl ? (
+    <div className="absolute left-3 bottom-2.5 z-[2] text-center md:left-4 md:bottom-3">
+      {qrDataUrl && (
+        <img
+          src={qrDataUrl}
+          alt="Validação"
+          className="mx-auto mb-0.5"
+          style={{ width: QR_DISPLAY_PX, height: QR_DISPLAY_PX, imageRendering: "pixelated" }}
+        />
+      )}
+      <p
+        className={cn(
+          "font-mono text-[8px] max-w-[120px] break-all leading-tight",
+          isPrint ? "text-[#555]" : "text-muted-foreground",
+        )}
+      >
+        {data.codeHash}
+      </p>
+    </div>
+  ) : null
+
   return (
     <div
       className={cn(
@@ -67,125 +187,30 @@ export function CertificateDocument({
         className,
       )}
     >
-      <div
-        className={cn(
-          "relative mx-auto w-full max-w-[900px] text-center",
-          isPrint
-            ? "border-[3px] border-double border-[#4c1d95] px-8 py-6 pb-8"
-            : "border-[3px] border-double border-[#4c1d95]/80 rounded-lg px-6 py-5 pb-7 md:px-8 md:py-6 md:pb-8",
-        )}
-      >
-        <div className="space-y-1">
-          {data.institutionLogoUrl && (
-            <img
-              src={data.institutionLogoUrl}
-              alt={data.institutionName}
-              className="h-10 mx-auto object-contain mb-2"
-            />
-          )}
-
-          <p
-            className={cn(
-              "text-[11px] uppercase tracking-widest font-semibold mb-2",
-              isPrint ? "text-[#4c1d95]" : "text-primary",
-            )}
-          >
-            {data.institutionName}
-          </p>
-
-          <h1
-            className={cn(
-              "font-semibold tracking-wide",
-              isPrint ? "text-[24px] text-[#111]" : "text-xl md:text-2xl font-display font-bold",
-            )}
-          >
-            Certificado de Conclusão
-          </h1>
-          <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
-            Certificamos que
-          </p>
-
-          <h2
-            className={cn(
-              "font-bold my-2",
-              isPrint ? "text-[28px] text-[#4c1d95]" : "text-xl md:text-2xl font-display text-primary",
-            )}
-          >
-            {data.studentName}
-          </h2>
-
-          <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
-            concluiu com sucesso a disciplina
-          </p>
-          <h3
-            className={cn(
-              "font-semibold",
-              isPrint ? "text-[18px] text-[#111]" : "text-lg md:text-xl font-display",
-            )}
-          >
-            {data.courseTitle}
-          </h3>
-
-          {data.workloadHours != null && data.workloadHours > 0 && (
-            <p className={cn("text-xs mt-1", isPrint ? "text-[#444]" : "text-muted-foreground")}>
-              Carga horária: <strong>{data.workloadHours} horas</strong>
-            </p>
-          )}
-
-          <p className={cn("text-xs mt-1", isPrint ? "text-[#444]" : "text-muted-foreground")}>
-            Data de emissão:{" "}
-            <span className={cn("font-medium", !isPrint && "text-foreground")}>
-              {formatIssuedDate(data.issuedAt)}
-            </span>
-          </p>
+      {isCustom ? (
+        <div
+          className="relative mx-auto flex w-full max-w-[900px] aspect-[297/210] flex-col justify-center bg-cover bg-center bg-no-repeat text-center pt-[28%] pb-[21%] px-[5%]"
+          style={{ backgroundImage: `url(${data.backgroundImageUrl})` }}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-white/5" aria-hidden />
+          <div className="relative z-[1] w-full space-y-1">{contentBlock}</div>
+          {verifyBlock}
         </div>
-
-        {data.signatures.length > 0 && (
-          <div className="mt-4 flex flex-row flex-nowrap justify-center items-end gap-10 md:gap-14">
-            {data.signatures.map((sig) => (
-              <div key={`${sig.signerName}-${sig.signerTitle}`} className="w-[130px] shrink-0 space-y-0.5">
-                {sig.imageUrl ? (
-                  <img src={sig.imageUrl} alt="" className="h-11 mx-auto object-contain" />
-                ) : (
-                  <div
-                    className={cn(
-                      "h-9 border-b-2 mx-2",
-                      isPrint ? "border-[#333]" : "border-foreground/20",
-                    )}
-                  />
-                )}
-                <p className={cn("text-[11px] font-semibold", isPrint ? "text-[#333]" : "text-foreground")}>
-                  {sig.signerName}
-                </p>
-                <p className={cn("text-[10px]", isPrint ? "text-[#666]" : "text-muted-foreground")}>
-                  {sig.signerTitle}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {data.validationUrl && (
-          <div className="absolute right-3 bottom-2.5 text-center md:right-4 md:bottom-3">
-            {qrDataUrl && (
-              <img
-                src={qrDataUrl}
-                alt="Validação"
-                className="mx-auto mb-0.5"
-                style={{ width: QR_DISPLAY_PX, height: QR_DISPLAY_PX, imageRendering: "pixelated" }}
-              />
+      ) : (
+        <div className="mx-auto w-full max-w-[900px] aspect-[297/210] p-2.5">
+          <div
+            className={cn(
+              "relative flex h-full w-full flex-col justify-center text-center px-5 py-4 md:px-6",
+              isPrint
+                ? "border-[3px] border-double border-[#4c1d95]"
+                : "border-[3px] border-double border-[#4c1d95]/80 rounded-lg",
             )}
-            <p
-              className={cn(
-                "font-mono text-[8px] max-w-[88px] break-all leading-tight",
-                isPrint ? "text-[#555]" : "text-muted-foreground",
-              )}
-            >
-              {data.codeHash}
-            </p>
+          >
+            <div className="space-y-1">{contentBlock}</div>
+            {verifyBlock}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

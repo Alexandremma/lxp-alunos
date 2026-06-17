@@ -10,6 +10,8 @@ export type CertificateSnapshot = {
   instructor_name: string | null
   institution_name: string
   institution_logo_url: string | null
+  layout_kind?: "default" | "custom"
+  background_image_url?: string | null
   completed_at: string | null
   template_id: string | null
   signatures: Array<{
@@ -53,6 +55,8 @@ type TemplateInfoRow = {
   id: string
   institution_name: string | null
   institution_logo_path: string | null
+  layout_kind: "default" | "custom" | null
+  background_image_path: string | null
 }
 
 type SlotRow = {
@@ -96,7 +100,7 @@ export async function buildCertificateSnapshot(params: {
     const [tplRes, slotRes] = await Promise.all([
       supabase
         .from("lxp_certificate_templates")
-        .select("id,institution_name,institution_logo_path")
+        .select("id,institution_name,institution_logo_path,layout_kind,background_image_path")
         .eq("id", params.templateId)
         .maybeSingle(),
       supabase
@@ -134,6 +138,8 @@ export async function buildCertificateSnapshot(params: {
       (discipline as { professor: string | null } | null)?.professor?.trim() || null,
     institution_name: template?.institution_name?.trim() || "B42 Edtech",
     institution_logo_url: certificateSignaturePublicUrl(template?.institution_logo_path),
+    layout_kind: template?.layout_kind === "custom" ? "custom" : "default",
+    background_image_url: certificateSignaturePublicUrl(template?.background_image_path),
     completed_at:
       (progress as { completed_at: string | null } | null)?.completed_at ??
       (progress as { last_updated_at: string | null } | null)?.last_updated_at ??
