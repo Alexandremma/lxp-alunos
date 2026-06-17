@@ -16,6 +16,10 @@ export type CertificatePrintPayload = {
   institutionName?: string;
   institutionLogoUrl?: string | null;
   signatures?: CertificatePrintSignature[];
+  /** URL absoluta de validação pública (portal aluno) */
+  validationUrl?: string;
+  qrCodeDataUrl?: string;
+  /** @deprecated use validationUrl — mantido por compatibilidade */
   validateBaseUrl?: string;
   autoPrint?: boolean;
 };
@@ -40,6 +44,16 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function buildVerifyBlock(payload: CertificatePrintPayload): string {
+  if (!payload.qrCodeDataUrl) return "";
+  // data URL gerada localmente — não passar por escapeHtml (base64 é seguro em aspas duplas)
+  return `
+    <div class="verify-block">
+      <img src="${payload.qrCodeDataUrl}" alt="Validação" class="verify-qr" />
+      <p class="verify-code">${escapeHtml(payload.validationCode)}</p>
+    </div>`;
+}
+
 export function buildCertificatePrintHtml(payload: CertificatePrintPayload): string {
   const institution = payload.institutionName?.trim() || "B42 Edtech";
   const logoBlock = payload.institutionLogoUrl?.trim()
@@ -51,29 +65,22 @@ export function buildCertificatePrintHtml(payload: CertificatePrintPayload): str
       : "";
 
   const sigs = payload.signatures ?? [];
-  const signatureBlocks =
-    sigs.length > 0
-      ? sigs
-          .map(
-            (s) => `
+  const signatureBlocks = sigs
+    .map(
+      (s) => `
         <div class="sig">
           ${s.imageUrl ? `<img src="${escapeHtml(s.imageUrl)}" alt="" class="sig-img" />` : '<div class="sig-line"></div>'}
           <p class="sig-name">${escapeHtml(s.signerName)}</p>
           <p class="sig-title">${escapeHtml(s.signerTitle)}</p>
         </div>`,
-          )
-          .join("")
-      : `
-        <div class="sig">
-          <div class="sig-line"></div>
-          <p class="sig-name">${escapeHtml(payload.instructorName?.trim() || "Equipe Acadêmica")}</p>
-          <p class="sig-title">Instrutor(a)</p>
-        </div>
-        <div class="sig">
-          <div class="sig-line"></div>
-          <p class="sig-name">${escapeHtml(institution)}</p>
-          <p class="sig-title">Instituição</p>
-        </div>`;
+    )
+    .join("");
+
+  const sigsBlock =
+    sigs.length > 0 ? `<div class="sigs">${signatureBlocks}</div>` : "";
+
+  const footerRow = sigsBlock ? `<div class="footer-row">${sigsBlock}</div>` : "";
+  const verifyBlock = buildVerifyBlock(payload);
 
   const printScript =
     payload.autoPrint === false
@@ -100,40 +107,47 @@ window.onload = function() {
   <meta charset="utf-8" />
   <title>Certificado — ${escapeHtml(payload.disciplineName)}</title>
   <style>
+    @page { size: A4 landscape; margin: 10mm; }
     * { box-sizing: border-box; }
-    body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 32px; color: #111; background: #fff; }
-    .frame { border: 3px double #4c1d95; padding: 48px 40px; max-width: 820px; margin: 0 auto; }
-    .logo { text-align: center; margin: 0 0 16px; }
-    .logo img { max-height: 64px; max-width: 220px; object-fit: contain; }
-    .institution { text-align: center; font-size: 14px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 24px; font-weight: 600; }
-    h1 { font-size: 28px; text-align: center; margin: 0 0 8px; letter-spacing: 0.04em; }
-    .subtitle { text-align: center; color: #555; margin: 8px 0 24px; }
-    .student { font-size: 32px; text-align: center; color: #4c1d95; margin: 24px 0; font-weight: bold; }
-    .discipline { font-size: 22px; text-align: center; margin: 8px 0 24px; }
-    .meta { text-align: center; font-size: 14px; color: #444; margin: 4px 0; }
-    .code { text-align: center; font-family: monospace; font-size: 13px; margin-top: 24px; padding: 12px; background: #f4f4f5; border-radius: 8px; }
-    .sigs { display: flex; justify-content: space-around; gap: 24px; margin-top: 48px; flex-wrap: wrap; }
-    .sig { flex: 1; min-width: 180px; text-align: center; }
-    .sig-line { height: 48px; border-bottom: 2px solid #333; margin-bottom: 8px; }
-    .sig-img { max-height: 56px; max-width: 160px; object-fit: contain; margin-bottom: 8px; }
-    .sig-name { font-size: 14px; font-weight: 600; margin: 0; }
-    .sig-title { font-size: 12px; color: #666; margin: 4px 0 0; }
-    @media print { body { padding: 0; } .frame { border-width: 2px; } }
+    body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 18px 22px; color: #111; background: #fff; }
+    .frame { position: relative; border: 3px double #4c1d95; padding: 24px 40px 32px; width: 100%; margin: 0 auto; page-break-inside: avoid; }
+    .main { text-align: center; }
+    .logo { text-align: center; margin: 0 0 8px; }
+    .logo img { max-height: 48px; max-width: 180px; object-fit: contain; }
+    .institution { text-align: center; font-size: 12px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 10px; font-weight: 600; }
+    h1 { font-size: 24px; text-align: center; margin: 0 0 4px; letter-spacing: 0.04em; }
+    .subtitle { text-align: center; color: #555; margin: 4px 0 8px; font-size: 14px; }
+    .student { font-size: 28px; text-align: center; color: #4c1d95; margin: 8px 0; font-weight: bold; }
+    .discipline { font-size: 18px; text-align: center; margin: 4px 0 10px; }
+    .meta { text-align: center; font-size: 12px; color: #444; margin: 2px 0; }
+    .footer-row { margin-top: 16px; }
+    .sigs { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; align-items: flex-end; gap: 48px; }
+    .sig { flex: 0 0 auto; width: 150px; text-align: center; }
+    .sig-line { height: 36px; border-bottom: 2px solid #333; margin-bottom: 6px; }
+    .sig-img { max-height: 44px; max-width: 140px; object-fit: contain; margin-bottom: 6px; }
+    .sig-name { font-size: 12px; font-weight: 600; margin: 0; }
+    .sig-title { font-size: 10px; color: #666; margin: 2px 0 0; }
+    .verify-block { position: absolute; right: 14px; bottom: 10px; text-align: center; }
+    .verify-qr { width: 58px; height: 58px; display: block; margin: 0 auto 3px; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .verify-code { font-family: monospace; font-size: 8px; color: #555; margin: 0; line-height: 1.2; word-break: break-all; max-width: 88px; }
+    @media print { body { padding: 0; } .frame { border-width: 2px; padding: 20px 32px 28px; } .verify-qr { width: 15mm; height: 15mm; } }
   </style>
 </head>
 <body>
   <div class="frame">
-    ${logoBlock}
-    <p class="institution">${escapeHtml(institution)}</p>
-    <h1>Certificado de Conclusão</h1>
-    <p class="subtitle">Certificamos que</p>
-    <p class="student">${escapeHtml(payload.studentName)}</p>
-    <p class="subtitle">concluiu com sucesso a disciplina</p>
-    <p class="discipline">${escapeHtml(payload.disciplineName)}</p>
-    ${workload}
-    <p class="meta"><strong>Data de emissão:</strong> ${formatIssuedDate(payload.issuedAt)}</p>
-    <p class="code"><strong>Código de validação:</strong> ${escapeHtml(payload.validationCode)}</p>
-    <div class="sigs">${signatureBlocks}</div>
+    <div class="main">
+      ${logoBlock}
+      <p class="institution">${escapeHtml(institution)}</p>
+      <h1>Certificado de Conclusão</h1>
+      <p class="subtitle">Certificamos que</p>
+      <p class="student">${escapeHtml(payload.studentName)}</p>
+      <p class="subtitle">concluiu com sucesso a disciplina</p>
+      <p class="discipline">${escapeHtml(payload.disciplineName)}</p>
+      ${workload}
+      <p class="meta"><strong>Data de emissão:</strong> ${formatIssuedDate(payload.issuedAt)}</p>
+    </div>
+    ${footerRow}
+    ${verifyBlock}
   </div>
   ${printScript}
 </body>
@@ -141,15 +155,14 @@ window.onload = function() {
 }
 
 export async function openCertificatePrintWindow(payload: CertificatePrintPayload): Promise<void> {
-  const embedded = await embedCertificatePrintImages(payload)
+  const embedded = await embedCertificatePrintImages(payload);
   const html = buildCertificatePrintHtml({
     ...embedded,
     autoPrint: payload.autoPrint ?? true,
-    validateBaseUrl: payload.validateBaseUrl ?? window.location.origin,
   });
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
-  const win = window.open(blobUrl, "_blank", "width=900,height=700");
+  const win = window.open(blobUrl, "_blank", "width=1100,height=780");
   if (!win) {
     URL.revokeObjectURL(blobUrl);
     throw new Error("Não foi possível abrir a janela de impressão. Permita pop-ups para este site.");
@@ -167,6 +180,7 @@ export function certificateDetailToPrintPayload(detail: {
   institutionName: string;
   institutionLogoUrl: string | null;
   signatures: CertificatePrintSignature[];
+  validationUrl: string;
 }): CertificatePrintPayload {
   return {
     studentName: detail.studentName,
@@ -174,9 +188,9 @@ export function certificateDetailToPrintPayload(detail: {
     issuedAt: detail.issuedAt,
     validationCode: detail.codeHash,
     workloadHours: detail.workloadHours,
-    instructorName: detail.instructor,
     institutionName: detail.institutionName,
     institutionLogoUrl: detail.institutionLogoUrl,
     signatures: detail.signatures,
+    validationUrl: detail.validationUrl,
   };
 }

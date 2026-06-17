@@ -7,6 +7,7 @@ import {
   ensureCertificateIssue,
   type CertificateSnapshot,
 } from "@/services/certificateIssueService"
+import { buildCertificateValidationUrl } from "@/lib/certificatePublicUrls"
 import type { CertificatePrintSignature } from "@/lib/certificatePrint"
 
 export type CertificateDetail = {
@@ -54,7 +55,7 @@ function snapshotToDetail(
       }
     })
 
-  const validationPath = `/validar-certificado?code=${encodeURIComponent(issue.validation_code)}`
+  const validationUrl = buildCertificateValidationUrl(issue.validation_code)
 
   return {
     id: issue.id,
@@ -67,7 +68,7 @@ function snapshotToDetail(
     institutionName: snapshot.institution_name || "B42 Edtech",
     institutionLogoUrl: snapshot.institution_logo_url ?? null,
     signatures,
-    validationUrl: validationPath,
+    validationUrl,
   }
 }
 
