@@ -132,21 +132,33 @@ window.onload = function() {
     .frame { position: relative; border: 3px double #4c1d95; padding: 16px 28px 20px; width: 100%; height: 100%; flex: 1; min-height: 0; margin: 0; page-break-inside: avoid; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: stretch; }
     html.compact .frame { height: auto; flex: none; justify-content: flex-start; }
     .content-col { flex: 0 0 auto; width: 100%; }
-    .frame--custom { border: none; height: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: stretch; padding: 220px 56px 168px; background-size: cover; background-position: center; background-repeat: no-repeat; }
+    .frame--custom { border: none; height: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: stretch; padding: 192px 40px 148px; background-size: cover; background-position: center; background-repeat: no-repeat; }
     .frame--custom h1 { display: none; }
+    .frame--custom .logo img { max-height: 64px; max-width: 220px; }
+    .frame--custom .institution { font-size: 16px; letter-spacing: 0.1em; margin: 0 0 14px; }
+    .frame--custom .subtitle { font-size: 18px; margin: 6px 0 10px; }
+    .frame--custom .student { font-size: 38px; margin: 12px 0; }
+    .frame--custom .discipline { font-size: 24px; margin: 6px 0 12px; }
+    .frame--custom .meta { font-size: 15px; margin: 5px 0; }
+    .frame--custom .footer-row { margin-top: 22px; }
+    .frame--custom .sigs { gap: 56px; }
+    .frame--custom .sig { width: 165px; }
+    .frame--custom .sig-img { max-height: 50px; max-width: 155px; }
+    .frame--custom .sig-name { font-size: 13px; }
+    .frame--custom .sig-title { font-size: 11px; }
     .frame--custom .verify-block { left: 20px; bottom: 20px; right: auto; }
     html.compact .frame--custom { min-height: 520px; }
     .frame--custom::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.05); pointer-events: none; }
     .frame--custom > * { position: relative; z-index: 1; }
     .main { text-align: center; }
     .logo { text-align: center; margin: 0 0 10px; }
-    .logo img { max-height: 48px; max-width: 180px; object-fit: contain; }
-    .institution { text-align: center; font-size: 12px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 12px; font-weight: 600; }
-    h1 { font-size: 24px; text-align: center; margin: 0 0 8px; letter-spacing: 0.04em; }
-    .subtitle { text-align: center; color: #555; margin: 5px 0 8px; font-size: 14px; }
-    .student { font-size: 28px; text-align: center; color: #4c1d95; margin: 10px 0; font-weight: bold; }
-    .discipline { font-size: 18px; text-align: center; margin: 5px 0 10px; }
-    .meta { text-align: center; font-size: 12px; color: #444; margin: 4px 0; }
+    .logo img { max-height: 54px; max-width: 190px; object-fit: contain; }
+    .institution { text-align: center; font-size: 13px; letter-spacing: 0.08em; color: #4c1d95; text-transform: uppercase; margin: 0 0 12px; font-weight: 600; }
+    h1 { font-size: 26px; text-align: center; margin: 0 0 8px; letter-spacing: 0.04em; }
+    .subtitle { text-align: center; color: #555; margin: 5px 0 8px; font-size: 15px; }
+    .student { font-size: 32px; text-align: center; color: #4c1d95; margin: 10px 0; font-weight: bold; }
+    .discipline { font-size: 21px; text-align: center; margin: 5px 0 10px; }
+    .meta { text-align: center; font-size: 13px; color: #444; margin: 4px 0; }
     .footer-row { margin-top: 18px; }
     .sigs { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; align-items: flex-end; gap: 48px; }
     .sig { flex: 0 0 auto; width: 150px; text-align: center; }
@@ -155,9 +167,9 @@ window.onload = function() {
     .sig-name { font-size: 12px; font-weight: 600; margin: 0; }
     .sig-title { font-size: 10px; color: #666; margin: 2px 0 0; }
     .verify-block { position: absolute; left: 14px; bottom: 10px; right: auto; text-align: center; }
-    .verify-qr { width: 66px; height: 66px; display: block; margin: 0 auto 3px; image-rendering: pixelated; image-rendering: crisp-edges; }
-    .verify-code { font-family: monospace; font-size: 8px; color: #555; margin: 0; line-height: 1.2; word-break: break-all; max-width: 120px; }
-    @media print { .sheet { padding: 12px 20px; } .frame { border-width: 2px; padding: 14px 24px 18px; } .verify-qr { width: 17mm; height: 17mm; } }
+    .verify-qr { width: 78px; height: 78px; display: block; margin: 0 auto 4px; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .verify-code { font-family: monospace; font-size: 11px; color: #555; margin: 0; line-height: 1.25; word-break: break-all; max-width: 150px; }
+    @media print { .sheet { padding: 12px 20px; } .frame { border-width: 2px; padding: 14px 24px 18px; } .verify-qr { width: 20mm; height: 20mm; } }
   </style>
 </head>
 <body>

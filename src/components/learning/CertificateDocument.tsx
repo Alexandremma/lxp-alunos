@@ -71,13 +71,17 @@ export function CertificateDocument({
         <img
           src={data.institutionLogoUrl}
           alt={data.institutionName}
-          className="h-10 mx-auto object-contain mb-2.5"
+          className={cn(
+            "mx-auto object-contain mb-2.5",
+            isCustom ? "h-14 md:h-16" : "h-11",
+          )}
         />
       )}
 
       <p
         className={cn(
-          "text-[11px] uppercase tracking-widest font-semibold mb-3",
+          "uppercase tracking-widest font-semibold mb-3",
+          isCustom ? "text-sm md:text-base" : "text-xs",
           isPrint ? "text-[#4c1d95]" : "text-primary",
         )}
       >
@@ -88,44 +92,78 @@ export function CertificateDocument({
         <h1
           className={cn(
             "font-semibold tracking-wide",
-            isPrint ? "text-[24px] text-[#111]" : "text-xl md:text-2xl font-display font-bold",
+            isPrint ? "text-[26px] text-[#111]" : "text-2xl md:text-3xl font-display font-bold",
           )}
         >
           Certificado de Conclusão
         </h1>
       )}
-      <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
+      <p
+        className={cn(
+          isCustom ? "text-lg" : "text-base",
+          isPrint ? "text-[#555]" : "text-muted-foreground",
+        )}
+      >
         Certificamos que
       </p>
 
       <h2
         className={cn(
           "font-bold my-3",
-          isPrint ? "text-[28px] text-[#4c1d95]" : "text-xl md:text-2xl font-display text-primary",
+          isCustom
+            ? isPrint
+              ? "text-[38px] text-[#4c1d95]"
+              : "text-4xl md:text-[2.75rem] font-display text-primary"
+            : isPrint
+              ? "text-[32px] text-[#4c1d95]"
+              : "text-2xl md:text-3xl font-display text-primary",
         )}
       >
         {data.studentName}
       </h2>
 
-      <p className={cn("text-sm", isPrint ? "text-[#555]" : "text-muted-foreground")}>
+      <p
+        className={cn(
+          isCustom ? "text-lg" : "text-base",
+          isPrint ? "text-[#555]" : "text-muted-foreground",
+        )}
+      >
         concluiu com sucesso a disciplina
       </p>
       <h3
         className={cn(
           "font-semibold",
-          isPrint ? "text-[18px] text-[#111]" : "text-lg md:text-xl font-display",
+          isCustom
+            ? isPrint
+              ? "text-[24px] text-[#111]"
+              : "text-2xl md:text-3xl font-display"
+            : isPrint
+              ? "text-[21px] text-[#111]"
+              : "text-xl md:text-2xl font-display",
         )}
       >
         {data.courseTitle}
       </h3>
 
       {data.workloadHours != null && data.workloadHours > 0 && (
-        <p className={cn("text-xs mt-1.5", isPrint ? "text-[#444]" : "text-muted-foreground")}>
+        <p
+          className={cn(
+            "mt-1.5",
+            isCustom ? "text-base" : "text-sm",
+            isPrint ? "text-[#444]" : "text-muted-foreground",
+          )}
+        >
           Carga horária: <strong>{data.workloadHours} horas</strong>
         </p>
       )}
 
-      <p className={cn("text-xs mt-1.5", isPrint ? "text-[#444]" : "text-muted-foreground")}>
+      <p
+        className={cn(
+          "mt-1.5",
+          isCustom ? "text-base" : "text-sm",
+          isPrint ? "text-[#444]" : "text-muted-foreground",
+        )}
+      >
         Data de emissão:{" "}
         <span className={cn("font-medium", !isPrint && "text-foreground")}>
           {formatIssuedDate(data.issuedAt)}
@@ -133,11 +171,23 @@ export function CertificateDocument({
       </p>
 
       {data.signatures.length > 0 && (
-        <div className="mt-4 flex flex-row flex-nowrap justify-center items-end gap-10 md:gap-14">
+        <div
+          className={cn(
+            "mt-4 flex flex-row flex-nowrap justify-center items-end",
+            isCustom ? "gap-12 md:gap-16" : "gap-10 md:gap-14",
+          )}
+        >
           {data.signatures.map((sig) => (
-            <div key={`${sig.signerName}-${sig.signerTitle}`} className="w-[130px] shrink-0 space-y-0.5">
+            <div
+              key={`${sig.signerName}-${sig.signerTitle}`}
+              className={cn("shrink-0 space-y-0.5", isCustom ? "w-[145px]" : "w-[130px]")}
+            >
               {sig.imageUrl ? (
-                <img src={sig.imageUrl} alt="" className="h-11 mx-auto object-contain" />
+                <img
+                  src={sig.imageUrl}
+                  alt=""
+                  className={cn("mx-auto object-contain", isCustom ? "h-12" : "h-11")}
+                />
               ) : (
                 <div
                   className={cn(
@@ -171,7 +221,7 @@ export function CertificateDocument({
       )}
       <p
         className={cn(
-          "font-mono text-[8px] max-w-[120px] break-all leading-tight",
+          "font-mono text-[11px] max-w-[150px] break-all leading-tight",
           isPrint ? "text-[#555]" : "text-muted-foreground",
         )}
       >
@@ -189,7 +239,7 @@ export function CertificateDocument({
     >
       {isCustom ? (
         <div
-          className="relative mx-auto flex w-full max-w-[900px] aspect-[297/210] flex-col justify-center bg-cover bg-center bg-no-repeat text-center pt-[28%] pb-[21%] px-[5%]"
+          className="relative mx-auto flex w-full max-w-[900px] aspect-[297/210] flex-col justify-center bg-cover bg-center bg-no-repeat text-center pt-[25%] pb-[18%] px-[3.5%]"
           style={{ backgroundImage: `url(${data.backgroundImageUrl})` }}
         >
           <div className="pointer-events-none absolute inset-0 bg-white/5" aria-hidden />
