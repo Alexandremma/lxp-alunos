@@ -18,16 +18,16 @@ export default function Certificate() {
     if (!data) return;
     try {
       await downloadCertificatePdf(data);
-      toast.success("Use a janela de impressão para salvar em PDF.");
+      toast.success("Certificado baixado.");
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Não foi possível abrir a impressão.";
+      const message = e instanceof Error ? e.message : "Não foi possível baixar o certificado.";
       toast.error(message);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <Link to={courseId ? `/trails/${courseId}` : "/cursos-livres"}>
             <Button variant="ghost" className="gap-2">
@@ -80,6 +80,8 @@ export default function Certificate() {
                   instructor: data.instructor,
                   institutionName: data.institutionName,
                   institutionLogoUrl: data.institutionLogoUrl,
+                  layoutKind: data.layoutKind,
+                  backgroundImageUrl: data.backgroundImageUrl,
                   signatures: data.signatures,
                   validationUrl: data.validationUrl,
                 }}

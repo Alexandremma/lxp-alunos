@@ -36,7 +36,7 @@ export function CertificateEvidenceCard({ evidence, className }: CertificateEvid
         return
       }
       await downloadCertificatePdf(detail)
-      toast.success("Use a janela de impressão para salvar em PDF.")
+      toast.success("Certificado baixado.")
     } catch (err) {
       console.error(err)
       const message =

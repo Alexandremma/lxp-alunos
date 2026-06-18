@@ -1,4 +1,6 @@
 import type { CertificatePrintPayload } from "@/lib/certificatePrint"
+import { buildCertificateValidationUrl } from "@/lib/certificatePublicUrls"
+import { generateValidationQrDataUrl } from "@/lib/certificateQr"
 
 async function urlToDataUrl(url: string): Promise<string | null> {
   try {
@@ -16,13 +18,17 @@ async function urlToDataUrl(url: string): Promise<string | null> {
   }
 }
 
-/** Converte URLs públicas em data URLs para impressão/PDF confiável em janela blob:. */
+/** Converte URLs públicas em data URLs e gera QR de validação para impressão/PDF. */
 export async function embedCertificatePrintImages(
   payload: CertificatePrintPayload,
 ): Promise<CertificatePrintPayload> {
   const institutionLogoUrl = payload.institutionLogoUrl?.trim()
     ? (await urlToDataUrl(payload.institutionLogoUrl)) ?? payload.institutionLogoUrl
     : payload.institutionLogoUrl
+
+  const backgroundImageUrl = payload.backgroundImageUrl?.trim()
+    ? (await urlToDataUrl(payload.backgroundImageUrl)) ?? payload.backgroundImageUrl
+    : payload.backgroundImageUrl
 
   const signatures = payload.signatures
     ? await Promise.all(
@@ -34,9 +40,20 @@ export async function embedCertificatePrintImages(
       )
     : payload.signatures
 
+  const validationUrl =
+    payload.validationUrl?.trim() ||
+    (payload.validationCode ? buildCertificateValidationUrl(payload.validationCode) : "")
+
+  const qrCodeDataUrl =
+    payload.qrCodeDataUrl ||
+    (validationUrl ? await generateValidationQrDataUrl(validationUrl) : undefined)
+
   return {
     ...payload,
     institutionLogoUrl,
+    backgroundImageUrl,
     signatures,
+    validationUrl,
+    qrCodeDataUrl,
   }
 }

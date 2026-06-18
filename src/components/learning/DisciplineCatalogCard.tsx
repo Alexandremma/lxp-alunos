@@ -16,12 +16,8 @@ import type {
   StudentDisciplineCatalogItem,
 } from "@/types/studentCatalog";
 
-/** Altura da capa no card (Início + Minhas Disciplinas). */
 const COVER_IMAGE_HEIGHT = "h-48";
 
-/**
- * Meio-termo: vidro escuro (~65%) + blur — legível sem “tarja” pesada na capa.
- */
 const overlayBadgeBase =
   "inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/65 px-2.5 py-1 text-xs font-medium text-white/95 shadow-sm shadow-black/30 backdrop-blur-md";
 
@@ -81,7 +77,6 @@ type DisciplineCatalogCardProps = {
   item: StudentDisciplineCatalogItem;
   onOpenDiscipline: (id: string) => void;
   onEnroll?: (id: string) => void;
-  /** Ex.: dashboard — sempre botão secondary para Continuar/Iniciar. */
   compactAction?: boolean;
 };
 

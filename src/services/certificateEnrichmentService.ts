@@ -7,6 +7,8 @@ import {
 type TemplateMediaRow = {
   institution_name: string | null
   institution_logo_path: string | null
+  layout_kind: "default" | "custom" | null
+  background_image_path: string | null
 }
 
 type SlotMediaRow = {
@@ -34,7 +36,7 @@ export async function enrichCertificateSnapshot(
 
   const { data: template, error: tplErr } = await supabase
     .from("lxp_certificate_templates")
-    .select("institution_name,institution_logo_path")
+    .select("institution_name,institution_logo_path,layout_kind,background_image_path")
     .eq("id", templateId)
     .maybeSingle()
 
@@ -47,6 +49,14 @@ export async function enrichCertificateSnapshot(
 
   if (!enriched.institution_logo_url?.trim() && tpl?.institution_logo_path?.trim()) {
     enriched.institution_logo_url = certificateSignaturePublicUrl(tpl.institution_logo_path)
+  }
+
+  if (!enriched.layout_kind) {
+    enriched.layout_kind = tpl?.layout_kind === "custom" ? "custom" : "default"
+  }
+
+  if (!enriched.background_image_url?.trim() && tpl?.background_image_path?.trim()) {
+    enriched.background_image_url = certificateSignaturePublicUrl(tpl.background_image_path)
   }
 
   const needsSigImages = enriched.signatures.some((s) => !s.image_url?.trim())
