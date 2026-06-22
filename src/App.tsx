@@ -17,10 +17,6 @@ import TrailDetail from "./pages/TrailDetail";
 import Lesson from "./pages/Lesson";
 import Progress from "./pages/Progress";
 import Portfolio from "./pages/Portfolio";
-import Documents from "./pages/Documents";
-import Financial from "./pages/Financial";
-import Enrollment from "./pages/Enrollment";
-import Support from "./pages/Support";
 import KitchenSink from "./pages/KitchenSink";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -94,29 +90,11 @@ const App = () => (
               {/* Novas páginas */}
               <Route
                 path="/certificado/:courseId"
-                element={<ProtectedRoute element={<Certificate />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Certificate />} access="student" />}
               />
               <Route
                 path="/trails/:trailId/project/:lessonId"
-                element={<ProtectedRoute element={<ProjectUpload />} requiredRole="student" />}
-              />
-
-              {/* Secretaria */}
-              <Route
-                path="/secretaria/documentos"
-                element={<ProtectedRoute element={<Documents />} requiredRole="student" />}
-              />
-              <Route
-                path="/secretaria/financeiro"
-                element={<ProtectedRoute element={<Financial />} requiredRole="student" />}
-              />
-              <Route
-                path="/secretaria/matricula"
-                element={<ProtectedRoute element={<Enrollment />} requiredRole="student" />}
-              />
-              <Route
-                path="/secretaria/atendimento"
-                element={<ProtectedRoute element={<Support />} requiredRole="student" />}
+                element={<ProtectedRoute element={<ProjectUpload />} access="student" />}
               />
 
               {/* Teste integração Alice no domínio deployado (whitelist B42) */}

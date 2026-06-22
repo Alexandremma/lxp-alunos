@@ -17,6 +17,20 @@ export function getDisciplineCoverPublicUrl(path: string | null | undefined): st
   return data.publicUrl || null
 }
 
+export async function getDisciplineWorkload(disciplineId: string): Promise<number | null> {
+  if (!DISCIPLINE_UUID_RE.test(disciplineId)) return null
+
+  const { data, error } = await supabase
+    .from("lxp_course_disciplines")
+    .select("workload")
+    .eq("id", disciplineId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+  return typeof data.workload === "number" ? data.workload : null
+}
+
 /**
  * Metadados de apresentação da disciplina no LXP (não expõe detalhes de integração).
  * Subtítulo: description da disciplina → description do curso → null.
