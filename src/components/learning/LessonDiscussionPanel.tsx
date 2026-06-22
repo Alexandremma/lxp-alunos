@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Award, Loader2, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -75,17 +76,18 @@ export const LessonDiscussionPanel = ({
   const { data: xpRules } = useXpRules();
   const commentXp = xpRules ? getLessonCommentXp(xpRules) : null;
   const replyXp = xpRules ? getLessonCommentReplyXp(xpRules) : null;
-  const { create, update, remove, profileId } = useLessonCommentMutations({
-    externalDisciplineId,
-    externalUnitId,
-  });
+  const { create, update, remove, profileId, isModerator, canModerateComments } =
+    useLessonCommentMutations({
+      externalDisciplineId,
+      externalUnitId,
+    });
 
   const [newBody, setNewBody] = React.useState("");
   const [replyToId, setReplyToId] = React.useState<string | null>(null);
   const [replyBody, setReplyBody] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editBody, setEditBody] = React.useState("");
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<LessonCommentWithAuthor | null>(null);
 
   const threads = React.useMemo(
     () => buildThreads(commentsQ.data ?? []),
@@ -128,18 +130,30 @@ export const LessonDiscussionPanel = ({
   };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteTarget) return;
     try {
-      await remove.mutateAsync(deleteId);
-      setDeleteId(null);
+      await remove.mutateAsync({ commentId: deleteTarget.id, comment: deleteTarget });
+      setDeleteTarget(null);
       toast.success("Comentário removido");
     } catch {
       toast.error("Não foi possível remover");
     }
   };
 
+  const canEditComment = (comment: LessonCommentWithAuthor) =>
+    !!profileId && comment.student_profile_id === profileId;
+
+  const canDeleteComment = (comment: LessonCommentWithAuthor) => {
+    if (!profileId) return false;
+    if (comment.student_profile_id === profileId) return true;
+    return canModerateComments;
+  };
+
   const renderActions = (comment: LessonCommentWithAuthor, isEditing: boolean) => {
-    if (!profileId || comment.student_profile_id !== profileId) return null;
+    const showEdit = canEditComment(comment);
+    const showDelete = canDeleteComment(comment);
+    if (!showEdit && !showDelete) return null;
+
     if (isEditing) {
       return (
         <div className="flex gap-2 mt-2">
@@ -159,28 +173,33 @@ export const LessonDiscussionPanel = ({
         </div>
       );
     }
+
     return (
       <div className="flex items-center gap-2 mt-2">
-        <button
-          type="button"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-          onClick={() => {
-            setEditingId(comment.id);
-            setEditBody(comment.body);
-            setReplyToId(null);
-          }}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
-          onClick={() => setDeleteId(comment.id)}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Excluir
-        </button>
+        {showEdit && (
+          <button
+            type="button"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+            onClick={() => {
+              setEditingId(comment.id);
+              setEditBody(comment.body);
+              setReplyToId(null);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Editar
+          </button>
+        )}
+        {showDelete && (
+          <button
+            type="button"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => setDeleteTarget(comment)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Excluir
+          </button>
+        )}
       </div>
     );
   };
@@ -190,16 +209,30 @@ export const LessonDiscussionPanel = ({
     compact?: boolean,
   ) => {
     const isEditing = editingId === comment.id;
+    const isStaffComment = !!comment.author_badge_label;
+
     return (
       <div className={cn("flex items-start gap-3", compact && "gap-2")}>
         <Avatar className={cn("shrink-0", compact ? "h-7 w-7" : "h-8 w-8")}>
-          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+          <AvatarFallback
+            className={cn(
+              "text-xs",
+              isStaffComment
+                ? "bg-secondary/20 text-secondary-foreground"
+                : "bg-primary/10 text-primary",
+            )}
+          >
             {initialsFromName(comment.author_name)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-foreground">{comment.author_name}</span>
+            {comment.author_badge_label ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                {comment.author_badge_label}
+              </Badge>
+            ) : null}
             <span className="text-xs text-muted-foreground">
               {formatRelativeTime(comment.created_at)}
             </span>
@@ -250,7 +283,7 @@ export const LessonDiscussionPanel = ({
                 <Button size="sm" onClick={() => void submitReply()} disabled={create.isPending}>
                   Publicar resposta
                 </Button>
-                {replyXp != null && replyXp > 0 && (
+                {!isModerator && replyXp != null && replyXp > 0 && (
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Award className="h-3.5 w-3.5" />
                     +{replyXp} XP
@@ -270,7 +303,11 @@ export const LessonDiscussionPanel = ({
   return (
     <div className="space-y-4">
       <Textarea
-        placeholder="Faça uma pergunta ou comentário..."
+        placeholder={
+          isModerator
+            ? "Escreva um comentário como membro da equipe..."
+            : "Faça uma pergunta ou comentário..."
+        }
         value={newBody}
         onChange={(e) => setNewBody(e.target.value.slice(0, LESSON_COMMENT_MAX_LENGTH))}
         className="min-h-[80px] resize-none"
@@ -279,7 +316,7 @@ export const LessonDiscussionPanel = ({
         <p className="text-xs text-muted-foreground">
           {newBody.length}/{LESSON_COMMENT_MAX_LENGTH}
         </p>
-        {commentXp != null && commentXp > 0 && (
+        {!isModerator && commentXp != null && commentXp > 0 && (
           <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
             <Award className="h-3.5 w-3.5" />
             +{commentXp} XP ao comentar
@@ -323,12 +360,14 @@ export const LessonDiscussionPanel = ({
         ))}
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir comentário?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Respostas vinculadas também serão removidas.
+              {deleteTarget && deleteTarget.student_profile_id !== profileId
+                ? "Você está removendo o comentário de outra pessoa. Esta ação não pode ser desfeita e ficará registrada na auditoria."
+                : "Esta ação não pode ser desfeita. Respostas vinculadas também serão removidas."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

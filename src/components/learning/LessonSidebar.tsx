@@ -29,6 +29,7 @@ interface LessonSidebarProps {
   allLessons: Lesson[];
   progress?: number;
   onLessonClick?: () => void;
+  allowLockedNavigation?: boolean;
 }
 
 const lessonTypeIcons: Record<Lesson["type"], React.ComponentType<{ className?: string }>> = {
@@ -77,6 +78,7 @@ export const LessonSidebar = ({
   allLessons,
   progress = 0,
   onLessonClick,
+  allowLockedNavigation = false,
 }: LessonSidebarProps) => {
   const navigate = useNavigate();
 
@@ -97,7 +99,7 @@ export const LessonSidebar = ({
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    if (lesson.status === "locked") return;
+    if (lesson.status === "locked" && !allowLockedNavigation) return;
     navigate(`/trails/${trail.id}/lesson/${lesson.id}`);
     onLessonClick?.();
   };
@@ -200,7 +202,7 @@ export const LessonSidebar = ({
                       const status = statusConfig[lesson.status];
                       const StatusIcon = status.icon;
                       const isCurrent = lesson.id === currentLesson.id;
-                      const isLessonLocked = lesson.status === "locked";
+                      const isLessonLocked = lesson.status === "locked" && !allowLockedNavigation;
 
                       return (
                         <button

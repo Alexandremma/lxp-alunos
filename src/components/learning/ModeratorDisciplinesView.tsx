@@ -7,15 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyLearning } from "@/components/states/EmptyLearning";
 import { BookMarked, ChevronLeft, ChevronRight } from "lucide-react";
-import { DisciplineCatalogCard } from "@/components/learning/DisciplineCatalogCard";
-import { ModeratorDisciplinesView } from "@/components/learning/ModeratorDisciplinesView";
-import { useStudentCatalog, useStudentCatalogStats } from "@/hooks/queries/useStudentCatalog";
-import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
-import { useAuth } from "@/hooks/use-auth";
-import { useTeamModeration } from "@/hooks/useTeamModeration";
-import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
-import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
 import {
   Select,
   SelectContent,
@@ -23,7 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CourseCategory, DisciplineProgressStatus } from "@/types/studentCatalog";
+import { ModerationModeBanner } from "@/components/learning/ModerationModeBanner";
+import { ModeratorDisciplineCatalogCard } from "@/components/learning/ModeratorDisciplineCatalogCard";
+import {
+  useModeratorCatalog,
+  useModeratorCatalogCourses,
+} from "@/hooks/queries/useModeratorCatalog";
+import { useTeamModeration } from "@/hooks/useTeamModeration";
+import type { CourseCategory } from "@/types/studentCatalog";
 
 const PAGE_SIZE = 15;
 
@@ -32,32 +31,13 @@ function parsePageParam(raw: string | null): number {
   return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
 }
 
-const FreeCourses = () => {
-  const { isModerator, isLoading: moderationLoading } = useTeamModeration();
-
-  if (moderationLoading) {
-    return (
-      <DashboardLayout>
-        <QueryStateCard state="loading" title="Carregando..." />
-      </DashboardLayout>
-    );
-  }
-
-  if (isModerator) {
-    return <ModeratorDisciplinesView />;
-  }
-
-  return <StudentFreeCoursesView />;
-};
-
-const StudentFreeCoursesView = () => {
+export function ModeratorDisciplinesView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { profile } = useAuth();
+  const { teamRoleLabel } = useTeamModeration();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CourseCategory | "all">("all");
-  const [progressFilter, setProgressFilter] = useState<DisciplineProgressStatus | "all">("all");
 
   const page = parsePageParam(searchParams.get("page"));
 
@@ -84,19 +64,19 @@ const StudentFreeCoursesView = () => {
     [setSearchParams],
   );
 
-  const enrollInTrail = useEnrollInTrail();
-  const { data: enrolledCoursesData } = useGetActiveEnrolledCourses(profile?.id);
-  const { data: stats } = useStudentCatalogStats();
-  const { items, total, from, to, isLoading, isFetching, error, refetch } = useStudentCatalog({
+  const { data: courses = [] } = useModeratorCatalogCourses();
+  const { data, isLoading, isFetching, error, refetch } = useModeratorCatalog({
     q: search,
     courseId: courseFilter === "all" ? undefined : courseFilter,
     category: categoryFilter,
-    progressStatus: progressFilter,
     page,
     pageSize: PAGE_SIZE,
   });
 
-  const enrolledCourses = enrolledCoursesData ?? [];
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const from = data?.from ?? 0;
+  const to = data?.to ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
@@ -106,79 +86,42 @@ const StudentFreeCoursesView = () => {
   }, [isLoading, page, totalPages, setPage]);
 
   const hasActiveFilters = useMemo(
-    () =>
-      search.trim().length > 0 ||
-      courseFilter !== "all" ||
-      categoryFilter !== "all" ||
-      progressFilter !== "all",
-    [search, courseFilter, categoryFilter, progressFilter],
+    () => search.trim().length > 0 || courseFilter !== "all" || categoryFilter !== "all",
+    [search, courseFilter, categoryFilter],
   );
 
   const clearFilters = () => {
     setSearch("");
     setCourseFilter("all");
     setCategoryFilter("all");
-    setProgressFilter("all");
     setPage(1);
-  };
-
-  const handleEnroll = (id: string) => {
-    enrollInTrail.mutate(id, {
-      onSuccess: () => {
-        toast.success("Matrícula realizada com sucesso.");
-      },
-      onError: (err) => {
-        const message = err instanceof Error ? err.message : "Não foi possível concluir a matrícula.";
-        toast.error(message);
-      },
-    });
-  };
-
-  const handleOpenDiscipline = (id: string) => {
-    navigate(`/trails/${id}`);
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
         <PageHeader
-          title="Minhas Disciplinas"
-          description="Acompanhe e continue suas disciplinas. Filtre por curso, categoria ou progresso."
+          title="Disciplinas"
+          description={`Moderação de comentários${teamRoleLabel ? ` · ${teamRoleLabel}` : ""}. Escolha uma disciplina e acesse as aulas para revisar a discussão.`}
         />
+
+        <ModerationModeBanner />
+
         {isFetching && !isLoading && (
           <p className="text-xs text-muted-foreground">Atualizando catálogo...</p>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{stats?.enrolled ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Cursando</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-success">{stats?.completed ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Concluídos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{stats?.hoursStudied ?? 0}h</div>
-              <p className="text-xs text-muted-foreground">Horas Cursadas</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{stats?.available ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Disponíveis</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">
+              {total} disciplina{total === 1 ? "" : "s"} com conteúdo disponível para moderação.
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="flex flex-col md:flex-row gap-3">
           <Input
-            placeholder="Buscar disciplina..."
+            placeholder="Buscar por disciplina, código, curso ou professor..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -198,7 +141,7 @@ const StudentFreeCoursesView = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os cursos</SelectItem>
-              {enrolledCourses.map((course) => (
+              {courses.map((course) => (
                 <SelectItem key={course.id} value={course.id}>
                   {course.name}
                 </SelectItem>
@@ -221,25 +164,6 @@ const StudentFreeCoursesView = () => {
               <SelectItem value="postgraduate">Pós-Graduação</SelectItem>
               <SelectItem value="extension">Extensão</SelectItem>
               <SelectItem value="free_course">Curso livre</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={progressFilter}
-            onValueChange={(v) => {
-              setProgressFilter(v as DisciplineProgressStatus | "all");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Progresso" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="available">Disponível</SelectItem>
-              <SelectItem value="enrolled">Cursando</SelectItem>
-              <SelectItem value="completed">Concluído</SelectItem>
-              <SelectItem value="discipline_inactive">Disciplina inativa</SelectItem>
-              <SelectItem value="enrollment_inactive">Matrícula inativa</SelectItem>
             </SelectContent>
           </Select>
           {hasActiveFilters && (
@@ -269,11 +193,10 @@ const StudentFreeCoursesView = () => {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map((item) => (
-                <DisciplineCatalogCard
+                <ModeratorDisciplineCatalogCard
                   key={item.id}
                   item={item}
-                  onEnroll={handleEnroll}
-                  onOpenDiscipline={handleOpenDiscipline}
+                  onOpenDiscipline={(id) => navigate(`/trails/${id}`)}
                 />
               ))}
             </div>
@@ -310,12 +233,10 @@ const StudentFreeCoursesView = () => {
           <EmptyLearning
             type="trails"
             title="Nenhuma disciplina encontrada"
-            description="Não há disciplinas com os filtros selecionados. Tente ajustar a busca."
+            description="Não há disciplinas com conteúdo vinculado para os filtros selecionados."
           />
         )}
       </div>
     </DashboardLayout>
   );
-};
-
-export default FreeCourses;
+}

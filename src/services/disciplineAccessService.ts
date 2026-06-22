@@ -94,3 +94,45 @@ export async function getDisciplineAccessForStudent(
 
   return { allowed: true }
 }
+
+export async function getDisciplineAccessForModerator(
+  disciplineId: string,
+): Promise<DisciplineAccessResult> {
+  const { data: discipline, error: disciplineError } = await supabase
+    .from("lxp_course_disciplines")
+    .select("id,status")
+    .eq("id", disciplineId)
+    .maybeSingle()
+
+  if (disciplineError) throw disciplineError
+  if (!discipline) {
+    return {
+      allowed: false,
+      reason: "inactive_discipline",
+      title: "Disciplina indisponível",
+      message: "Esta disciplina não foi encontrada ou não está disponível.",
+    }
+  }
+
+  if (discipline.status === "inactive") {
+    return {
+      allowed: false,
+      reason: "inactive_discipline",
+      title: "Disciplina inativa",
+      message: "Esta disciplina está inativa e não pode ser moderada no momento.",
+    }
+  }
+
+  const hasLink = await courseDisciplineHasLibraryLink(disciplineId)
+  if (!hasLink) {
+    return {
+      allowed: false,
+      reason: "no_content_link",
+      title: "Conteúdo em preparação",
+      message:
+        "Esta disciplina ainda não possui conteúdo vinculado. A moderação ficará disponível quando houver aulas.",
+    }
+  }
+
+  return { allowed: true }
+}

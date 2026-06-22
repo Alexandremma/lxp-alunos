@@ -27,8 +27,6 @@ import Login from "./pages/Login";
 import SetPassword from "./pages/SetPassword";
 import Certificate from "./pages/Certificate";
 import ProjectUpload from "./pages/ProjectUpload";
-import CoursesManagement from "./pages/admin/CoursesManagement";
-import StudentsManagement from "./pages/admin/StudentsManagement";
 import AliceLaunchTest from "./pages/AliceLaunchTest";
 import ValidateCertificate from "./pages/ValidateCertificate";
 
@@ -55,43 +53,43 @@ const App = () => (
               {/* Ensino (aluno autenticado) */}
               <Route
                 path="/"
-                element={<ProtectedRoute element={<Dashboard />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Dashboard />} access="student" />}
               />
               <Route
                 path="/meus-cursos"
-                element={<ProtectedRoute element={<MyCourses />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourses />} access="student" />}
               />
               <Route
                 path="/meu-curso"
-                element={<ProtectedRoute element={<MyCourseRedirect />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourseRedirect />} access="student" />}
               />
               <Route
                 path="/meu-curso/:courseId"
-                element={<ProtectedRoute element={<MyCourse />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourse />} access="student" />}
               />
               <Route
                 path="/cursos-livres"
-                element={<ProtectedRoute element={<FreeCourses />} requiredRole="student" />}
+                element={<ProtectedRoute element={<FreeCourses />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails"
-                element={<ProtectedRoute element={<Navigate to="/cursos-livres" replace />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Navigate to="/cursos-livres" replace />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails/:id"
-                element={<ProtectedRoute element={<TrailDetail />} requiredRole="student" />}
+                element={<ProtectedRoute element={<TrailDetail />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails/:trailId/lesson/:lessonId"
-                element={<ProtectedRoute element={<Lesson />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Lesson />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/progress"
-                element={<ProtectedRoute element={<Progress />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Progress />} access="student" />}
               />
               <Route
                 path="/portfolio"
-                element={<ProtectedRoute element={<Portfolio />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Portfolio />} access="student" />}
               />
               {/* Novas páginas */}
               <Route
@@ -119,16 +117,6 @@ const App = () => (
               <Route
                 path="/secretaria/atendimento"
                 element={<ProtectedRoute element={<Support />} requiredRole="student" />}
-              />
-
-              {/* Back Office / Admin dentro do mesmo app (acesso admin) */}
-              <Route
-                path="/admin/cursos"
-                element={<ProtectedRoute element={<CoursesManagement />} requiredRole="admin" />}
-              />
-              <Route
-                path="/admin/alunos"
-                element={<ProtectedRoute element={<StudentsManagement />} requiredRole="admin" />}
               />
 
               {/* Teste integração Alice no domínio deployado (whitelist B42) */}

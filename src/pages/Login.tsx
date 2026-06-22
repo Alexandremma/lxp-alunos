@@ -21,6 +21,7 @@ import {
 } from "@/lib/authLoginMessages";
 import { signOutIfEnrollmentBlocked } from "@/hooks/useStudentAccessGate";
 import { lxpAlunosSetPasswordUrl } from "@/lib/authRedirectUrls";
+import { resolvePostLoginPath } from "@/lib/authRouting";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -137,7 +138,8 @@ export default function Login() {
         return;
       }
 
-      navigate("/", { replace: true });
+      const nextPath = await resolvePostLoginPath(currentUser.id);
+      navigate(nextPath, { replace: true });
     } catch (err) {
       setError(
         isLikelyNetworkError(err)

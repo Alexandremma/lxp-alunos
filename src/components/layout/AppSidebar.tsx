@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -6,25 +6,27 @@ import {
   BarChart3,
   LogOut,
   Sparkles,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { NavLink } from "@/components/NavLink"
-import { Separator } from "@/components/ui/separator"
-import { useLogout } from "@/hooks/use-logout"
-import { SidebarStudentGamification } from "@/components/layout/SidebarStudentGamification"
+  BookOpen,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { NavLink } from "@/components/NavLink";
+import { Separator } from "@/components/ui/separator";
+import { useLogout } from "@/hooks/use-logout";
+import { SidebarStudentGamification } from "@/components/layout/SidebarStudentGamification";
+import { useTeamModeration } from "@/hooks/useTeamModeration";
 
 interface NavItem {
-  title: string
-  url: string
-  icon: React.ElementType
+  title: string;
+  url: string;
+  icon: React.ElementType;
 }
 
 interface NavSection {
-  label: string
-  items: NavItem[]
+  label: string;
+  items: NavItem[];
 }
 
-const navSections: NavSection[] = [
+const studentNavSections: NavSection[] = [
   {
     label: "Ensino",
     items: [
@@ -35,32 +37,32 @@ const navSections: NavSection[] = [
       { title: "Portfólio", url: "/portfolio", icon: Trophy },
     ],
   },
-  // {
-  //   label: "Secretaria",
-  //   items: [
-  //     { title: "Documentos", url: "/secretaria/documentos", icon: FileText },
-  //     { title: "Financeiro", url: "/secretaria/financeiro", icon: CreditCard },
-  //     { title: "Matrícula", url: "/secretaria/matricula", icon: ClipboardList },
-  //     { title: "Atendimento", url: "/secretaria/atendimento", icon: HeadphonesIcon },
-  //   ],
-  // },
-]
+];
+
+const moderatorNavSections: NavSection[] = [
+  {
+    label: "Moderação",
+    items: [{ title: "Disciplinas", url: "/cursos-livres", icon: BookOpen }],
+  },
+];
 
 interface AppSidebarProps {
-  collapsed?: boolean
-  className?: string
+  collapsed?: boolean;
+  className?: string;
 }
 
 const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
-  const location = useLocation()
-  const { logout } = useLogout()
+  const location = useLocation();
+  const { logout } = useLogout();
+  const { isModerator } = useTeamModeration();
+  const navSections = isModerator ? moderatorNavSections : studentNavSections;
 
   const isActive = (path: string) => {
     if (path === "/") {
-      return location.pathname === "/"
+      return location.pathname === "/";
     }
-    return location.pathname.startsWith(path)
-  }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <aside
@@ -73,25 +75,24 @@ const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
       <div
         className={cn(
           "flex items-center h-16 border-b border-sidebar-border shrink-0",
-          collapsed ? "justify-center px-2" : "gap-3 px-4",
+          collapsed ? "justify-center px-2" : "px-4 gap-3"
         )}
       >
-        <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-          <span className="text-sm font-bold text-primary-foreground">PA</span>
-        </div>
+        <GraduationCap className="h-7 w-7 text-primary shrink-0" />
         {!collapsed && (
           <div className="min-w-0">
             <h1 className="font-display font-semibold text-sm text-sidebar-foreground truncate">
-              Portal do Aluno
+              {isModerator ? "Moderação LXP" : "Portal do Aluno"}
             </h1>
-            <p className="text-xs text-sidebar-foreground/60 truncate">Ensino Superior</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">
+              {isModerator ? "Comentários nas aulas" : "Ensino Superior"}
+            </p>
           </div>
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="flex flex-1 flex-col min-h-0 p-3">
-        <div className="flex-1 space-y-4 overflow-y-auto scrollbar-thin">
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
           {navSections.map((section, sectionIndex) => (
             <div key={section.label}>
               {!collapsed && (
@@ -99,54 +100,54 @@ const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
                   {section.label}
                 </p>
               )}
-              <div className="space-y-1">
+              <ul className="space-y-1">
                 {section.items.map((item) => (
-                  <NavLink
-                    key={item.url}
-                    to={item.url}
-                    end={item.url === "/"}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                      "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                      collapsed && "justify-center px-2"
-                    )}
-                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    {!collapsed && <span>{item.title}</span>}
-                  </NavLink>
+                  <li key={item.url}>
+                    <NavLink
+                      to={item.url}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                        collapsed && "justify-center px-2"
+                      )}
+                      activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </li>
                 ))}
-              </div>
+              </ul>
               {sectionIndex < navSections.length - 1 && (
                 <Separator className="mt-4 bg-sidebar-border" />
               )}
             </div>
           ))}
         </div>
-
-        <div className={cn("shrink-0 pt-3", collapsed ? "flex justify-center" : "")}>
-          <SidebarStudentGamification collapsed={collapsed} />
-        </div>
       </nav>
 
-      {/* Logout */}
+      {!isModerator && !collapsed && (
+        <div className="px-3 pb-3 shrink-0">
+          <SidebarStudentGamification />
+        </div>
+      )}
+
       <div className="p-3 border-t border-sidebar-border shrink-0">
         <button
+          type="button"
+          onClick={() => void logout()}
           className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full",
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
             "text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10",
             collapsed && "justify-center px-2"
           )}
-          onClick={() => {
-            void logout()
-          }}
         >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
+          <LogOut className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Sair</span>}
         </button>
       </div>
     </aside>
-  )
-}
+  );
+};
 
-export { AppSidebar }
+export { AppSidebar };

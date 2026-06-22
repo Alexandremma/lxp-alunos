@@ -24,6 +24,7 @@ import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
+import { useTeamModeration } from "@/hooks/useTeamModeration";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
@@ -40,7 +41,10 @@ const Lesson = () => {
   const navigate = useNavigate();
   const completeLesson = useCompleteLesson();
   const { profile, user } = useAuth();
-  const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId);
+  const { isModerator } = useTeamModeration();
+  const { trail, modules, lessons: allLessons, isLoading } = useTrailDetail(trailId, {
+    moderationMode: isModerator,
+  });
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(trailId);
 
   const [completionDialogOpen, setCompletionDialogOpen] = React.useState(false);
@@ -99,7 +103,7 @@ const Lesson = () => {
     );
   }
 
-  if (lesson.status === "locked") {
+  if (!isModerator && lesson.status === "locked") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full">
@@ -167,7 +171,26 @@ const Lesson = () => {
     Boolean(lesson.aliceContentId) &&
     isAliceConfigured();
 
-  const navigationFooter = (
+  const navigationFooter = isModerator ? (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border bg-card shrink-0">
+      <Button
+        variant="outline"
+        onClick={handlePrev}
+        disabled={!prev}
+        className="gap-2"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Anterior</span>
+      </Button>
+      <span className="text-xs text-muted-foreground text-center px-2">
+        Moderação · navegue entre as aulas para revisar comentários
+      </span>
+      <Button variant="outline" onClick={handleNext} className="gap-2">
+        <span className="hidden sm:inline">{next ? "Próxima" : "Voltar à disciplina"}</span>
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+    </div>
+  ) : (
     <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border bg-card shrink-0">
       <Button
         variant="outline"
@@ -212,11 +235,12 @@ const Lesson = () => {
       headerLessonInfo={{
         title: lesson.title,
         description: lesson.description,
-        xpReward: lesson.xpReward,
+        xpReward: isModerator ? undefined : lesson.xpReward,
       }}
       immersiveContent={isImmersiveEbook}
       externalDisciplineId={String(trailId)}
       externalUnitId={String(lessonId)}
+      moderationMode={isModerator}
     >
       {isImmersiveEbook ? (
         <div className="h-full flex flex-col min-h-0 overflow-hidden">
@@ -239,7 +263,7 @@ const Lesson = () => {
         </div>
       ) : (
         <div className="max-w-5xl mx-auto p-6 lg:p-8 space-y-6 animate-fade-up">
-          {lesson.type === "video" && (
+          {lesson.type === "video" && !isModerator && (
             <div className="rounded-xl overflow-hidden shadow-lg">
               <VideoPlayer
                 title={lesson.title}
@@ -297,6 +321,7 @@ const Lesson = () => {
         </div>
       )}
 
+      {!isModerator ? (
       <Dialog open={completionDialogOpen} onOpenChange={setCompletionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -328,6 +353,7 @@ const Lesson = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      ) : null}
     </LessonLayout>
   );
 };

@@ -35,6 +35,7 @@ interface LessonLayoutProps {
   /** IDs usados em progresso/comentários (trailId + lessonId). */
   externalDisciplineId?: string;
   externalUnitId?: string;
+  moderationMode?: boolean;
 }
 
 export const LessonLayout = ({
@@ -48,11 +49,21 @@ export const LessonLayout = ({
   immersiveContent = false,
   externalDisciplineId,
   externalUnitId,
+  moderationMode = false,
 }: LessonLayoutProps) => {
   const isMobile = useIsMobile();
   const [leftSidebarOpen, setLeftSidebarOpen] = React.useState(true);
-  const [rightPanel, setRightPanel] = React.useState<'notes' | 'discussion' | null>(null);
+  const [rightPanel, setRightPanel] = React.useState<'notes' | 'discussion' | null>(
+    moderationMode ? 'discussion' : null,
+  );
   const [aiTutorOpen, setAiTutorOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (moderationMode) {
+      setRightPanel('discussion');
+      setAiTutorOpen(false);
+    }
+  }, [moderationMode, externalUnitId]);
 
   const closeRightPanel = () => setRightPanel(null);
 
@@ -100,6 +111,7 @@ export const LessonLayout = ({
                     allLessons={allLessons}
                     progress={progress}
                     onLessonClick={() => {}}
+                    allowLockedNavigation={moderationMode}
                   />
                 </SheetContent>
               </Sheet>
@@ -173,6 +185,7 @@ export const LessonLayout = ({
             )}
 
             {/* Notes Button */}
+            {!moderationMode && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -189,6 +202,7 @@ export const LessonLayout = ({
               </TooltipTrigger>
               <TooltipContent>Anotações</TooltipContent>
             </Tooltip>
+            )}
 
             {/* Discussion Button */}
             <Tooltip>
@@ -245,7 +259,7 @@ export const LessonLayout = ({
             {children}
             
             {/* AI Tutor FAB */}
-            {!aiTutorOpen && (
+            {!moderationMode && !aiTutorOpen && (
               <AiTutorFab
                 onClick={toggleAiTutor}
                 className={immersiveContent ? "bottom-20" : undefined}
@@ -254,7 +268,7 @@ export const LessonLayout = ({
           </main>
 
           {/* AI Tutor Sidebar */}
-          {aiTutorOpen && (
+          {!moderationMode && aiTutorOpen && (
             <aside className="border-l border-border bg-card shrink-0 h-full w-80 lg:w-96 overflow-hidden">
               <AiTutorSidebar
                 lessonTitle={currentLesson.title}
@@ -280,7 +294,9 @@ export const LessonLayout = ({
                     <p className="text-xs text-muted-foreground mt-1">
                       {rightPanel === 'notes'
                         ? 'Suas notas para esta aula'
-                        : 'Comentários e perguntas'}
+                        : moderationMode
+                          ? 'Moderação de comentários desta aula'
+                          : 'Comentários e perguntas'}
                     </p>
                   </div>
                   <Button
