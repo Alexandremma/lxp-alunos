@@ -6,8 +6,10 @@ export function useCertificateReady(
   courseDisciplineId: string | undefined,
   completedLessons: number,
   totalLessons: number,
+  options?: { enabled?: boolean },
 ) {
-  const enabled = Boolean(profileId && courseDisciplineId)
+  const enabled =
+    (options?.enabled ?? true) && Boolean(profileId && courseDisciplineId);
   return useQuery({
     queryKey: [
       "certificate",

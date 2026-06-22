@@ -18,16 +18,19 @@ import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
 import { TrailCertificateCard } from "@/components/learning/TrailCertificateCard";
+import { ModerationModeBanner } from "@/components/learning/ModerationModeBanner";
 import { getCertificateDetail } from "@/services/certificateService";
 import { downloadCertificatePdf } from "@/services/certificatePdfService";
 import { supabase } from "@/lib/supabaseClient";
+import { useTeamModeration } from "@/hooks/useTeamModeration";
 
 const TrailDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
+  const { isModerator } = useTeamModeration();
   const { trail, modules, lessons, contentStatus, disciplineCompleteXp, isLoading, error } =
-    useTrailDetail(id || undefined);
+    useTrailDetail(id || undefined, { moderationMode: isModerator });
   const { data: access, isLoading: accessLoading } = useDisciplineAccess(id);
   const [isDownloadingCert, setIsDownloadingCert] = useState(false);
 
@@ -39,6 +42,7 @@ const TrailDetail = () => {
     id,
     completedLessonsPreview,
     totalLessonsPreview || trail?.totalLessons || 0,
+    { enabled: !isModerator },
   );
 
   const { data: disciplineMeta } = useQuery({
@@ -157,6 +161,8 @@ const TrailDetail = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
+        {isModerator ? <ModerationModeBanner /> : null}
+
         {/* Back Button */}
         <Link to="/cursos-livres" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="w-4 h-4" />
@@ -188,7 +194,7 @@ const TrailDetail = () => {
           </CardContent></Card>
           <Card><CardContent className="p-4 flex items-center gap-3">
             <Trophy className="w-5 h-5 text-warning shrink-0" />
-            <div className="min-w-0"><p className="text-lg font-bold">+{trail.xpReward}</p><p className="text-xs text-muted-foreground">XP</p></div>
+            <div className="min-w-0"><p className="text-lg font-bold">{isModerator ? "—" : `+${trail.xpReward}`}</p><p className="text-xs text-muted-foreground">XP</p></div>
           </CardContent></Card>
           <Card><CardContent className="p-4 flex items-center gap-3">
             <User className="w-5 h-5 text-info shrink-0" />
@@ -233,7 +239,12 @@ const TrailDetail = () => {
                     </AccordionTrigger>
                     <AccordionContent className="pb-4 space-y-2">
                       {moduleLessons.filter((l) => l.moduleId === module.id).map((lesson) => (
-                        <LessonCard key={lesson.id} lesson={lesson} trailId={trail.id} />
+                        <LessonCard
+                          key={lesson.id}
+                          lesson={lesson}
+                          trailId={trail.id}
+                          allowLockedNavigation={isModerator}
+                        />
                       ))}
                     </AccordionContent>
                   </AccordionItem>
@@ -245,8 +256,28 @@ const TrailDetail = () => {
           {/* Sidebar */}
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Seu Progresso</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{isModerator ? "Aulas" : "Seu Progresso"}</CardTitle></CardHeader>
               <CardContent className="flex flex-col items-center gap-4">
+                {isModerator ? (
+                  <>
+                    <p className="text-sm text-center text-muted-foreground">
+                      Selecione uma aula na lista ao lado para visualizar o conteúdo e moderar os comentários.
+                    </p>
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        const first = lessons[0];
+                        if (first) {
+                          navigate(`/trails/${trail.id}/lesson/${first.id}`);
+                        }
+                      }}
+                      disabled={lessons.length === 0}
+                    >
+                      Abrir primeira aula
+                    </Button>
+                  </>
+                ) : (
+                  <>
                 <ProgressRing progress={progress} size="xl" />
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">{trail.completedLessons} de {trail.totalLessons} aulas concluídas</p>
@@ -267,8 +298,11 @@ const TrailDetail = () => {
                 >
                   {primaryActionLabel}
                 </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
+            {!isModerator ? (
             <TrailCertificateCard
               trailId={trail.id}
               ready={certificateReady}
@@ -277,6 +311,7 @@ const TrailDetail = () => {
               onDownload={() => void handleDownloadCertificate()}
               isDownloading={isDownloadingCert}
             />
+            ) : null}
           </div>
         </div>
       </div>

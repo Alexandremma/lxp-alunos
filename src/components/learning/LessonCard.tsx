@@ -17,6 +17,7 @@ interface LessonCardProps {
   lesson: TrailLesson;
   trailId: string;
   className?: string;
+  allowLockedNavigation?: boolean;
 }
 
 const DEFAULT_LESSON_TYPE: NonNullable<TrailLesson["type"]> = "reading";
@@ -77,7 +78,12 @@ const statusConfig = {
   },
 };
 
-export const LessonCard = ({ lesson, trailId, className }: LessonCardProps) => {
+export const LessonCard = ({
+  lesson,
+  trailId,
+  className,
+  allowLockedNavigation = false,
+}: LessonCardProps) => {
   const lessonType = lesson.type ?? DEFAULT_LESSON_TYPE;
   const typeInfo = typeConfig[lessonType] ?? typeConfig.reading;
   const statusInfo = statusConfig[lesson.status];
@@ -129,7 +135,7 @@ export const LessonCard = ({ lesson, trailId, className }: LessonCardProps) => {
     </div>
   );
 
-  if (lesson.status === "locked") {
+  if (lesson.status === "locked" && !allowLockedNavigation) {
     return content;
   }
 

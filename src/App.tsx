@@ -55,43 +55,43 @@ const App = () => (
               {/* Ensino (aluno autenticado) */}
               <Route
                 path="/"
-                element={<ProtectedRoute element={<Dashboard />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Dashboard />} access="student" />}
               />
               <Route
                 path="/meus-cursos"
-                element={<ProtectedRoute element={<MyCourses />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourses />} access="student" />}
               />
               <Route
                 path="/meu-curso"
-                element={<ProtectedRoute element={<MyCourseRedirect />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourseRedirect />} access="student" />}
               />
               <Route
                 path="/meu-curso/:courseId"
-                element={<ProtectedRoute element={<MyCourse />} requiredRole="student" />}
+                element={<ProtectedRoute element={<MyCourse />} access="student" />}
               />
               <Route
                 path="/cursos-livres"
-                element={<ProtectedRoute element={<FreeCourses />} requiredRole="student" />}
+                element={<ProtectedRoute element={<FreeCourses />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails"
-                element={<ProtectedRoute element={<Navigate to="/cursos-livres" replace />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Navigate to="/cursos-livres" replace />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails/:id"
-                element={<ProtectedRoute element={<TrailDetail />} requiredRole="student" />}
+                element={<ProtectedRoute element={<TrailDetail />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/trails/:trailId/lesson/:lessonId"
-                element={<ProtectedRoute element={<Lesson />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Lesson />} access="studentOrTeamModerator" />}
               />
               <Route
                 path="/progress"
-                element={<ProtectedRoute element={<Progress />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Progress />} access="student" />}
               />
               <Route
                 path="/portfolio"
-                element={<ProtectedRoute element={<Portfolio />} requiredRole="student" />}
+                element={<ProtectedRoute element={<Portfolio />} access="student" />}
               />
               {/* Novas páginas */}
               <Route

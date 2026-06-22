@@ -13,6 +13,8 @@ import { useMemo } from "react"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import { useLogout } from "@/hooks/use-logout"
 import { useAuth } from "@/hooks/use-auth"
+import { useTeamModeration } from "@/hooks/useTeamModeration"
+import { Badge } from "@/components/ui/badge"
 
 function initialsFromDisplay(label: string): string {
   const t = label.trim()
@@ -32,6 +34,7 @@ interface TopBarProps {
 const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
   const { logout } = useLogout()
   const { profile, user } = useAuth()
+  const { isModerator, teamRoleLabel } = useTeamModeration()
 
   const menuName = useMemo(() => {
     const fromProfile = profile?.name?.trim()
@@ -70,6 +73,11 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
       </Button>
 
       <div className="flex items-center gap-2">
+        {isModerator && teamRoleLabel ? (
+          <Badge variant="outline" className="hidden sm:inline-flex">
+            Moderação · {teamRoleLabel}
+          </Badge>
+        ) : null}
         <ThemeToggle />
 
         <DropdownMenu>
