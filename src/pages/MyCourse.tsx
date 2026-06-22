@@ -17,7 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type Period, type Subject } from "@/data/mockData";
+import { type MyCoursePeriod, type MyCourseSubject } from "@/types/myCourse";
 import {
   Collapsible,
   CollapsibleContent,
@@ -46,9 +46,9 @@ const subjectStatusConfig = {
 /** Disciplinas vindas do Supabase usam UUID; o mock antigo não — só linkamos quando for UUID. */
 const DISCIPLINE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const subjectUsesCredits = (subject: Subject) => subject.creditsEnabled !== false;
+const subjectUsesCredits = (subject: MyCourseSubject) => subject.creditsEnabled !== false;
 
-const PeriodCard = ({ period }: { period: Period }) => {
+const PeriodCard = ({ period }: { period: MyCoursePeriod }) => {
   const [isOpen, setIsOpen] = useState(period.status === "current");
   const StatusIcon = statusConfig[period.status].icon;
 
@@ -116,7 +116,7 @@ const PeriodCard = ({ period }: { period: Period }) => {
   );
 };
 
-const SubjectRow = ({ subject }: { subject: Subject }) => {
+const SubjectRow = ({ subject }: { subject: MyCourseSubject }) => {
   const noContentLink = subject.hasContentLink === false;
   const blocked =
     subject.disciplineInactive || subject.enrollmentInactive || noContentLink;
@@ -242,31 +242,7 @@ const MyCourse = () => {
     }
   }, [courseId, profile?.id, navigate]);
 
-  const periods = useMemo<Period[]>(
-    () =>
-      currentCourse?.periods?.map((period) => ({
-        id: period.id,
-        number: period.number,
-        name: period.name,
-        status: period.status,
-        subjects: period.subjects.map((subject) => ({
-          id: subject.id,
-          name: subject.name,
-          code: subject.code,
-          credits: subject.credits,
-          creditsEnabled: subject.creditsEnabled,
-          workload: subject.workload,
-          status: subject.status,
-          grade: subject.grade,
-          professor: subject.professor,
-          disciplineInactive: subject.disciplineInactive,
-          enrollmentInactive: subject.enrollmentInactive,
-          hasContentLink: subject.hasContentLink,
-          isComplete: subject.isComplete,
-        })),
-      })) ?? [],
-    [currentCourse?.periods],
-  );
+  const periods = currentCourse?.periods ?? [];
 
   const courseName = useMemo(
     () => (loadingCourse ? "Carregando..." : (currentCourse?.name ?? "Sem curso ativo")),

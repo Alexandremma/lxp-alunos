@@ -21,7 +21,7 @@ import { TrailCertificateCard } from "@/components/learning/TrailCertificateCard
 import { ModerationModeBanner } from "@/components/learning/ModerationModeBanner";
 import { getCertificateDetail } from "@/services/certificateService";
 import { downloadCertificatePdf } from "@/services/certificatePdfService";
-import { supabase } from "@/lib/supabaseClient";
+import { getDisciplineWorkload } from "@/services/disciplinePresentationService";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
 
 const TrailDetail = () => {
@@ -45,17 +45,9 @@ const TrailDetail = () => {
     { enabled: !isModerator },
   );
 
-  const { data: disciplineMeta } = useQuery({
-    queryKey: ["lxp", "discipline-meta", id],
-    queryFn: async () => {
-      const { data, error: qErr } = await supabase
-        .from("lxp_course_disciplines")
-        .select("workload")
-        .eq("id", id!)
-        .maybeSingle();
-      if (qErr) throw qErr;
-      return data as { workload: number | null } | null;
-    },
+  const { data: disciplineWorkload } = useQuery({
+    queryKey: ["lxp", "discipline-workload", id],
+    queryFn: () => getDisciplineWorkload(id!),
     enabled: Boolean(id),
   });
 
@@ -307,7 +299,7 @@ const TrailDetail = () => {
               trailId={trail.id}
               ready={certificateReady}
               readyLoading={certificateReadyQ.isLoading}
-              workloadHours={disciplineMeta?.workload ?? null}
+              workloadHours={disciplineWorkload ?? null}
               onDownload={() => void handleDownloadCertificate()}
               isDownloading={isDownloadingCert}
             />

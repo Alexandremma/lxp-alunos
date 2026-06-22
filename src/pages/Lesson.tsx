@@ -28,11 +28,7 @@ import { useTeamModeration } from "@/hooks/useTeamModeration";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
-import type {
-  Trail as LegacyTrail,
-  Module as LegacyModule,
-  Lesson as LegacyLesson,
-} from "@/data/mockData";
+import type { Trail, TrailLesson, TrailModule } from "@/services/trailAdapter";
 
 type CompletionDialogMode = "next_lesson" | "trail_complete";
 
@@ -227,10 +223,10 @@ const Lesson = () => {
 
   return (
     <LessonLayout
-      trail={trail as unknown as LegacyTrail}
-      modules={modules as unknown as LegacyModule[]}
-      currentLesson={lesson as unknown as LegacyLesson}
-      allLessons={allLessons as unknown as LegacyLesson[]}
+      trail={trail}
+      modules={modules}
+      currentLesson={lesson}
+      allLessons={allLessons}
       progress={progress}
       headerLessonInfo={{
         title: lesson.title,
