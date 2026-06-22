@@ -27,8 +27,6 @@ import Login from "./pages/Login";
 import SetPassword from "./pages/SetPassword";
 import Certificate from "./pages/Certificate";
 import ProjectUpload from "./pages/ProjectUpload";
-import CoursesManagement from "./pages/admin/CoursesManagement";
-import StudentsManagement from "./pages/admin/StudentsManagement";
 import AliceLaunchTest from "./pages/AliceLaunchTest";
 import ValidateCertificate from "./pages/ValidateCertificate";
 
@@ -119,16 +117,6 @@ const App = () => (
               <Route
                 path="/secretaria/atendimento"
                 element={<ProtectedRoute element={<Support />} requiredRole="student" />}
-              />
-
-              {/* Back Office / Admin dentro do mesmo app (acesso admin) */}
-              <Route
-                path="/admin/cursos"
-                element={<ProtectedRoute element={<CoursesManagement />} requiredRole="admin" />}
-              />
-              <Route
-                path="/admin/alunos"
-                element={<ProtectedRoute element={<StudentsManagement />} requiredRole="admin" />}
               />
 
               {/* Teste integração Alice no domínio deployado (whitelist B42) */}
