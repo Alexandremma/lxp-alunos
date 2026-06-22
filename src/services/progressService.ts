@@ -6,6 +6,21 @@ import {
   resolveExternalDisciplineId,
   type TrailLesson,
 } from "@/services/trailAdapter"
+import type { LessonAccessMode } from "@/types/discipline"
+import type {
+  LessonProgressStatus,
+  RecordLessonCompleteParams,
+  RecordLessonEventParams,
+  UpsertDisciplineProgressParams,
+} from "@/types/progress"
+
+export type {
+  LessonProgressStatus,
+  RecordLessonCompleteParams,
+  RecordLessonEventParams,
+  UpsertDisciplineProgressParams,
+} from "@/types/progress"
+export type { LessonAccessMode } from "@/types/discipline"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -27,14 +42,6 @@ async function resolveCourseDisciplineId(
   return data?.course_discipline_id ?? null
 }
 
-export type UpsertDisciplineProgressParams = {
-  studentProfileId: string
-  courseDisciplineId: string
-  status: "approved" | "in_progress" | "pending" | "failed"
-  grade?: number | null
-  xpEarnedDelta?: number
-}
-
 export async function upsertDisciplineProgress(params: UpsertDisciplineProgressParams): Promise<void> {
   const now = new Date().toISOString()
   const { error } = await supabase.from("lxp_student_discipline_progress").upsert(
@@ -51,16 +58,6 @@ export async function upsertDisciplineProgress(params: UpsertDisciplineProgressP
   if (error) throw error
 }
 
-export type RecordLessonEventParams = {
-  studentProfileId: string
-  trailId: string
-  lessonId: string
-  event: "start" | "complete"
-  /** Obrigatório quando event === "complete" (para agregar disciplina). */
-  totalLessons?: number
-  xpEarnedDelta?: number
-}
-
 export async function recordLessonEvent(params: RecordLessonEventParams): Promise<void> {
   if (params.event === "complete") {
     const total = params.totalLessons ?? 0
@@ -71,13 +68,6 @@ export async function recordLessonEvent(params: RecordLessonEventParams): Promis
       totalLessons: total,
     })
   }
-}
-
-export type RecordLessonCompleteParams = {
-  studentProfileId: string
-  trailId: string
-  lessonId: string
-  totalLessons: number
 }
 
 export async function recordLessonComplete(params: RecordLessonCompleteParams): Promise<void> {
@@ -133,8 +123,6 @@ export async function recordLessonComplete(params: RecordLessonCompleteParams): 
   }
 }
 
-export type LessonProgressStatus = "pending" | "in_progress" | "completed"
-
 export async function fetchLessonProgressMap(
   studentProfileId: string,
   externalDisciplineId: string,
@@ -154,8 +142,6 @@ export async function fetchLessonProgressMap(
   }
   return map
 }
-
-export type LessonAccessMode = "free" | "sequential"
 
 export function mergeTrailLessonsWithProgress(
   lessons: TrailLesson[],
