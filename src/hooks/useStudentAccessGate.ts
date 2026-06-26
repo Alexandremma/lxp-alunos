@@ -7,9 +7,16 @@ import {
   STUDENT_BLOCKED_MESSAGE,
 } from "@/services/studentAccessLoginService"
 
+const verifiedProfileIds = new Set<string>()
+
+/** Limpa cache de verificação (logout / troca de sessão). */
+export function resetStudentAccessGateCache() {
+  verifiedProfileIds.clear()
+}
+
 /**
  * Redireciona aluno com todas as matrículas bloqueadas para o login.
- * Roda uma vez por perfil na sessão (não bloqueia cada troca de rota).
+ * Roda uma vez por perfil na sessão do browser (não bloqueia cada troca de rota).
  */
 export function useStudentAccessGate(profileId: string | undefined, enabled: boolean) {
   const navigate = useNavigate()
@@ -18,7 +25,7 @@ export function useStudentAccessGate(profileId: string | undefined, enabled: boo
 
   useEffect(() => {
     if (!enabled || !profileId) return
-    if (checkedProfileRef.current === profileId) return
+    if (verifiedProfileIds.has(profileId) || checkedProfileRef.current === profileId) return
 
     let cancelled = false
     setChecking(true)
@@ -38,6 +45,7 @@ export function useStudentAccessGate(profileId: string | undefined, enabled: boo
         if (!cancelled) {
           setChecking(false)
           checkedProfileRef.current = profileId
+          verifiedProfileIds.add(profileId)
         }
       }
     })()

@@ -1,8 +1,10 @@
 import { ReactElement } from "react";
 import { Navigate } from "react-router-dom";
+import { AppBootstrapScreen } from "@/components/states/AppBootstrapScreen";
 import { useAuth } from "@/hooks/use-auth";
 import { useStudentAccessGate } from "@/hooks/useStudentAccessGate";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
+import { isQueryBootstrapping } from "@/lib/routeGuard";
 
 export type RouteAccess = "student" | "teamModerator" | "studentOrTeamModerator";
 
@@ -55,8 +57,9 @@ function resolveDeniedRedirect(
 export const ProtectedRoute = (props: ProtectedRouteProps) => {
   const { element } = props;
   const access = resolveAccess(props);
-  const { session, profile, loading } = useAuth();
-  const { isModerator, isLoading: moderationLoading } = useTeamModeration();
+  const { session, profile, loading: authBootstrapping } = useAuth();
+  const { isModerator, member, isPending: memberPending } = useTeamModeration();
+  const memberBootstrapping = isQueryBootstrapping(memberPending, member ?? undefined);
 
   const requiresStudentGate =
     access === "student" &&
@@ -69,12 +72,16 @@ export const ProtectedRoute = (props: ProtectedRouteProps) => {
     requiresStudentGate,
   );
 
-  if (loading || moderationLoading || checkingAccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Carregando...
-      </div>
-    );
+  const needsModerationCheck =
+    access === "teamModerator" || access === "studentOrTeamModerator";
+
+  const isBootstrapping =
+    authBootstrapping ||
+    checkingAccess ||
+    (needsModerationCheck && memberBootstrapping);
+
+  if (isBootstrapping) {
+    return <AppBootstrapScreen />;
   }
 
   if (!session) {

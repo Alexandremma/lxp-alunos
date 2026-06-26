@@ -2,7 +2,7 @@ import { useBackofficeMember } from "@/hooks/queries/useBackofficeMember";
 import { formatTeamRoleLabel, type TeamRole } from "@/consts/teamRoles";
 
 export function useTeamModeration() {
-  const { data: member, isLoading, isFetching } = useBackofficeMember();
+  const { data: member, isLoading, isPending, isFetching } = useBackofficeMember();
 
   const isModerator = !!member;
   const teamRole: TeamRole | null = member?.role ?? null;
@@ -12,6 +12,7 @@ export function useTeamModeration() {
     member,
     isModerator,
     isLoading,
+    isPending,
     isFetching,
     teamRole,
     teamRoleLabel,

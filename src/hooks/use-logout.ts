@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
+import { resetStudentAccessGateCache } from "@/hooks/useStudentAccessGate";
 
 export function useLogout() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export function useLogout() {
     setLoading(true);
     try {
       await supabase.auth.signOut();
+      resetStudentAccessGateCache();
       queryClient.clear();
     } finally {
       setLoading(false);
