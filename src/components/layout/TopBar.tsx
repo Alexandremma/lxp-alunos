@@ -1,6 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/profile/UserAvatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,16 +16,6 @@ import { useLogout } from "@/hooks/use-logout"
 import { useAuth } from "@/hooks/use-auth"
 import { useTeamModeration } from "@/hooks/useTeamModeration"
 import { Badge } from "@/components/ui/badge"
-
-function initialsFromDisplay(label: string): string {
-  const t = label.trim()
-  if (!t) return "?"
-  const parts = t.split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  }
-  return t.slice(0, 2).toUpperCase()
-}
 
 interface TopBarProps {
   isSidebarOpen: boolean
@@ -51,11 +41,6 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
   const menuEmail = useMemo(
     () => profile?.email?.trim() || user?.email?.trim() || "",
     [profile?.email, user?.email],
-  )
-
-  const avatarInitials = useMemo(
-    () => initialsFromDisplay(menuName === "Aluno" && menuEmail ? menuEmail : menuName),
-    [menuName, menuEmail],
   )
 
   return (
@@ -85,12 +70,14 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src="/placeholder.svg" alt={menuName} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {avatarInitials}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={menuName}
+                email={menuEmail}
+                genericLabel="Aluno"
+                avatarPath={profile?.avatar_path}
+                updatedAt={profile?.updated_at}
+                className="h-9 w-9"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

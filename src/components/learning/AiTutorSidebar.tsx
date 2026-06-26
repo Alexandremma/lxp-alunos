@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Bot, X, Send, User, FileText, HelpCircle, Layers, Lightbulb } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bot, X, Send, FileText, HelpCircle, Layers, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/profile/UserAvatar";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -38,6 +40,7 @@ const mockResponses: Record<string, string> = {
 };
 
 export function AiTutorSidebar({ lessonTitle, onClose }: AiTutorSidebarProps) {
+  const { profile, user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -56,6 +59,21 @@ Como posso te ajudar? 😊`,
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+
+  const userDisplayName = useMemo(() => {
+    const fromProfile = profile?.name?.trim();
+    if (fromProfile) return fromProfile;
+    const meta = user?.user_metadata?.full_name;
+    if (typeof meta === "string" && meta.trim()) return meta.trim();
+    const email = user?.email?.trim();
+    if (email) return email.split("@")[0] ?? email;
+    return "Aluno";
+  }, [profile?.name, user]);
+
+  const userEmail = useMemo(
+    () => profile?.email?.trim() || user?.email?.trim() || "",
+    [profile?.email, user?.email],
+  );
 
   const handleSend = async (text: string, actionId?: string) => {
     if (!text.trim() && !actionId) return;
@@ -151,22 +169,23 @@ Como posso te ajudar? 😊`,
                 message.role === "user" && "flex-row-reverse"
               )}
             >
-              <Avatar className="h-7 w-7 shrink-0">
-                <AvatarFallback
-                  className={cn(
-                    "text-xs",
-                    message.role === "assistant"
-                      ? "bg-gradient-to-br from-primary to-primary/60 text-primary-foreground"
-                      : "bg-muted"
-                  )}
-                >
-                  {message.role === "assistant" ? (
+              {message.role === "assistant" ? (
+                <Avatar className="h-7 w-7 shrink-0">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
                     <Bot className="h-3.5 w-3.5" />
-                  ) : (
-                    <User className="h-3.5 w-3.5" />
-                  )}
-                </AvatarFallback>
-              </Avatar>
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <UserAvatar
+                  name={userDisplayName}
+                  email={userEmail}
+                  genericLabel="Aluno"
+                  avatarPath={profile?.avatar_path}
+                  updatedAt={profile?.updated_at}
+                  className="h-7 w-7 shrink-0"
+                  fallbackClassName="text-xs"
+                />
+              )}
               <div
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm max-w-[85%]",

@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/profile/UserAvatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,13 +31,6 @@ import {
   getLessonCommentReplyXp,
   getLessonCommentXp,
 } from "@/services/gamificationXpRulesService";
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
 
 function formatRelativeTime(iso: string): string {
   return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: ptBR });
@@ -215,18 +208,18 @@ export const LessonDiscussionPanel = ({
 
     return (
       <div className={cn("flex items-start gap-3", compact && "gap-2")}>
-        <Avatar className={cn("shrink-0", compact ? "h-7 w-7" : "h-8 w-8")}>
-          <AvatarFallback
-            className={cn(
-              "text-xs",
-              isStaffComment
-                ? "bg-secondary/20 text-secondary-foreground"
-                : "bg-primary/10 text-primary",
-            )}
-          >
-            {initialsFromName(comment.author_name)}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          name={comment.author_name}
+          avatarPath={comment.author_avatar_path}
+          updatedAt={comment.author_avatar_updated_at}
+          className={cn("shrink-0", compact ? "h-7 w-7" : "h-8 w-8")}
+          fallbackClassName={cn(
+            "text-xs",
+            isStaffComment
+              ? "bg-secondary/20 text-secondary-foreground"
+              : "bg-primary/10 text-primary",
+          )}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-foreground">{comment.author_name}</span>
