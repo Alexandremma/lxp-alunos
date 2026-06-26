@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Award, Loader2, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -334,7 +335,7 @@ export const LessonDiscussionPanel = ({
 
       <div className="pt-4 border-t border-border space-y-4">
         {commentsQ.isLoading && (
-          <p className="text-sm text-muted-foreground text-center py-6">Carregando discussão...</p>
+          <PageLoadingState variant="section" title="Carregando discussão…" className="py-6" />
         )}
         {commentsQ.isError && (
           <p className="text-sm text-destructive text-center py-6">

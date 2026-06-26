@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Calendar, Loader2, Mail, Pencil, Phone, Save, User, X } from "lucide-react";
+import { Calendar, Mail, Pencil, Phone, Save, User, X } from "lucide-react";
 import { toast } from "sonner";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -123,10 +125,7 @@ const Profile = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          Carregando perfil…
-        </div>
+        <PageLoadingState variant="section" title="Carregando perfil…" />
       </DashboardLayout>
     );
   }
@@ -261,7 +260,7 @@ const Profile = () => {
                   disabled={updateProfile.isPending}
                 >
                   {updateProfile.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
                     <Save className="h-4 w-4 mr-2" />
                   )}

@@ -24,6 +24,7 @@ import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
@@ -60,13 +61,7 @@ const Lesson = () => {
   const progress = allLessons.length > 0 ? Math.round((completedLessons / allLessons.length) * 100) : 0;
 
   if (isLoading || accessLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Carregando aula...</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingState variant="fullscreen" title="Carregando aula…" />;
   }
 
   if (access?.allowed === false) {

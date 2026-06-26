@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { PageLoadingState } from "@/components/states/PageLoadingState"
 import { cn } from "@/lib/utils"
 import {
   buildAliceLaunchUrl,
@@ -106,7 +107,7 @@ export function AliceLessonFrame({
         </Alert>
       )}
       {launching && (
-        <p className="text-sm text-muted-foreground mb-2 shrink-0">Carregando conteúdo…</p>
+        <PageLoadingState variant="inline" title="Carregando conteúdo…" className="mb-2 shrink-0" />
       )}
       <iframe
         name={IFRAME_NAME}
