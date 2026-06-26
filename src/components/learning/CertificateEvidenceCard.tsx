@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Download, GraduationCap, Loader2 } from "lucide-react"
+import { Download, GraduationCap } from "lucide-react"
+import { LoadingSpinner } from "@/components/states/LoadingSpinner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,7 +74,7 @@ export function CertificateEvidenceCard({ evidence, className }: CertificateEvid
           disabled={downloading || !courseDisciplineId}
         >
           {downloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LoadingSpinner size="sm" />
           ) : (
             <Download className="h-4 w-4" />
           )}

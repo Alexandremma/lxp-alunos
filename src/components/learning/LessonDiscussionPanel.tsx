@@ -1,8 +1,9 @@
 import * as React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Award, Loader2, Pencil, Reply, Trash2 } from "lucide-react";
+import { Award, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -330,7 +331,7 @@ export const LessonDiscussionPanel = ({
         onClick={() => void submitRoot()}
         disabled={create.isPending || !newBody.trim()}
       >
-        {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar comentário"}
+        {create.isPending ? <LoadingSpinner size="sm" /> : "Enviar comentário"}
       </Button>
 
       <div className="pt-4 border-t border-border space-y-4">

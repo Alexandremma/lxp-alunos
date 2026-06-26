@@ -87,7 +87,6 @@ import {
   FileText,
   Users,
   BarChart3,
-  Loader2,
   Check,
   X,
   AlertCircle,
@@ -103,6 +102,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 
 // Color palette data
 const colorPalettes = {
@@ -1270,15 +1270,15 @@ const KitchenSink = () => {
             <Subsection title="Loading Spinners">
               <div className="flex flex-wrap items-center gap-8">
                 <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <span className="text-xs text-muted-foreground">Default</span>
+                  <LoadingSpinner size="sm" />
+                  <span className="text-xs text-muted-foreground">Small</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+                  <LoadingSpinner size="md" />
                   <span className="text-xs text-muted-foreground">Medium</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                  <LoadingSpinner size="lg" />
                   <span className="text-xs text-muted-foreground">Large</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
