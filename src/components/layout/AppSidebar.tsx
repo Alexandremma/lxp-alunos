@@ -7,6 +7,7 @@ import {
   LogOut,
   Sparkles,
   BookOpen,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -35,6 +36,7 @@ const studentNavSections: NavSection[] = [
       { title: "Minhas Disciplinas", url: "/cursos-livres", icon: Sparkles },
       { title: "Progresso", url: "/progress", icon: BarChart3 },
       { title: "Portfólio", url: "/portfolio", icon: Trophy },
+      { title: "Perfil", url: "/perfil", icon: User },
     ],
   },
 ];
@@ -42,7 +44,10 @@ const studentNavSections: NavSection[] = [
 const moderatorNavSections: NavSection[] = [
   {
     label: "Moderação",
-    items: [{ title: "Disciplinas", url: "/cursos-livres", icon: BookOpen }],
+    items: [
+      { title: "Disciplinas", url: "/cursos-livres", icon: BookOpen },
+      { title: "Perfil", url: "/perfil", icon: User },
+    ],
   },
 ];
 

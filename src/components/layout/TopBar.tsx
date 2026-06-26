@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import { useLogout } from "@/hooks/use-logout"
 import { useAuth } from "@/hooks/use-auth"
@@ -32,6 +33,7 @@ interface TopBarProps {
 }
 
 const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
+  const navigate = useNavigate()
   const { logout } = useLogout()
   const { profile, user } = useAuth()
   const { isModerator, teamRoleLabel } = useTeamModeration()
@@ -101,6 +103,15 @@ const TopBar = ({ isSidebarOpen, onToggleSidebar }: TopBarProps) => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                navigate("/perfil")
+              }}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Perfil
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive"
               onSelect={(e) => {

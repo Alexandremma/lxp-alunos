@@ -17,6 +17,7 @@ import TrailDetail from "./pages/TrailDetail";
 import Lesson from "./pages/Lesson";
 import Progress from "./pages/Progress";
 import Portfolio from "./pages/Portfolio";
+import Profile from "./pages/Profile";
 import KitchenSink from "./pages/KitchenSink";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -86,6 +87,10 @@ const App = () => (
               <Route
                 path="/portfolio"
                 element={<ProtectedRoute element={<Portfolio />} access="student" />}
+              />
+              <Route
+                path="/perfil"
+                element={<ProtectedRoute element={<Profile />} access="studentOrTeamModerator" />}
               />
               {/* Novas páginas */}
               <Route
