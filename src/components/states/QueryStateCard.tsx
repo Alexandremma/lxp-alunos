@@ -1,7 +1,8 @@
 import type { LucideIcon } from "lucide-react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { cn } from "@/lib/utils";
 
 type QueryStateCardProps = {
@@ -34,9 +35,14 @@ export function QueryStateCard({
 
   return (
     <Card className={className}>
-      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+      <CardContent
+        className="flex flex-col items-center justify-center py-12 text-center"
+        role={state === "loading" ? "status" : undefined}
+        aria-live={state === "loading" ? "polite" : undefined}
+        aria-busy={state === "loading" ? true : undefined}
+      >
         {state === "loading" ? (
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground/60 mb-4" />
+          <LoadingSpinner size="lg" className="mb-4 text-primary" />
         ) : (
           <ResolvedIcon className={cn("h-10 w-10 mb-4", iconColor)} />
         )}

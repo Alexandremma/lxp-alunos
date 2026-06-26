@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useGetActiveEnrolledCourses } from "@/hooks/queries/useGetActiveEnrolledCourses";
 import { getLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useStudentCatalog } from "@/hooks/queries/useStudentCatalog";
 import { useDashboardStats } from "@/hooks/queries/useDashboardStats";
 
@@ -124,11 +125,7 @@ const Dashboard = () => {
           />
         )}
         {loadingEnrollments && (
-          <QueryStateCard
-            state="loading"
-            title="Carregando seu curso atual..."
-            className="border-primary/20 bg-gradient-to-br from-primary/5 to-background"
-          />
+          <LoadingLearning type="card" className="border-primary/20 bg-gradient-to-br from-primary/5 to-background rounded-xl" />
         )}
         {currentCourse && (
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
@@ -303,11 +300,7 @@ const Dashboard = () => {
                 </div>
                 <div className="grid md:grid-cols-2 gap-6">
                   {loadingCatalog ? (
-                    <QueryStateCard
-                      state="loading"
-                      title="Carregando disciplinas em andamento..."
-                      className="md:col-span-2"
-                    />
+                    <LoadingLearning type="grid" count={2} className="md:col-span-2" />
                   ) : catalogError ? (
                     <QueryStateCard
                       state="error"

@@ -8,6 +8,7 @@ import { GraduationCap, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { setLastCourseId } from "@/lib/lastCourseStorage";
 
 const MyCourses = () => {
@@ -43,11 +44,7 @@ const MyCourses = () => {
         )}
 
         {isLoading ? (
-          <QueryStateCard
-            state="loading"
-            title="Carregando cursos..."
-            description="Aguarde um instante"
-          />
+          <LoadingLearning type="grid" count={6} />
         ) : (courses?.length ?? 0) === 0 ? (
           <QueryStateCard
             state="empty"

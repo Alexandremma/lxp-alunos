@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Award, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Award, CheckCircle2, XCircle } from "lucide-react";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,7 @@ export default function ValidateCertificate() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <LoadingSpinner size="sm" className="mr-2" />
                   Validando…
                 </>
               ) : (

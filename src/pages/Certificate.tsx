@@ -3,6 +3,7 @@ import { Download, ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useAuth } from "@/hooks/use-auth";
 import { useCertificateDetail } from "@/hooks/queries/useCertificateDetail";
 import { downloadCertificatePdf } from "@/services/certificatePdfService";
@@ -50,7 +51,7 @@ export default function Certificate() {
         </div>
 
         {isLoading ? (
-          <QueryStateCard state="loading" title="Carregando certificado..." />
+          <LoadingLearning type="detail" />
         ) : error ? (
           <QueryStateCard
             state="error"

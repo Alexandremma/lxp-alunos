@@ -24,6 +24,7 @@ import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
@@ -61,10 +62,8 @@ const Lesson = () => {
 
   if (isLoading || accessLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Carregando aula...</p>
-        </div>
+      <div className="min-h-screen bg-background p-4 md:p-6">
+        <LoadingLearning type="detail" className="max-w-5xl mx-auto" />
       </div>
     );
   }

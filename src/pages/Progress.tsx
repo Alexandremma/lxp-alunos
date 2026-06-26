@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recha
 import { useAuth } from "@/hooks/use-auth";
 import { useProgressOverview } from "@/hooks/queries/useProgressOverview";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { BookOpen } from "lucide-react";
 
 const Progress = () => {
@@ -18,7 +19,7 @@ const Progress = () => {
       <DashboardLayout>
         <div className="space-y-6 animate-fade-up">
           <PageHeader title="Meu Progresso" description="Acompanhe sua evolução e estatísticas de aprendizagem." />
-          <QueryStateCard state="loading" title="Carregando seu progresso..." />
+          <LoadingLearning type="detail" />
         </div>
       </DashboardLayout>
     );

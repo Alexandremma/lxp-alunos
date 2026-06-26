@@ -1,4 +1,5 @@
 import { GraduationCap } from "lucide-react";
+import { LoadingDots } from "@/components/states/LoadingDots";
 import { cn } from "@/lib/utils";
 
 type AppBootstrapScreenProps = {
@@ -6,10 +7,7 @@ type AppBootstrapScreenProps = {
   className?: string;
 };
 
-/**
- * Tela de bootstrap de rota (auth / permissões). Primeiro passo para loading
- * centralizado — ver docs-central § loading UI padronizado (follow-up).
- */
+/** Bootstrap de rota (auth / permissões). Espelhar em lxp-backoffice. */
 export function AppBootstrapScreen({
   message = "Preparando sua área de estudo…",
   className,
@@ -31,11 +29,7 @@ export function AppBootstrapScreen({
         </div>
       </div>
       <div className="flex flex-col items-center gap-3">
-        <div className="flex gap-1.5" aria-hidden>
-          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce [animation-delay:-0.3s]" />
-          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce [animation-delay:-0.15s]" />
-          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce" />
-        </div>
+        <LoadingDots />
         <p className="text-sm font-medium text-foreground/80">{message}</p>
       </div>
     </div>

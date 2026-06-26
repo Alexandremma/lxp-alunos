@@ -15,6 +15,7 @@ import { useCertificateReady } from "@/hooks/queries/useCertificateReady";
 import type { TrailModule } from "@/services/trailAdapter";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
 import { TrailCertificateCard } from "@/components/learning/TrailCertificateCard";
@@ -54,7 +55,7 @@ const TrailDetail = () => {
   if (isLoading || accessLoading) {
     return (
       <DashboardLayout>
-        <QueryStateCard state="loading" title="Carregando trilha..." />
+        <LoadingLearning type="detail" />
       </DashboardLayout>
     );
   }
@@ -209,11 +210,7 @@ const TrailDetail = () => {
                 className="border-warning/30 bg-warning/5"
               />
             ) : modules.length === 0 ? (
-              <QueryStateCard
-                state="empty"
-                title="Carregando módulos..."
-                description="Aguarde enquanto organizamos as aulas desta disciplina."
-              />
+              <LoadingLearning type="list" count={4} />
             ) : (
               <Accordion type="single" collapsible defaultValue={modules[0]?.id} className="space-y-3">
                 {modules.map((module) => (

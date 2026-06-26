@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
 import { toast } from "sonner";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useEnrollInTrail } from "@/hooks/mutations/useEnrollInTrail";
 import {
   Select,
@@ -242,12 +243,7 @@ const StudentFreeCoursesView = () => {
         </div>
 
         {isLoading ? (
-          <QueryStateCard
-            state="loading"
-            title="Carregando disciplinas..."
-            description="Aguarde um instante"
-            icon={BookMarked}
-          />
+          <LoadingLearning type="grid" count={6} />
         ) : error ? (
           <QueryStateCard
             state="error"

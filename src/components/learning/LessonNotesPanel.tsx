@@ -1,8 +1,10 @@
 import * as React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/states/LoadingSpinner";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -169,7 +171,7 @@ export const LessonNotesPanel = ({
           disabled={create.isPending || !newBody.trim()}
         >
           {create.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LoadingSpinner size="sm" />
           ) : (
             "Salvar anotação"
           )}
@@ -178,7 +180,7 @@ export const LessonNotesPanel = ({
 
       <div className="pt-4 border-t border-border space-y-3">
         {notesQ.isLoading && (
-          <p className="text-sm text-muted-foreground text-center py-6">Carregando anotações...</p>
+          <LoadingLearning type="list" count={2} className="py-2" />
         )}
         {notesQ.isError && (
           <p className="text-sm text-destructive text-center py-6">
