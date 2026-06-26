@@ -33,15 +33,7 @@ function parsePageParam(raw: string | null): number {
 }
 
 const FreeCourses = () => {
-  const { isModerator, isLoading: moderationLoading } = useTeamModeration();
-
-  if (moderationLoading) {
-    return (
-      <DashboardLayout>
-        <QueryStateCard state="loading" title="Carregando..." />
-      </DashboardLayout>
-    );
-  }
+  const { isModerator } = useTeamModeration();
 
   if (isModerator) {
     return <ModeratorDisciplinesView />;

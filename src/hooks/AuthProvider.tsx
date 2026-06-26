@@ -1,11 +1,12 @@
-import { PropsWithChildren, useCallback, useEffect, useState } from "react";
+import { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/consts/queryKeys";
 import { AuthContext, type LxpProfile } from "@/hooks/auth-context";
-import { shouldRefetchAuthProfile } from "@/hooks/auth-events";
+import { shouldBlockUiForAuthProfileFetch, shouldRefetchAuthProfile } from "@/hooks/auth-events";
 import { supabase } from "@/lib/supabaseClient";
 import { recordStudentDailyAccess } from "@/services/studentAccessService";
+import { resetStudentAccessGateCache } from "@/hooks/useStudentAccessGate";
 
 function trackStudentDailyAccess(profile: LxpProfile | null, invalidateStats?: (id: string) => void) {
   if (!profile || profile.role !== "student") return;
@@ -22,7 +23,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [queryClient]);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<LxpProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const profileRef = useRef<LxpProfile | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isResolvingProfile, setIsResolvingProfile] = useState(false);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const loadProfileForUser = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -38,6 +45,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return (data as LxpProfile) ?? null;
   }, []);
 
+  const applyProfile = useCallback(
+    (nextProfile: LxpProfile | null) => {
+      setProfile(nextProfile);
+      trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
+    },
+    [invalidateGamificationQueries],
+  );
+
   const refetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
@@ -45,15 +60,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const nextProfile = await loadProfileForUser(user.id);
-    setProfile(nextProfile);
-    trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
-  }, [user, loadProfileForUser, invalidateGamificationQueries]);
+    applyProfile(nextProfile);
+  }, [user, loadProfileForUser, applyProfile]);
 
   useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
-      setLoading(true);
+      setIsInitializing(true);
       const {
         data: { session: currentSession },
       } = await supabase.auth.getSession();
@@ -65,13 +79,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (currentSession?.user) {
         const nextProfile = await loadProfileForUser(currentSession.user.id);
-        setProfile(nextProfile);
-        trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
+        applyProfile(nextProfile);
       } else {
         setProfile(null);
       }
 
-      setLoading(false);
+      setIsInitializing(false);
     };
 
     void init();
@@ -84,7 +97,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!nextSession?.user) {
         setProfile(null);
-        setLoading(false);
+        setIsResolvingProfile(false);
+        resetStudentAccessGateCache();
         queryClient.clear();
         return;
       }
@@ -93,14 +107,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      setLoading(true);
+      const userId = nextSession.user.id;
+      const hasProfileForCurrentUser = profileRef.current?.user_id === userId;
+      const blockUi = shouldBlockUiForAuthProfileFetch(event, hasProfileForCurrentUser);
+
+      if (blockUi) {
+        setIsResolvingProfile(true);
+      }
+
       void (async () => {
         try {
-          const nextProfile = await loadProfileForUser(nextSession.user.id);
-          setProfile(nextProfile);
-          trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
+          const nextProfile = await loadProfileForUser(userId);
+          applyProfile(nextProfile);
         } finally {
-          setLoading(false);
+          if (blockUi) {
+            setIsResolvingProfile(false);
+          }
         }
       })();
     });
@@ -109,7 +131,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [invalidateGamificationQueries, loadProfileForUser, queryClient]);
+  }, [applyProfile, invalidateGamificationQueries, loadProfileForUser, queryClient]);
+
+  const loading = isInitializing || isResolvingProfile;
 
   const value = {
     user,
