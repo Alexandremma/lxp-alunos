@@ -9,6 +9,8 @@ export type LxpProfile = {
   name: string | null;
   email: string | null;
   role: ProfileRole;
+  phone?: string | null;
+  birth_date?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -18,6 +20,7 @@ export type AuthContextValue = {
   session: Session | null;
   profile: LxpProfile | null;
   loading: boolean;
+  refetchProfile: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);

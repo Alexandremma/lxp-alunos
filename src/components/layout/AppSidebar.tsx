@@ -1,4 +1,3 @@
-import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -7,6 +6,7 @@ import {
   LogOut,
   Sparkles,
   BookOpen,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -35,6 +35,7 @@ const studentNavSections: NavSection[] = [
       { title: "Minhas Disciplinas", url: "/cursos-livres", icon: Sparkles },
       { title: "Progresso", url: "/progress", icon: BarChart3 },
       { title: "Portfólio", url: "/portfolio", icon: Trophy },
+      { title: "Perfil", url: "/perfil", icon: User },
     ],
   },
 ];
@@ -42,7 +43,10 @@ const studentNavSections: NavSection[] = [
 const moderatorNavSections: NavSection[] = [
   {
     label: "Moderação",
-    items: [{ title: "Disciplinas", url: "/cursos-livres", icon: BookOpen }],
+    items: [
+      { title: "Disciplinas", url: "/cursos-livres", icon: BookOpen },
+      { title: "Perfil", url: "/perfil", icon: User },
+    ],
   },
 ];
 
@@ -52,17 +56,9 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
-  const location = useLocation();
   const { logout } = useLogout();
   const { isModerator } = useTeamModeration();
   const navSections = isModerator ? moderatorNavSections : studentNavSections;
-
-  const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-    return location.pathname.startsWith(path);
-  };
 
   return (
     <aside

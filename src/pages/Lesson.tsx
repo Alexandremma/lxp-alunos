@@ -18,7 +18,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { VideoPlayer } from "@/components/learning/VideoPlayer";
 import { LessonLayout } from "@/components/learning/LessonLayout";
-// TODO: Replace mock-based logic with adapters once lesson endpoints are defined.
 import { toast } from "sonner";
 import { useCompleteLesson } from "@/hooks/mutations/useCompleteLesson";
 import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
@@ -28,7 +27,7 @@ import { useTeamModeration } from "@/hooks/useTeamModeration";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
 import { isAliceConfigured } from "@/services/aliceService";
-import type { Trail, TrailLesson, TrailModule } from "@/services/trailAdapter";
+import type { Trail, TrailLesson, TrailModule } from "@/types/trail";
 
 type CompletionDialogMode = "next_lesson" | "trail_complete";
 

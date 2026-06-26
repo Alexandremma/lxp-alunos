@@ -24,6 +24,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<LxpProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadProfileForUser = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from("lxp_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[use-auth] Erro ao buscar lxp_profiles:", error.message);
+    }
+
+    return (data as LxpProfile) ?? null;
+  }, []);
+
+  const refetchProfile = useCallback(async () => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    const nextProfile = await loadProfileForUser(user.id);
+    setProfile(nextProfile);
+    trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
+  }, [user, loadProfileForUser, invalidateGamificationQueries]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -39,17 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        const { data, error } = await supabase
-          .from("lxp_profiles")
-          .select("*")
-          .eq("user_id", currentSession.user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.warn("[use-auth] Erro ao buscar lxp_profiles:", error.message);
-        }
-
-        const nextProfile = (data as LxpProfile) ?? null;
+        const nextProfile = await loadProfileForUser(currentSession.user.id);
         setProfile(nextProfile);
         trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
       } else {
@@ -81,19 +96,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setLoading(true);
       void (async () => {
         try {
-          const { data, error } = await supabase
-            .from("lxp_profiles")
-            .select("*")
-            .eq("user_id", nextSession.user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.warn(
-              "[use-auth] Erro ao buscar lxp_profiles (onAuthStateChange):",
-              error.message,
-            );
-          }
-          const nextProfile = (data as LxpProfile) ?? null;
+          const nextProfile = await loadProfileForUser(nextSession.user.id);
           setProfile(nextProfile);
           trackStudentDailyAccess(nextProfile, invalidateGamificationQueries);
         } finally {
@@ -106,13 +109,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [invalidateGamificationQueries, queryClient]);
+  }, [invalidateGamificationQueries, loadProfileForUser, queryClient]);
 
   const value = {
     user,
     session,
     profile,
     loading,
+    refetchProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
