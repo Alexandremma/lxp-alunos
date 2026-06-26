@@ -29,6 +29,8 @@ import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummari
 import { CourseSwitcher } from "@/components/my-course/CourseSwitcher";
 import { setLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const statusConfig = {
   completed: { label: "Concluído", color: "bg-success/10 text-success border-success/20", icon: CheckCircle },
@@ -245,7 +247,7 @@ const MyCourse = () => {
   const periods = currentCourse?.periods ?? [];
 
   const courseName = useMemo(
-    () => (loadingCourse ? "Carregando..." : (currentCourse?.name ?? "Sem curso ativo")),
+    () => currentCourse?.name ?? (loadingCourse ? "" : "Sem curso ativo"),
     [currentCourse?.name, loadingCourse],
   );
   const allSubjects = useMemo(() => periods.flatMap((p) => p.subjects), [periods]);
@@ -326,10 +328,13 @@ const MyCourse = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold">
-                    {courseName}
+                    {loadingCourse ? <Skeleton className="h-7 w-48" /> : courseName}
                   </h2>
                   {loadingCourse ? (
-                    <p className="mt-1 text-sm text-muted-foreground">Carregando informações do curso...</p>
+                    <div className="mt-2 space-y-2">
+                      <Skeleton className="h-4 w-56" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
                   ) : currentCourse ? (
                     <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -385,11 +390,7 @@ const MyCourse = () => {
 
           <TabsContent value="grade" className="space-y-4">
             {loadingCourse ? (
-              <QueryStateCard
-                state="loading"
-                title="Carregando grade curricular..."
-                description="Aguarde um instante"
-              />
+              <LoadingLearning type="list" count={4} />
             ) : periods.length > 0 ? (
               periods.map((period) => <PeriodCard key={period.id} period={period} />)
             ) : (

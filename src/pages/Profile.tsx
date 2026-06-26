@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Calendar, Mail, Pencil, Phone, Save, User, X } from "lucide-react";
 import { toast } from "sonner";
-import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -125,7 +125,7 @@ const Profile = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <PageLoadingState variant="section" title="Carregando perfil…" />
+        <LoadingLearning type="card" className="max-w-2xl" />
       </DashboardLayout>
     );
   }

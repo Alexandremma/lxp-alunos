@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyLearning } from "@/components/states/EmptyLearning";
 import { BookMarked, ChevronLeft, ChevronRight } from "lucide-react";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import {
   Select,
   SelectContent,
@@ -174,12 +175,7 @@ export function ModeratorDisciplinesView() {
         </div>
 
         {isLoading ? (
-          <QueryStateCard
-            state="loading"
-            title="Carregando disciplinas..."
-            description="Aguarde um instante"
-            icon={BookMarked}
-          />
+          <LoadingLearning type="grid" count={6} />
         ) : error ? (
           <QueryStateCard
             state="error"

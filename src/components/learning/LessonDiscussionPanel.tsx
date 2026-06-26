@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Award, Pencil, Reply, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/states/LoadingSpinner";
-import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -336,7 +336,7 @@ export const LessonDiscussionPanel = ({
 
       <div className="pt-4 border-t border-border space-y-4">
         {commentsQ.isLoading && (
-          <PageLoadingState variant="section" title="Carregando discussão…" className="py-6" />
+          <LoadingLearning type="list" count={3} className="py-2" />
         )}
         {commentsQ.isError && (
           <p className="text-sm text-destructive text-center py-6">

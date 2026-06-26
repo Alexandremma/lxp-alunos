@@ -2,20 +2,14 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
 import { getLastCourseId } from "@/lib/lastCourseStorage";
-import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 
 const MyCourseRedirect = () => {
   const { profile } = useAuth();
   const { data: courses, isLoading } = useListMyCourseSummaries(profile?.id);
 
   if (isLoading) {
-    return (
-      <QueryStateCard
-        state="loading"
-        title="Carregando curso..."
-        description="Aguarde um instante"
-      />
-    );
+    return <LoadingLearning type="card" />;
   }
 
   const lastId = getLastCourseId();

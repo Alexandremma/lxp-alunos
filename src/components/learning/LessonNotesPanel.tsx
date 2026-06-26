@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/states/LoadingSpinner";
-import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -180,7 +180,7 @@ export const LessonNotesPanel = ({
 
       <div className="pt-4 border-t border-border space-y-3">
         {notesQ.isLoading && (
-          <PageLoadingState variant="inline" title="Carregando anotações…" className="py-6" />
+          <LoadingLearning type="list" count={2} className="py-2" />
         )}
         {notesQ.isError && (
           <p className="text-sm text-destructive text-center py-6">

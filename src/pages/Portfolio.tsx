@@ -7,6 +7,7 @@ import { GameBadge } from "@/components/learning/GameBadge";
 import { EvidenceCard } from "@/components/learning/EvidenceCard";
 import { CertificateEvidenceCard } from "@/components/learning/CertificateEvidenceCard";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
+import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useAuth } from "@/hooks/use-auth";
 import { usePortfolioEvidences } from "@/hooks/queries/usePortfolioEvidences";
 import type { LearningEvidence } from "@/types/learningEvidence";
@@ -134,7 +135,7 @@ const Portfolio = () => {
         </Tabs>
 
         {isLoading ? (
-          <QueryStateCard state="loading" title="Carregando seu portfólio..." />
+          <LoadingLearning type="grid" count={6} />
         ) : error ? (
           <QueryStateCard
             state="error"
