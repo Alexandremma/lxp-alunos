@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 type AvatarUploadFieldProps = {
   name?: string | null;
+  email?: string | null;
+  genericLabel?: string;
   avatarPath?: string | null;
   updatedAt?: string | null;
   disabled?: boolean;
@@ -18,6 +20,8 @@ type AvatarUploadFieldProps = {
 
 export function AvatarUploadField({
   name,
+  email,
+  genericLabel,
   avatarPath,
   updatedAt,
   disabled = false,
@@ -82,10 +86,12 @@ export function AvatarUploadField({
       >
         <UserAvatar
           name={name}
+          email={email}
+          genericLabel={genericLabel}
           avatarPath={avatarPath}
           updatedAt={updatedAt}
           className={cn("h-16 w-16", avatarClassName)}
-          fallbackClassName={cn("bg-primary text-primary-foreground text-lg", fallbackClassName)}
+          fallbackClassName={cn("text-lg", fallbackClassName)}
         />
 
         {canEdit ? (

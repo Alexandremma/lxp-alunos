@@ -18,34 +18,59 @@ export type LessonCommentRow = {
 
 export type LessonCommentWithAuthor = LessonCommentRow & {
   author_name: string;
+  author_avatar_path: string | null;
+  author_avatar_updated_at: string | null;
   author_badge_label: string | null;
 };
 
-type ProfileNameRow = { id: string; name: string | null };
+type ProfileDisplayRow = {
+  id: string;
+  name: string | null;
+  avatar_path: string | null;
+  updated_at: string;
+};
 
-async function attachAuthorNames(rows: LessonCommentRow[]): Promise<LessonCommentWithAuthor[]> {
-  if (rows.length === 0) return [];
+const PROFILE_DISPLAY_BATCH_SIZE = 50;
 
-  const ids = [...new Set(rows.map((r) => r.student_profile_id))];
-  const { data: profiles, error } = await supabase
-    .from("lxp_profiles")
-    .select("id,name")
-    .in("id", ids);
+async function fetchProfileDisplay(profileIds: string[]): Promise<ProfileDisplayRow[]> {
+  const uniqueIds = [...new Set(profileIds)];
+  if (uniqueIds.length === 0) return [];
 
-  if (error) throw error;
-
-  const nameById = new Map<string, string>();
-  for (const p of (profiles ?? []) as ProfileNameRow[]) {
-    nameById.set(p.id, p.name?.trim() || "Aluno");
+  const rows: ProfileDisplayRow[] = [];
+  for (let index = 0; index < uniqueIds.length; index += PROFILE_DISPLAY_BATCH_SIZE) {
+    const chunk = uniqueIds.slice(index, index + PROFILE_DISPLAY_BATCH_SIZE);
+    const { data, error } = await supabase.rpc("lxp_get_profile_display", {
+      p_profile_ids: chunk,
+    });
+    if (error) throw error;
+    rows.push(...((data ?? []) as ProfileDisplayRow[]));
   }
 
-  return rows.map((row) => ({
-    ...row,
-    author_name: nameById.get(row.student_profile_id) ?? "Aluno",
-    author_badge_label: row.author_team_role
-      ? formatTeamRoleLabel(row.author_team_role)
-      : null,
-  }));
+  return rows;
+}
+
+async function attachAuthorDisplay(rows: LessonCommentRow[]): Promise<LessonCommentWithAuthor[]> {
+  if (rows.length === 0) return [];
+
+  const profiles = await fetchProfileDisplay(rows.map((row) => row.student_profile_id));
+
+  const displayById = new Map<string, ProfileDisplayRow>();
+  for (const profile of profiles) {
+    displayById.set(profile.id, profile);
+  }
+
+  return rows.map((row) => {
+    const display = displayById.get(row.student_profile_id);
+    return {
+      ...row,
+      author_name: display?.name?.trim() || "Aluno",
+      author_avatar_path: display?.avatar_path ?? null,
+      author_avatar_updated_at: display?.updated_at ?? null,
+      author_badge_label: row.author_team_role
+        ? formatTeamRoleLabel(row.author_team_role)
+        : null,
+    };
+  });
 }
 
 const COMMENT_SELECT =
@@ -63,7 +88,7 @@ export async function listLessonComments(params: {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return attachAuthorNames((data ?? []) as LessonCommentRow[]);
+  return attachAuthorDisplay((data ?? []) as LessonCommentRow[]);
 }
 
 export async function createLessonComment(params: {
@@ -94,7 +119,7 @@ export async function createLessonComment(params: {
     .single();
 
   if (error) throw error;
-  const [withAuthor] = await attachAuthorNames([data as LessonCommentRow]);
+  const [withAuthor] = await attachAuthorDisplay([data as LessonCommentRow]);
   return withAuthor;
 }
 

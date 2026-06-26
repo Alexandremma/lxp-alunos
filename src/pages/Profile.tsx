@@ -128,6 +128,8 @@ const Profile = () => {
             <div className="flex items-center gap-4 min-w-0">
               <AvatarUploadField
                 name={displayName}
+                email={displayEmail}
+                genericLabel="Aluno"
                 avatarPath={profile?.avatar_path}
                 updatedAt={profile?.updated_at}
                 disabled={!isEditing}
