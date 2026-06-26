@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import type { LxpProfile } from "@/hooks/auth-context";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
@@ -137,58 +136,33 @@ const Profile = () => {
       <PageHeader
         title="Meu perfil"
         description="Visualize e edite suas informações de cadastro."
-        actions={
-          isEditing ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelEdit}
-                disabled={updateProfile.isPending}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={updateProfile.isPending}
-              >
-                {updateProfile.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Salvar
-              </Button>
-            </>
-          ) : (
-            <Button type="button" onClick={handleStartEdit}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
-          )
-        }
       />
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src="/placeholder.svg" alt={displayName} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                {avatarInitials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{displayName}</CardTitle>
-              <CardDescription>{displayEmail || "—"}</CardDescription>
-              {isModerator && teamRoleLabel ? (
-                <Badge variant="outline" className="mt-2">
-                  Moderação · {teamRoleLabel}
-                </Badge>
-              ) : null}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <Avatar className="h-16 w-16 shrink-0">
+                <AvatarImage src="/placeholder.svg" alt={displayName} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                  {avatarInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <CardTitle>{displayName}</CardTitle>
+                <CardDescription>{displayEmail || "—"}</CardDescription>
+                {isModerator && teamRoleLabel ? (
+                  <Badge variant="outline" className="mt-2">
+                    Moderação · {teamRoleLabel}
+                  </Badge>
+                ) : null}
+              </div>
             </div>
+            {profile?.created_at ? (
+              <p className="text-sm text-muted-foreground text-right shrink-0">
+                Membro desde {formatDateBr(profile.created_at)}
+              </p>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent>
@@ -269,14 +243,38 @@ const Profile = () => {
             </form>
           </Form>
 
-          {!isEditing && profile?.created_at ? (
-            <>
-              <Separator className="my-6" />
-              <p className="text-sm text-muted-foreground">
-                Membro desde {formatDateBr(profile.created_at)}
-              </p>
-            </>
-          ) : null}
+          <div className="flex justify-end gap-2 border-t border-border pt-6 mt-6">
+            {isEditing ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={updateProfile.isPending}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={form.handleSubmit(onSubmit)}
+                  disabled={updateProfile.isPending}
+                >
+                  {updateProfile.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar
+                </Button>
+              </>
+            ) : (
+              <Button type="button" onClick={handleStartEdit}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </DashboardLayout>

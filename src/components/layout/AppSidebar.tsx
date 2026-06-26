@@ -1,4 +1,3 @@
-import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -57,17 +56,9 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = ({ collapsed = false, className }: AppSidebarProps) => {
-  const location = useLocation();
   const { logout } = useLogout();
   const { isModerator } = useTeamModeration();
   const navSections = isModerator ? moderatorNavSections : studentNavSections;
-
-  const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-    return location.pathname.startsWith(path);
-  };
 
   return (
     <aside
