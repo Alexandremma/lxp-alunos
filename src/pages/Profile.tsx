@@ -8,7 +8,7 @@ import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { LoadingSpinner } from "@/components/states/LoadingSpinner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarUploadField } from "@/components/profile/AvatarUploadField";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,16 +41,6 @@ function formatDateBr(value: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
-function initialsFromDisplay(label: string): string {
-  const trimmed = label.trim();
-  if (!trimmed) return "?";
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return trimmed.slice(0, 2).toUpperCase();
-}
-
 function profileFormValues(profile: LxpProfile | null, displayEmail: string): ProfileFormValues {
   return {
     name: profile?.name?.trim() || "",
@@ -79,11 +69,6 @@ const Profile = () => {
     if (displayEmail) return displayEmail.split("@")[0] ?? displayEmail;
     return "Aluno";
   }, [profile?.name, user, displayEmail]);
-
-  const avatarInitials = useMemo(
-    () => initialsFromDisplay(displayName === "Aluno" && displayEmail ? displayEmail : displayName),
-    [displayName, displayEmail],
-  );
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -141,12 +126,12 @@ const Profile = () => {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
-              <Avatar className="h-16 w-16 shrink-0">
-                <AvatarImage src="/placeholder.svg" alt={displayName} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {avatarInitials}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarUploadField
+                name={displayName}
+                avatarPath={profile?.avatar_path}
+                updatedAt={profile?.updated_at}
+                disabled={!isEditing}
+              />
               <div className="min-w-0">
                 <CardTitle>{displayName}</CardTitle>
                 <CardDescription>{displayEmail || "—"}</CardDescription>

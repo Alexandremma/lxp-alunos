@@ -11,6 +11,7 @@ export type LxpProfile = {
   role: ProfileRole;
   phone?: string | null;
   birth_date?: string | null;
+  avatar_path?: string | null;
   created_at: string;
   updated_at: string;
 };
