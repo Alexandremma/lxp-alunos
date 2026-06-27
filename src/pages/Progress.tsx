@@ -6,6 +6,7 @@ import { FeedbackBadge } from "@/components/learning/FeedbackBadge";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuth } from "@/hooks/use-auth";
 import { useProgressOverview } from "@/hooks/queries/useProgressOverview";
+import { courseProgressFromCompletedCount } from "@/lib/progressPercent";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { BookOpen } from "lucide-react";
@@ -45,7 +46,7 @@ const Progress = () => {
   const stats = data.stats;
   const weeklyStudyData = data.weeklyStudyData;
   const trails = data.trails;
-  const completionRate = stats.totalTrails > 0 ? Math.round((stats.completedTrails / stats.totalTrails) * 100) : 0;
+  const completionRate = courseProgressFromCompletedCount(stats.completedTrails, stats.totalTrails);
 
   return (
     <DashboardLayout>

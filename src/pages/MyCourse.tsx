@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { LearningProgressBar } from "@/components/learning/LearningProgressBar";
 import {
   CheckCircle,
   Clock,
@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useGetMyCourseOverview } from "@/hooks/queries/useGetMyCourseOverview";
 import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
+import { summarizeLinkedCourseProgress } from "@/services/myCourseService";
 import { CourseSwitcher } from "@/components/my-course/CourseSwitcher";
 import { setLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
@@ -251,13 +252,12 @@ const MyCourse = () => {
     [currentCourse?.name, loadingCourse],
   );
   const allSubjects = useMemo(() => periods.flatMap((p) => p.subjects), [periods]);
-  const completedDisciplines = useMemo(
-    () => allSubjects.filter((s) => s.isComplete).length,
+  const linkedCourseProgress = useMemo(
+    () => summarizeLinkedCourseProgress(allSubjects),
     [allSubjects],
   );
-  const totalDisciplines = allSubjects.length;
-  const courseProgress =
-    totalDisciplines > 0 ? Math.round((completedDisciplines / totalDisciplines) * 100) : 0;
+  const { completedDisciplines, totalDisciplines, progressPercent: courseProgress } =
+    linkedCourseProgress;
   const totalCredits = useMemo(
     () =>
       periods.reduce(
@@ -354,16 +354,13 @@ const MyCourse = () => {
               </div>
               {!loadingCourse && totalDisciplines > 0 && (
                 <div className="flex flex-col gap-3 flex-1 max-w-md w-full">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Progresso do Curso</span>
-                    <span className="text-sm text-muted-foreground">
-                      {completedDisciplines} de {totalDisciplines} disciplinas
-                    </span>
-                  </div>
-                  <Progress value={courseProgress} className="h-3" />
-                  <p className="text-xs text-muted-foreground mt-1 text-right">{courseProgress}% concluído</p>
-                </div>
+                <LearningProgressBar
+                  value={courseProgress}
+                  label="Progresso do Curso"
+                  suffix={`${completedDisciplines} de ${totalDisciplines} disciplinas`}
+                  barClassName="h-3"
+                />
+                <p className="text-xs text-muted-foreground text-right">{courseProgress}% concluído</p>
               </div>
               )}
             </div>
