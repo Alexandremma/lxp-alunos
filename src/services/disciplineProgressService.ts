@@ -1,3 +1,4 @@
+import { lessonProgressPercent } from "@/lib/progressPercent"
 import { supabase } from "@/lib/supabaseClient"
 import {
   getDisciplineLessonAccessMode,
@@ -24,6 +25,10 @@ export type DisciplineProgressInput = {
   disciplineId: string
 }
 
+/**
+ * Lesson-based progress for many disciplines (same source as TrailDetail).
+ * Replaces the legacy DB-status heuristic (50% for in_progress).
+ */
 export async function fetchDisciplineProgressFromDb(
   profileId: string,
   disciplineIds: string[],
@@ -31,19 +36,12 @@ export async function fetchDisciplineProgressFromDb(
   const map = new Map<string, { progressPercent: number; isComplete: boolean }>()
   if (disciplineIds.length === 0) return map
 
-  const { data, error } = await supabase
-    .from("lxp_student_discipline_progress")
-    .select("course_discipline_id,status")
-    .eq("student_profile_id", profileId)
-    .in("course_discipline_id", disciplineIds)
-
-  if (error) throw error
-
-  for (const row of data ?? []) {
-    const status = row.status as string
-    const isComplete = status === "approved"
-    const progressPercent = isComplete ? 100 : status === "in_progress" ? 50 : 0
-    map.set(row.course_discipline_id as string, { progressPercent, isComplete })
+  const snapshots = await computeDisciplineProgressBatch(profileId, disciplineIds)
+  for (const [disciplineId, snap] of snapshots) {
+    map.set(disciplineId, {
+      progressPercent: snap.progressPercent,
+      isComplete: snap.isComplete,
+    })
   }
 
   return map
@@ -63,8 +61,7 @@ async function resolveDisciplineLessonProgress(
 
   const totalLessons = merged.length
   const completedLessons = merged.filter((l) => l.status === "completed").length
-  const progressPercent =
-    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+  const progressPercent = lessonProgressPercent(completedLessons, totalLessons)
   const isComplete = totalLessons > 0 && completedLessons >= totalLessons
 
   return {

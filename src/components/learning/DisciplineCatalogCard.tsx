@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { LearningProgressBar } from "@/components/learning/LearningProgressBar";
+import { clampProgressPercent } from "@/lib/progressPercent";
 import {
   BookMarked,
   BookOpen,
@@ -99,7 +100,7 @@ export function DisciplineCatalogCard({
     item.progressStatus === "discipline_inactive" ||
     item.progressStatus === "enrollment_inactive";
 
-  const progress = Math.max(0, Math.min(100, item.progressPercent ?? 0));
+  const progress = clampProgressPercent(item.progressPercent ?? 0);
 
   return (
     <Card className="overflow-hidden card-hover group flex h-full flex-col">
@@ -161,15 +162,7 @@ export function DisciplineCatalogCard({
         </div>
 
         <div className="mt-auto space-y-4 pt-4">
-          {showProgress && (
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Progresso</span>
-                <span className="font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
+          {showProgress && <LearningProgressBar value={progress} />}
 
           <Button
             className="w-full"

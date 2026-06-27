@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { MyCourseData, MyCoursePeriod, MyCourseSummary, SubjectStatus } from "@/types/myCourse";
+import { courseProgressFromCompletedCount } from "@/lib/progressPercent";
+import { computeDisciplineProgressBatch, type DisciplineProgressSnapshot } from "@/services/disciplineProgressService";
+import type { MyCourseData, MyCoursePeriod, MyCourseSummary, MyCourseSubject, SubjectStatus } from "@/types/myCourse";
 
 type EnrollmentRow = { course_id: string; created_at?: string | null; status: string };
 type CourseRow = { id: string; name: string; description: string | null; status: string; created_at: string };
@@ -49,9 +51,10 @@ async function buildCourseOverview(
 
   let progressByDisciplineId = new Map<string, { status: SubjectStatus; grade: number | null }>();
   let linkByDisciplineId = new Set<string>();
+  let lessonProgressByDisciplineId = new Map<string, DisciplineProgressSnapshot>();
 
   if (disciplineIds.length > 0) {
-    const [{ data: progressRows, error: progressError }, { data: linkRows, error: linksError }] =
+    const [{ data: progressRows, error: progressError }, { data: linkRows, error: linksError }, progressSnapshots] =
       await Promise.all([
         supabase
           .from("lxp_student_discipline_progress")
@@ -63,6 +66,7 @@ async function buildCourseOverview(
           .select("course_discipline_id")
           .eq("library_content_type", "discipline")
           .in("course_discipline_id", disciplineIds),
+        computeDisciplineProgressBatch(profileId, disciplineIds),
       ]);
 
     if (progressError) throw progressError;
@@ -76,6 +80,7 @@ async function buildCourseOverview(
     linkByDisciplineId = new Set(
       (linkRows ?? []).map((row) => row.course_discipline_id as string),
     );
+    lessonProgressByDisciplineId = progressSnapshots;
   }
 
   const enrollmentInactive = enrollment.status === "inactive";
@@ -97,9 +102,10 @@ async function buildCourseOverview(
   }) => {
     const subjects = (period.lxp_course_disciplines ?? []).map((discipline) => {
       const progress = progressByDisciplineId.get(discipline.id);
+      const lessonProgress = lessonProgressByDisciplineId.get(discipline.id);
       const hasContentLink = linkByDisciplineId.has(discipline.id);
       const status = deriveSubjectStatus(progress, hasContentLink);
-      const isComplete = status === "approved";
+      const isComplete = lessonProgress?.isComplete ?? status === "approved";
       const creditsEnabled = discipline.credits_enabled ?? true;
 
       return {
@@ -115,7 +121,7 @@ async function buildCourseOverview(
         disciplineInactive: (discipline.status ?? "active") === "inactive",
         enrollmentInactive,
         hasContentLink,
-        progressPercent: isComplete ? 100 : status === "in_progress" ? 50 : 0,
+        progressPercent: lessonProgress?.progressPercent ?? 0,
         isComplete,
       };
     });
@@ -139,13 +145,17 @@ async function buildCourseOverview(
 }
 
 function summarizeCourse(course: MyCourseData): Pick<MyCourseSummary, "totalDisciplines" | "completedDisciplines" | "progressPercent"> {
-  const linkedSubjects = course.periods.flatMap((p) =>
-    p.subjects.filter((s) => s.hasContentLink),
-  );
+  return summarizeLinkedCourseProgress(course.periods.flatMap((p) => p.subjects));
+}
+
+/** Shared course-level progress (linked disciplines with content only). */
+export function summarizeLinkedCourseProgress(
+  subjects: Pick<MyCourseSubject, "hasContentLink" | "isComplete">[],
+): Pick<MyCourseSummary, "totalDisciplines" | "completedDisciplines" | "progressPercent"> {
+  const linkedSubjects = subjects.filter((s) => s.hasContentLink !== false);
   const totalDisciplines = linkedSubjects.length;
   const completedDisciplines = linkedSubjects.filter((s) => s.isComplete).length;
-  const progressPercent =
-    totalDisciplines > 0 ? Math.round((completedDisciplines / totalDisciplines) * 100) : 0;
+  const progressPercent = courseProgressFromCompletedCount(completedDisciplines, totalDisciplines);
   return { totalDisciplines, completedDisciplines, progressPercent };
 }
 

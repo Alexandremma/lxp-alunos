@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { lessonProgressPercent } from "@/lib/progressPercent";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ProgressRing } from "@/components/learning/ProgressRing";
 import { LessonCard } from "@/components/learning/LessonCard";
@@ -90,7 +91,7 @@ const TrailDetail = () => {
 
   const totalLessons = lessons.length || trail.totalLessons || 0;
   const completedLessons = trail.completedLessons ?? 0;
-  const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const progress = lessonProgressPercent(completedLessons, totalLessons);
   const lessonsUnavailable = totalLessons === 0 && contentStatus?.state === "unavailable";
   const certificateReady = certificateReadyQ.data === true;
   const moduleLessons = lessons.filter((l) =>

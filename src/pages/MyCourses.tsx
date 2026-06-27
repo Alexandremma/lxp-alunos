@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { LearningProgressBar } from "@/components/learning/LearningProgressBar";
 import { GraduationCap, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
@@ -77,15 +77,10 @@ const MyCourses = () => {
                     {course.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                     )}
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Progresso</span>
-                        <span className="font-medium">
-                          {course.completedDisciplines} de {course.totalDisciplines} disciplinas
-                        </span>
-                      </div>
-                      <Progress value={course.progressPercent} className="h-2" />
-                    </div>
+                    <LearningProgressBar
+                      value={course.progressPercent}
+                      suffix={`${course.completedDisciplines} de ${course.totalDisciplines} disciplinas`}
+                    />
                   </CardContent>
                 </Card>
               </Link>
