@@ -7,8 +7,8 @@ import {
   createLessonComment,
   deleteLessonComment,
   updateLessonComment,
-  type LessonCommentWithAuthor,
 } from "@/services/lessonCommentService";
+import type { LessonCommentWithAuthor } from "@/types/lessonComments";
 import { lessonCommentKeys } from "@/hooks/queries/useLessonComments";
 
 export function useLessonCommentMutations(params: {
