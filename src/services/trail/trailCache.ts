@@ -1,4 +1,4 @@
-import type { AliceRent } from "@/services/aliceService"
+import type { AliceRent } from "@/types/alice"
 
 export type ExternalAuthor = { nome?: string | null }
 

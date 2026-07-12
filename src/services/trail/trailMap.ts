@@ -1,8 +1,8 @@
+import type { AliceRent } from "@/types/alice"
 import {
   fetchAliceRentsForDiscipline,
   isAliceConfigured,
   matchAliceRentForLesson,
-  type AliceRent,
 } from "@/services/aliceService"
 import { getDisciplinePresentation } from "@/services/disciplinePresentationService"
 import type { TrailContentStatus } from "@/types/trail"

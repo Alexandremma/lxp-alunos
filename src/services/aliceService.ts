@@ -4,20 +4,9 @@
  */
 
 import { resolveAliceBaseUrl } from "@/lib/resolveAliceBaseUrl"
+import type { AliceDisciplineRents, AliceRent } from "@/types/alice"
 
-export type AliceRent = {
-  id: number
-  hash: string
-  urlCompleta: string
-  nomeUnidade: string
-  contentId: string
-}
-
-export type AliceDisciplineRents = {
-  disciplineId: number
-  disciplineName: string
-  rents: AliceRent[]
-}
+export type { AliceDisciplineRents, AliceLaunchUser, AliceRent } from "@/types/alice"
 
 type AliceRentRaw = {
   id?: number
@@ -158,12 +147,6 @@ export function buildAliceLaunchUrl(contentId: string, useHttp?: boolean): strin
     useHttp || import.meta.env.VITE_ALICE_LAUNCH_USE_HTTP === "true" ? "http" : "https"
   const base = resolveAliceBaseUrl(import.meta.env.VITE_ALICE_BASE_URL).replace(/^https?:\/\//, "")
   return `${scheme}://${base}/?c=${encodeURIComponent(parseAliceContentId(contentId))}`
-}
-
-export type AliceLaunchUser = {
-  userId: string
-  fullName: string
-  email: string
 }
 
 export function splitAlicePersonName(fullName: string): { given: string; family: string } {

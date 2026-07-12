@@ -1,8 +1,8 @@
 import { supabase } from "@/lib/supabaseClient"
+import type { AliceRent } from "@/types/alice"
 import {
   fetchAliceRentsForDiscipline,
   isAliceConfigured,
-  type AliceRent,
 } from "@/services/aliceService"
 import type { LessonAccessMode } from "@/types/discipline"
 import {
