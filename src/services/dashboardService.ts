@@ -2,18 +2,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { computeConsecutiveLoginStreak } from "@/lib/accessDate";
 import { listStudentAccessDates } from "@/services/studentAccessService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
+import type { DashboardStats } from "@/types/dashboard";
 
-export type DashboardStats = {
-  streak: number;
-  level: number;
-  levelTitle: string;
-  totalXp: number;
-  levelProgressPercent: number;
-  xpToNextLevel: number | null;
-  completedTrails: number;
-  totalLessonsCompleted: number;
-  totalHoursStudied: number;
-};
+export type { DashboardStats } from "@/types/dashboard";
 
 type LevelRow = {
   level_number: number;

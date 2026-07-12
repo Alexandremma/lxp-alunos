@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/consts/queryKeys";
-import { getDashboardStats, type DashboardStats } from "@/services/dashboardService";
+import { getDashboardStats } from "@/services/dashboardService";
+import type { DashboardStats } from "@/types/dashboard";
 
 export function useDashboardStats(profileId?: string) {
   return useQuery<DashboardStats>({

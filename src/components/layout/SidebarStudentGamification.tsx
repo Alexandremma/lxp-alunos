@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useAuth } from "@/hooks/use-auth"
 import { useDashboardStats } from "@/hooks/queries/useDashboardStats"
-import type { DashboardStats } from "@/services/dashboardService"
+import type { DashboardStats } from "@/types/dashboard"
 
 const EMPTY_STATS: DashboardStats = {
   streak: 0,
