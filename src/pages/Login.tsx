@@ -12,27 +12,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
-import {
-  isLikelyNetworkError,
-  mapResetPasswordErrorMessage,
-  mapSignInErrorMessage,
-  STUDENT_BLOCKED_MESSAGE,
-} from "@/lib/authLoginMessages";
-import { signOutIfEnrollmentBlocked } from "@/hooks/useStudentAccessGate";
-import { lxpAlunosSetPasswordUrl } from "@/lib/authRedirectUrls";
-import { resolvePostLoginPath } from "@/lib/authRouting";
+import { STUDENT_BLOCKED_MESSAGE } from "@/lib/authLoginMessages";
+import { useStudentSignIn } from "@/hooks/mutations/useStudentSignIn";
+import { useRequestPasswordReset } from "@/hooks/mutations/useRequestPasswordReset";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authView, setAuthView] = useState<"login" | "forgot">("login");
-  const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const signInMutation = useStudentSignIn();
+  const resetMutation = useRequestPasswordReset();
 
   useEffect(() => {
     const state = location.state as { blockedMessage?: string } | null;
@@ -82,73 +75,19 @@ export default function Login() {
       return;
     }
 
-    setLoading(true);
     setError(null);
 
-    try {
-      const {
-        data: { session },
-        error: signInError,
-      } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
+    const result = await signInMutation.mutateAsync({
+      email: trimmedEmail,
+      password,
+    });
 
-      if (signInError || !session) {
-        setError(mapSignInErrorMessage(signInError));
-        return;
-      }
-
-      const currentUser = session.user;
-
-      let profileId: string | null = null;
-
-      const { data: existingProfile, error: profileError } = await supabase
-        .from("lxp_profiles")
-        .select("id")
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.warn("[Login] Erro ao carregar perfil:", profileError.message);
-      } else if (!existingProfile) {
-        const { data: inserted, error: insertError } = await supabase
-          .from("lxp_profiles")
-          .insert({
-            user_id: currentUser.id,
-            email: currentUser.email,
-            name: currentUser.user_metadata?.full_name ?? currentUser.email,
-            role: "student",
-          })
-          .select("id")
-          .maybeSingle();
-
-        if (insertError) {
-          console.warn("[Login] Erro ao criar perfil:", insertError.message);
-        } else {
-          profileId = inserted?.id ?? null;
-        }
-      } else {
-        profileId = existingProfile.id as string;
-      }
-
-      const blockedMessage = await signOutIfEnrollmentBlocked(currentUser.id);
-      if (blockedMessage) {
-        setError(blockedMessage);
-        return;
-      }
-
-      const nextPath = await resolvePostLoginPath(currentUser.id);
-      navigate(nextPath, { replace: true });
-    } catch (err) {
-      setError(
-        isLikelyNetworkError(err)
-          ? "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente."
-          : "Não foi possível entrar. Tente novamente em instantes.",
-      );
-    } finally {
-      setLoading(false);
+    if (result.status === "error") {
+      setError(result.message);
+      return;
     }
+
+    navigate(result.nextPath, { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -160,31 +99,21 @@ export default function Login() {
       return;
     }
 
-    setForgotLoading(true);
     setError(null);
 
-    try {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: lxpAlunosSetPasswordUrl,
-      });
-      if (resetErr) {
-        setError(mapResetPasswordErrorMessage(resetErr));
-        return;
-      }
-      setForgotMessage(
-        "Se existir uma conta com este e-mail, você receberá um link para redefinir a senha em instantes.",
-      );
-    } catch (err) {
-      setError(
-        isLikelyNetworkError(err)
-          ? "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente."
-          : "Não foi possível enviar o e-mail. Tente novamente ou fale com o suporte.",
-      );
-    } finally {
-      setForgotLoading(false);
+    const result = await resetMutation.mutateAsync(trimmed);
+    if (result.status === "error") {
+      setError(result.message);
+      return;
     }
+
+    setForgotMessage(
+      "Se existir uma conta com este e-mail, você receberá um link para redefinir a senha em instantes.",
+    );
   };
 
+  const loading = signInMutation.isPending;
+  const forgotLoading = resetMutation.isPending;
   const formBusy = loading || forgotLoading;
 
   return (
