@@ -22,8 +22,8 @@ import { useLessonComments } from "@/hooks/queries/useLessonComments";
 import { useLessonCommentMutations } from "@/hooks/mutations/useLessonCommentMutations";
 import {
   LESSON_COMMENT_MAX_LENGTH,
-  type LessonCommentWithAuthor,
 } from "@/services/lessonCommentService";
+import type { LessonCommentWithAuthor } from "@/types/lessonComments";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useXpRules } from "@/hooks/queries/useXpRules";
