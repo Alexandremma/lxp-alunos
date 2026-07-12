@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import type { LxpProfile } from "@/hooks/auth-context";
+import type { LxpProfile } from "@/types/auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
 import { useUpdateOwnStudentProfile } from "@/hooks/mutations/useUpdateOwnStudentProfile";
 import { formatPhoneBr } from "@/lib/inputMasks";

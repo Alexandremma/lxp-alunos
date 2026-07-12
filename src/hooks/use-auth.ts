@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { AuthContext } from "@/hooks/auth-context";
 
-export type { AuthContextValue, LxpProfile } from "@/hooks/auth-context";
+export type { AuthContextValue, LxpProfile } from "@/types/auth";
 
 export function useAuth() {
   const ctx = useContext(AuthContext);

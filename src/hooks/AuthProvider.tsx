@@ -2,7 +2,8 @@ import { PropsWithChildren, useCallback, useEffect, useRef, useState } from "rea
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/consts/queryKeys";
-import { AuthContext, type LxpProfile } from "@/hooks/auth-context";
+import { AuthContext } from "@/hooks/auth-context";
+import type { LxpProfile } from "@/types/auth";
 import { shouldBlockUiForAuthProfileFetch, shouldRefetchAuthProfile } from "@/hooks/auth-events";
 import { supabase } from "@/lib/supabaseClient";
 import { recordStudentDailyAccess } from "@/services/studentAccessService";
