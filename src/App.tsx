@@ -18,13 +18,10 @@ import Lesson from "./pages/Lesson";
 import Progress from "./pages/Progress";
 import Portfolio from "./pages/Portfolio";
 import Profile from "./pages/Profile";
-import KitchenSink from "./pages/KitchenSink";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import SetPassword from "./pages/SetPassword";
 import Certificate from "./pages/Certificate";
-import ProjectUpload from "./pages/ProjectUpload";
-import AliceLaunchTest from "./pages/AliceLaunchTest";
 import ValidateCertificate from "./pages/ValidateCertificate";
 
 const App = () => (
@@ -97,16 +94,6 @@ const App = () => (
                 path="/certificado/:courseId"
                 element={<ProtectedRoute element={<Certificate />} access="student" />}
               />
-              <Route
-                path="/trails/:trailId/project/:lessonId"
-                element={<ProtectedRoute element={<ProjectUpload />} access="student" />}
-              />
-
-              {/* Teste integração Alice no domínio deployado (whitelist B42) */}
-              <Route path="/teste-alice" element={<AliceLaunchTest />} />
-
-              {/* Utils (pode manter livre ou proteger, aqui vou deixar livre para dev) */}
-              <Route path="/kitchen-sink" element={<KitchenSink />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
