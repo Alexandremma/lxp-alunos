@@ -1,19 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import {
   getModeratorDisciplinesCatalog,
   listModeratorCatalogCourses,
 } from "@/services/moderatorDisciplinesCatalogService";
 import type { ModeratorDisciplinesCatalogParams } from "@/types/moderatorCatalog";
 
-export const moderatorCatalogKeys = {
-  list: (params: ModeratorDisciplinesCatalogParams) =>
-    ["moderator", "catalog", params] as const,
-  courses: () => ["moderator", "catalog", "courses"] as const,
-};
-
 export function useModeratorCatalog(params: ModeratorDisciplinesCatalogParams) {
   return useQuery({
-    queryKey: moderatorCatalogKeys.list(params),
+    queryKey: queryKeys.moderatorCatalog.list(params),
     queryFn: () => getModeratorDisciplinesCatalog(params),
     staleTime: 60_000,
   });
@@ -21,7 +16,7 @@ export function useModeratorCatalog(params: ModeratorDisciplinesCatalogParams) {
 
 export function useModeratorCatalogCourses() {
   return useQuery({
-    queryKey: moderatorCatalogKeys.courses(),
+    queryKey: queryKeys.moderatorCatalog.courses(),
     queryFn: listModeratorCatalogCourses,
     staleTime: 60_000,
   });

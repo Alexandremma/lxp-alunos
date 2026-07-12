@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { xpRulesQueryKey } from "@/hooks/queries/useXpRules";
+import { queryKeys } from "@/consts/queryKeys";
 
 /**
  * Invalidates XP rules when admin updates lxp_gamification_xp_rules (Supabase Realtime).
@@ -20,7 +20,7 @@ export function useXpRulesSync() {
           table: "lxp_gamification_xp_rules",
         },
         () => {
-          void queryClient.invalidateQueries({ queryKey: xpRulesQueryKey });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.gamification.xpRules });
         },
       )
       .subscribe();

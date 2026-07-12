@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Clock, BookOpen, Trophy, User } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -48,7 +49,7 @@ const TrailDetail = () => {
   );
 
   const { data: disciplineWorkload } = useQuery({
-    queryKey: ["lxp", "discipline-workload", id],
+    queryKey: queryKeys.trail.disciplineWorkload(id!),
     queryFn: () => getDisciplineWorkload(id!),
     enabled: Boolean(id),
   });

@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import { fetchActiveXpRules } from "@/services/gamificationXpRulesService";
-
-export const xpRulesQueryKey = ["gamification", "xp-rules-active"] as const;
 
 export function useXpRules() {
   return useQuery({
-    queryKey: xpRulesQueryKey,
+    queryKey: queryKeys.gamification.xpRules,
     queryFn: fetchActiveXpRules,
     staleTime: 60_000,
   });

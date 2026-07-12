@@ -19,10 +19,10 @@ export function useEnrollInTrail() {
   return useMutation({
     mutationFn: (contentId: string) => enroll(contentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lxp", "catalog"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all })
       if (profile?.id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.enrollments.activeCourses(profile.id) })
-        queryClient.invalidateQueries({ queryKey: ["my-course", "overview", profile.id] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.overviewAll(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.summaries(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profile.id) })

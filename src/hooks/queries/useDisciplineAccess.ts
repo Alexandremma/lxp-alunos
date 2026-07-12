@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
 import {
@@ -11,7 +12,7 @@ export function useDisciplineAccess(disciplineId: string | undefined) {
   const { isModerator } = useTeamModeration();
 
   return useQuery({
-    queryKey: ["lxp", "discipline-access", profile?.id, disciplineId, isModerator],
+    queryKey: queryKeys.discipline.access(profile?.id, disciplineId, isModerator),
     queryFn: () => {
       if (isModerator) {
         return getDisciplineAccessForModerator(disciplineId!);

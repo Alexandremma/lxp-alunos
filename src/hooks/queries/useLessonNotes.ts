@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/consts/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
 import { listLessonNotes } from "@/services/lessonNoteService";
-
-export const lessonNoteKeys = {
-  list: (profileId: string, disciplineId: string, unitId: string) =>
-    ["lesson-notes", profileId, disciplineId, unitId] as const,
-};
 
 export function useLessonNotes(params: {
   externalDisciplineId: string;
@@ -15,7 +11,7 @@ export function useLessonNotes(params: {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: lessonNoteKeys.list(
+    queryKey: queryKeys.lessonNotes.list(
       profile?.id ?? "",
       params.externalDisciplineId,
       params.externalUnitId,

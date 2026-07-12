@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { queryKeys } from "@/consts/queryKeys";
 import {
   createLessonNote,
   deleteLessonNote,
   updateLessonNote,
 } from "@/services/lessonNoteService";
-import { lessonNoteKeys } from "@/hooks/queries/useLessonNotes";
 
 export function useLessonNoteMutations(params: {
   externalDisciplineId: string;
@@ -17,7 +17,7 @@ export function useLessonNoteMutations(params: {
   const invalidate = () => {
     if (!profile?.id) return;
     void qc.invalidateQueries({
-      queryKey: lessonNoteKeys.list(
+      queryKey: queryKeys.lessonNotes.list(
         profile.id,
         params.externalDisciplineId,
         params.externalUnitId,
