@@ -32,7 +32,11 @@ interface LessonSidebarProps {
   allowLockedNavigation?: boolean;
 }
 
-const lessonTypeIcons: Record<Lesson["type"], React.ComponentType<{ className?: string }>> = {
+type LessonType = NonNullable<Lesson["type"]>;
+
+const DEFAULT_LESSON_TYPE: LessonType = "reading";
+
+const lessonTypeIcons: Record<LessonType, React.ComponentType<{ className?: string }>> = {
   video: Play,
   reading: FileText,
   quiz: HelpCircle,
@@ -40,13 +44,17 @@ const lessonTypeIcons: Record<Lesson["type"], React.ComponentType<{ className?: 
   discussion: MessageCircle,
 };
 
-const lessonTypeLabels: Record<Lesson["type"], string> = {
+const lessonTypeLabels: Record<LessonType, string> = {
   video: "Vídeo",
   reading: "Leitura",
   quiz: "Quiz",
   project: "Projeto",
   discussion: "Discussão",
 };
+
+function resolveLessonType(type?: Lesson["type"]): LessonType {
+  return type ?? DEFAULT_LESSON_TYPE;
+}
 
 const statusConfig = {
   completed: {
@@ -198,7 +206,7 @@ export const LessonSidebar = ({
                 <AccordionContent className="pb-0">
                   <div className="space-y-0.5 pb-2">
                     {moduleLessons.map((lesson, lessonIndex) => {
-                      const TypeIcon = lessonTypeIcons[lesson.type];
+                      const TypeIcon = lessonTypeIcons[resolveLessonType(lesson.type)];
                       const status = statusConfig[lesson.status];
                       const StatusIcon = status.icon;
                       const isCurrent = lesson.id === currentLesson.id;
@@ -234,7 +242,7 @@ export const LessonSidebar = ({
                             <div className="flex items-center gap-2 mt-0.5">
                               <TypeIcon className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
-                                {lessonTypeLabels[lesson.type]} • {lesson.duration} min
+                                {lessonTypeLabels[resolveLessonType(lesson.type)]} • {lesson.duration} min
                               </span>
                             </div>
                           </div>

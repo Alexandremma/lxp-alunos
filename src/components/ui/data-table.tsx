@@ -188,7 +188,7 @@ function DataTable<T extends { id?: string | number }>({
                   >
                     {column.cell
                       ? column.cell(item)
-                      : getValue(item, column.key)}
+                      : (getValue(item, column.key) as React.ReactNode)}
                   </TableCell>
                 ))}
               </TableRow>

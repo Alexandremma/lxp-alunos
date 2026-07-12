@@ -3,6 +3,7 @@ import { computeConsecutiveLoginStreak } from "@/lib/accessDate";
 import { listStudentAccessDates } from "@/services/studentAccessService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
 import type { DashboardStats } from "@/types/dashboard";
+import type { SearchLibraryResponse } from "@/types/library";
 
 export type { DashboardStats } from "@/types/dashboard";
 
@@ -79,7 +80,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
       .eq("student_profile_id", profileId)
       .eq("status", "completed"),
     listStudentAccessDates(profileId).catch(() => [] as string[]),
-    getEnrolledLinkedDisciplinesCatalog(profileId).catch(() => ({ items: [], total: 0 })),
+    getEnrolledLinkedDisciplinesCatalog(profileId).catch((): SearchLibraryResponse => ({ items: [], total: 0 })),
   ]);
 
   if (levelsResult.error) throw levelsResult.error;

@@ -11,13 +11,22 @@ type TemplateMediaRow = {
   background_image_path: string | null
 }
 
+type SlotMediaSignature = {
+  signer_name: string
+  signer_title: string
+  image_path: string | null
+}
+
 type SlotMediaRow = {
   slot: number
-  lxp_certificate_signatures: {
-    signer_name: string
-    signer_title: string
-    image_path: string | null
-  } | null
+  lxp_certificate_signatures: SlotMediaSignature | SlotMediaSignature[] | null
+}
+
+function normalizeSlotSignature(
+  value: SlotMediaRow["lxp_certificate_signatures"],
+): SlotMediaSignature | null {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
 /**
@@ -73,8 +82,8 @@ export async function enrichCertificateSnapshot(
 
     const bySlot = new Map(
       ((slots ?? []) as SlotMediaRow[])
-        .filter((row) => row.lxp_certificate_signatures)
-        .map((row) => [row.slot, row.lxp_certificate_signatures!]),
+        .map((row) => [row.slot, normalizeSlotSignature(row.lxp_certificate_signatures)] as const)
+        .filter((entry): entry is [number, SlotMediaSignature] => entry[1] !== null),
     )
 
     enriched.signatures = enriched.signatures.map((sig) => {
