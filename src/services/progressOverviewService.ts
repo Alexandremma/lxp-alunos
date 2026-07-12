@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
-import { getDashboardStats, type DashboardStats } from "@/services/dashboardService";
+import { getDashboardStats } from "@/services/dashboardService";
+import type { DashboardStats } from "@/types/dashboard";
 import { computeDisciplineProgressBatch } from "@/services/disciplineProgressService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
 
