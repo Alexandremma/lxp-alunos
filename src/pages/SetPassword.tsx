@@ -4,15 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabaseClient";
 import { usePasswordRecoverySession } from "@/lib/authRecovery";
+import { useSetPassword } from "@/hooks/mutations/useSetPassword";
 
 export default function SetPassword() {
   const navigate = useNavigate();
   const recovery = usePasswordRecoverySession();
+  const setPasswordMutation = useSetPassword();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,20 +32,18 @@ export default function SetPassword() {
       return;
     }
 
-    setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      setError("Não foi possível definir a senha. Solicite um novo link e tente novamente.");
-      setLoading(false);
+    const result = await setPasswordMutation.mutateAsync(password);
+    if (result.status === "error") {
+      setError(result.message);
       return;
     }
 
-    await supabase.auth.signOut();
-    setLoading(false);
     setMessage("Senha definida com sucesso. Você já pode entrar no LXP Alunos.");
     window.history.replaceState({}, document.title, window.location.pathname);
     navigate("/login", { replace: true });
   };
+
+  const loading = setPasswordMutation.isPending;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
