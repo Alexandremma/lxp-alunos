@@ -9,7 +9,6 @@ import {
   updateLessonComment,
 } from "@/services/lessonCommentService";
 import type { LessonCommentWithAuthor } from "@/types/lessonComments";
-import { lessonCommentKeys } from "@/hooks/queries/useLessonComments";
 
 export function useLessonCommentMutations(params: {
   externalDisciplineId: string;
@@ -18,7 +17,7 @@ export function useLessonCommentMutations(params: {
   const qc = useQueryClient();
   const { profile } = useAuth();
   const { isModerator, teamRole, member } = useTeamModeration();
-  const listKey = lessonCommentKeys.list(params.externalDisciplineId, params.externalUnitId);
+  const listKey = queryKeys.lessonComments.list(params.externalDisciplineId, params.externalUnitId);
 
   const invalidateAll = () => {
     void qc.invalidateQueries({ queryKey: listKey });

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient"
+import { STORAGE_BUCKETS } from "@/consts/storageBuckets"
 
-const SIGNATURES_BUCKET = "certificate-signatures"
+const SIGNATURES_BUCKET = STORAGE_BUCKETS.certificateSignatures
 
 export type CertificateSnapshot = {
   student_name: string

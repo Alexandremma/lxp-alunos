@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
+import { STORAGE_BUCKETS } from "@/consts/storageBuckets";
 
-export const USER_AVATARS_BUCKET = "user-avatars";
+export const USER_AVATARS_BUCKET = STORAGE_BUCKETS.userAvatars;
 
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;

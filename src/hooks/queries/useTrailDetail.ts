@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import { queryKeys } from "@/consts/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
 import {
   getTrailDetail,
@@ -49,31 +50,31 @@ export function useTrailDetail(trailId?: string, options?: UseTrailDetailOptions
     : undefined;
 
   const trail = useQuery<Trail | null>({
-    queryKey: ["lxp", "trail", "detail", trailId],
+    queryKey: queryKeys.trail.detail(trailId!),
     queryFn: () => getTrailDetail(trailId!),
     enabled,
   });
 
   const modules = useQuery<TrailModule[]>({
-    queryKey: ["lxp", "trail", "modules", trailId],
+    queryKey: queryKeys.trail.modules(trailId!),
     queryFn: () => getTrailModules(trailId!),
     enabled,
   });
 
   const lessons = useQuery<TrailLesson[]>({
-    queryKey: ["lxp", "trail", "lessons", trailId],
+    queryKey: queryKeys.trail.lessons(trailId!),
     queryFn: () => getTrailLessons(trailId!),
     enabled,
   });
 
   const lessonAccessMode = useQuery({
-    queryKey: ["lxp", "trail", "lesson-access-mode", trailId],
+    queryKey: queryKeys.trail.lessonAccessMode(trailId!),
     queryFn: () => getDisciplineLessonAccessMode(trailId!),
     enabled,
   });
 
   const progressMap = useQuery({
-    queryKey: ["lxp", "trail", "lesson-progress-map", trailId, profile?.id],
+    queryKey: queryKeys.trail.lessonProgressMap(trailId!, profile?.id),
     queryFn: async () => {
       const ext = await resolveExternalDisciplineId(trailId!);
       return fetchLessonProgressMap(profile!.id, ext);
@@ -85,7 +86,7 @@ export function useTrailDetail(trailId?: string, options?: UseTrailDetailOptions
   const lessonsEmpty = lessonsLoaded && (lessons.data?.length ?? 0) === 0;
 
   const contentStatus = useQuery<TrailContentStatus>({
-    queryKey: ["lxp", "trail", "content-status", trailId],
+    queryKey: queryKeys.trail.contentStatus(trailId!),
     queryFn: () => resolveTrailContentStatus(trailId!),
     enabled: enabled && lessonsEmpty,
     staleTime: 30_000,

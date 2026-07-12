@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { queryKeys } from "@/consts/queryKeys"
 import {
   fetchFilteredStudentCatalogItems,
   getStudentDisciplinesCatalogStats,
@@ -15,7 +16,7 @@ export function useStudentCatalog(params: StudentDisciplinesCatalogParams) {
   const filterKey = { q, courseId, category, progressStatus, profileId: profile?.id }
 
   const datasetQuery = useQuery({
-    queryKey: ["lxp", "catalog", "dataset", filterKey],
+    queryKey: queryKeys.catalog.dataset(filterKey),
     queryFn: async () => {
       if (!profile?.id) return []
       return fetchFilteredStudentCatalogItems(profile.id, {
@@ -52,7 +53,7 @@ export function useStudentCatalogStats() {
   const { profile } = useAuth()
 
   return useQuery({
-    queryKey: ["lxp", "catalog", "stats", profile?.id],
+    queryKey: queryKeys.catalog.stats(profile?.id),
     queryFn: async () => {
       if (!profile?.id) {
         return { enrolled: 0, completed: 0, available: 0, hoursStudied: 0 }

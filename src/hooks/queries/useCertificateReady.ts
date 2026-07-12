@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { queryKeys } from "@/consts/queryKeys"
 import { isDisciplineCertificateReady } from "@/services/certificateService"
 
 export function useCertificateReady(
@@ -11,14 +12,12 @@ export function useCertificateReady(
   const enabled =
     (options?.enabled ?? true) && Boolean(profileId && courseDisciplineId);
   return useQuery({
-    queryKey: [
-      "certificate",
-      "ready",
-      profileId,
-      courseDisciplineId,
+    queryKey: queryKeys.certificate.ready(
+      profileId!,
+      courseDisciplineId!,
       completedLessons,
       totalLessons,
-    ] as const,
+    ),
     enabled,
     queryFn: () =>
       isDisciplineCertificateReady({

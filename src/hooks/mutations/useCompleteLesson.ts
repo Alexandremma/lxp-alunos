@@ -18,15 +18,16 @@ export function useCompleteLesson() {
       })
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "detail", variables.trailId] })
-      queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "modules", variables.trailId] })
-      queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "lessons", variables.trailId] })
-      queryClient.invalidateQueries({ queryKey: ["lxp", "trail", "lesson-progress-map", variables.trailId] })
+      const { trailId } = variables
+      queryClient.invalidateQueries({ queryKey: queryKeys.trail.detail(trailId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.trail.modules(trailId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.trail.lessons(trailId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.trail.lessonProgressMap(trailId) })
       if (profile?.id) {
-        queryClient.invalidateQueries({ queryKey: ["lxp", "catalog"] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all })
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.progress.overview(profile.id) })
-        queryClient.invalidateQueries({ queryKey: ["my-course", "overview", profile.id] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.overviewAll(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.myCourse.summaries(profile.id) })
         queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.evidences(profile.id) })
       }

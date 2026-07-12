@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient"
+import { STORAGE_BUCKETS } from "@/consts/storageBuckets"
 
-const COVERS_BUCKET = "discipline-covers"
+const COVERS_BUCKET = STORAGE_BUCKETS.disciplineCovers
 
 const DISCIPLINE_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
