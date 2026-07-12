@@ -1,227 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LearningProgressBar } from "@/components/learning/LearningProgressBar";
-import {
-  CheckCircle,
-  Clock,
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  GraduationCap,
-  Calendar,
-  User,
-} from "lucide-react";
+import { GraduationCap, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type MyCoursePeriod, type MyCourseSubject } from "@/types/myCourse";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetMyCourseOverview } from "@/hooks/queries/useGetMyCourseOverview";
 import { useListMyCourseSummaries } from "@/hooks/queries/useListMyCourseSummaries";
 import { summarizeLinkedCourseProgress } from "@/services/myCourseService";
 import { CourseSwitcher } from "@/components/my-course/CourseSwitcher";
+import { PeriodCard } from "@/components/my-course/PeriodCard";
+import { subjectUsesCredits } from "@/components/my-course/SubjectRow";
 import { setLastCourseId } from "@/lib/lastCourseStorage";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const statusConfig = {
-  completed: { label: "Concluído", color: "bg-success/10 text-success border-success/20", icon: CheckCircle },
-  current: { label: "Em Curso", color: "bg-primary/10 text-primary border-primary/20", icon: Clock },
-  future: { label: "Futuro", color: "bg-muted text-muted-foreground border-muted", icon: BookOpen },
-};
-
-const subjectStatusConfig = {
-  approved: { label: "Aprovado", color: "bg-success/10 text-success" },
-  in_progress: { label: "Cursando", color: "bg-primary/10 text-primary" },
-  pending: { label: "Pendente", color: "bg-muted text-muted-foreground" },
-  failed: { label: "Reprovado", color: "bg-destructive/10 text-destructive" },
-};
-
-/** Disciplinas vindas do Supabase usam UUID; o mock antigo não — só linkamos quando for UUID. */
-const DISCIPLINE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const subjectUsesCredits = (subject: MyCourseSubject) => subject.creditsEnabled !== false;
-
-const PeriodCard = ({ period }: { period: MyCoursePeriod }) => {
-  const [isOpen, setIsOpen] = useState(period.status === "current");
-  const StatusIcon = statusConfig[period.status].icon;
-
-  const totalCredits = period.subjects.reduce(
-    (acc, s) => acc + (subjectUsesCredits(s) ? s.credits : 0),
-    0,
-  );
-  const approvedSubjects = period.subjects.filter((s) => s.status === "approved").length;
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={cn(
-        "transition-all duration-200",
-        period.status === "current" && "border-primary/30 shadow-md"
-      )}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "p-2 rounded-lg",
-                  statusConfig[period.status].color
-                )}>
-                  <StatusIcon className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">{period.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {period.subjects.length} disciplinas
-                    {totalCredits > 0 && ` • ${totalCredits} créditos`}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {period.status === "completed" && (
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                    {approvedSubjects}/{period.subjects.length} aprovadas
-                  </Badge>
-                )}
-                {period.status === "current" && (
-                  <Badge className="bg-primary text-primary-foreground">
-                    Período Atual
-                  </Badge>
-                )}
-                {isOpen ? (
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-3">
-            <div className="space-y-2">
-              {period.subjects.map((subject) => (
-                <SubjectRow key={subject.id} subject={subject} />
-              ))}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-};
-
-const SubjectRow = ({ subject }: { subject: MyCourseSubject }) => {
-  const noContentLink = subject.hasContentLink === false;
-  const blocked =
-    subject.disciplineInactive || subject.enrollmentInactive || noContentLink;
-  const canOpenDisciplineTrail = DISCIPLINE_UUID_RE.test(subject.id) && !blocked;
-
-  const row = (
-    <div
-      className={cn(
-        "flex items-center justify-between p-3 rounded-lg transition-colors",
-        blocked
-          ? "border border-dashed border-warning/40 bg-warning/5 cursor-not-allowed opacity-80"
-          : "bg-muted/30",
-        canOpenDisciplineTrail && "hover:bg-muted/60",
-      )}
-      aria-disabled={blocked || undefined}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={cn(
-              "font-medium text-sm",
-              canOpenDisciplineTrail && "group-hover:text-primary transition-colors",
-              blocked && "text-muted-foreground",
-            )}
-          >
-            {subject.name}
-          </span>
-          <span className="text-xs text-muted-foreground">({subject.code})</span>
-          {canOpenDisciplineTrail && (
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
-              Abrir disciplina
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
-          {subjectUsesCredits(subject) && (
-            <span>{subject.credits} créditos</span>
-          )}
-          {subject.workload > 0 && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              {subject.workload}h
-            </span>
-          )}
-          {subject.professor?.trim() && (
-            <span className="flex items-center gap-1">
-              <User className="h-3.5 w-3.5 shrink-0" />
-              {subject.professor}
-            </span>
-          )}
-        </div>
-        {noContentLink && !subject.disciplineInactive && !subject.enrollmentInactive && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Conteúdo em preparação. As aulas ficarão disponíveis quando a instituição vincular o material externo.
-          </p>
-        )}
-        {subject.disciplineInactive && (
-          <p className="mt-2 text-xs text-warning">
-            Esta disciplina está inativa. O acesso às aulas ficará disponível quando a instituição reativá-la.
-          </p>
-        )}
-        {subject.enrollmentInactive && !subject.disciplineInactive && (
-          <p className="mt-2 text-xs text-destructive">
-            Sua matrícula neste curso está inativa. Você não pode acessar as disciplinas até a reativação.
-          </p>
-        )}
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        {noContentLink && !subject.disciplineInactive && !subject.enrollmentInactive ? (
-          <Badge variant="outline" className="bg-muted text-muted-foreground shrink-0">
-            Em preparação
-          </Badge>
-        ) : subject.disciplineInactive ? (
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 shrink-0">
-            Disciplina inativa
-          </Badge>
-        ) : subject.enrollmentInactive ? (
-          <Badge variant="outline" className="bg-destructive/10 text-destructive shrink-0">
-            Matrícula inativa
-          </Badge>
-        ) : (
-          <Badge variant="outline" className={subjectStatusConfig[subject.status].color}>
-            {subjectStatusConfig[subject.status].label}
-          </Badge>
-        )}
-      </div>
-    </div>
-  );
-
-  if (canOpenDisciplineTrail) {
-    return (
-      <Link
-        to={`/trails/${subject.id}`}
-        className="block rounded-lg group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        {row}
-      </Link>
-    );
-  }
-
-  return <div className="rounded-lg">{row}</div>;
-};
 
 const MyCourse = () => {
   const navigate = useNavigate();
