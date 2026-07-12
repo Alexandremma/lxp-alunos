@@ -7,8 +7,8 @@ import {
   getAliceLaunchKeyForApp,
   isAliceConfigured,
   splitAlicePersonName,
-  type AliceLaunchUser,
 } from "@/services/aliceService"
+import type { AliceLaunchUser } from "@/types/alice"
 
 const IFRAME_NAME = "aliceLessonFrame"
 
