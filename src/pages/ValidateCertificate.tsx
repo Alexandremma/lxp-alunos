@@ -6,18 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  validateCertificateByCode,
-  type PublicCertificateValidation,
-} from "@/services/certificateValidationService";
+import type { PublicCertificateValidation } from "@/services/certificateValidationService";
+import { useValidateCertificate } from "@/hooks/mutations/useValidateCertificate";
 
 export default function ValidateCertificate() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCode = searchParams.get("code") ?? "";
   const [code, setCode] = useState(initialCode);
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PublicCertificateValidation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const validateMutation = useValidateCertificate();
 
   const runValidation = async (value: string) => {
     const trimmed = value.trim();
@@ -26,11 +24,10 @@ export default function ValidateCertificate() {
       setErrorMessage("Informe o código impresso no certificado.");
       return;
     }
-    setLoading(true);
     setErrorMessage(null);
     setResult(null);
     try {
-      const res = await validateCertificateByCode(trimmed);
+      const res = await validateMutation.mutateAsync(trimmed);
       if (res.valid) {
         setResult(res);
         setSearchParams({ code: res.validationCode }, { replace: true });
@@ -40,8 +37,6 @@ export default function ValidateCertificate() {
       }
     } catch {
       setErrorMessage("Não foi possível validar o código. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -51,6 +46,8 @@ export default function ValidateCertificate() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount with URL code
   }, []);
+
+  const loading = validateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
