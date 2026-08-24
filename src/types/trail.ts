@@ -49,4 +49,6 @@ export type TrailLesson = {
   ebookPath?: string
   /** Hash ?c= do Alice (GET /api/rents) para launch POST no iframe */
   aliceContentId?: string
+  /** `rent.hash` do Alice — contexto RAG do Tutor MAIA (`rent_hash`) */
+  aliceRentHash?: string
 }
