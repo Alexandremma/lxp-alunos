@@ -234,6 +234,7 @@ const Lesson = () => {
       immersiveContent={isImmersiveEbook}
       externalDisciplineId={String(trailId)}
       externalUnitId={String(lessonId)}
+      aliceRentHash={lesson.aliceRentHash}
       moderationMode={isModerator}
     >
       {isImmersiveEbook ? (

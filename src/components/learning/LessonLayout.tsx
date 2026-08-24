@@ -35,6 +35,8 @@ interface LessonLayoutProps {
   /** IDs usados em progresso/comentários (trailId + lessonId). */
   externalDisciplineId?: string;
   externalUnitId?: string;
+  /** `rent.hash` Alice para o Tutor MAIA; sem hash o tutor fica desabilitado. */
+  aliceRentHash?: string;
   moderationMode?: boolean;
 }
 
@@ -49,6 +51,7 @@ export const LessonLayout = ({
   immersiveContent = false,
   externalDisciplineId,
   externalUnitId,
+  aliceRentHash,
   moderationMode = false,
 }: LessonLayoutProps) => {
   const isMobile = useIsMobile();
@@ -272,6 +275,7 @@ export const LessonLayout = ({
             <aside className="border-l border-border bg-card shrink-0 h-full w-80 lg:w-96 overflow-hidden">
               <AiTutorSidebar
                 lessonTitle={currentLesson.title}
+                rentHash={aliceRentHash}
                 onClose={() => setAiTutorOpen(false)}
               />
             </aside>

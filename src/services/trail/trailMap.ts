@@ -31,6 +31,7 @@ export function mapAliceRentsToLessons(rents: AliceRent[]): TrailLesson[] {
     xpReward: 10,
     status: index === 0 ? "in_progress" : "available",
     aliceContentId: rent.contentId,
+    aliceRentHash: rent.hash || undefined,
   }))
 }
 
@@ -92,6 +93,7 @@ export async function getTrailLessons(trailId: string): Promise<TrailLesson[]> {
       status: index === 0 ? "in_progress" : "available",
       ebookPath: unit.url_caderno_digital ?? undefined,
       aliceContentId: rent?.contentId,
+      aliceRentHash: rent?.hash || undefined,
     }
   })
 }
