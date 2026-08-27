@@ -20,12 +20,9 @@ type UseLessonStudyHeartbeatParams = {
 
 function isActivelyStudying(): boolean {
   if (typeof document === "undefined") return false
-  if (document.visibilityState !== "visible") return false
-  try {
-    return document.hasFocus()
-  } catch {
-    return true
-  }
+  // Só visibility: foco no iframe Alice (cross-origin) faz hasFocus()=false no parent
+  // e pararia o contador exatamente no uso real da aula.
+  return document.visibilityState === "visible"
 }
 
 export function useLessonStudyHeartbeat({
@@ -114,7 +111,8 @@ export function useLessonStudyHeartbeat({
     }
 
     const onBlur = () => {
-      void flush("blur")
+      // Não flushar no blur: clique no iframe Alice dispara blur no parent
+      // sem esconder a aba — o tempo continua válido.
     }
 
     const onPageHide = () => {
@@ -128,7 +126,6 @@ export function useLessonStudyHeartbeat({
 
     document.addEventListener("visibilitychange", onVisibility)
     window.addEventListener("focus", onFocus)
-    window.addEventListener("blur", onBlur)
     window.addEventListener("pagehide", onPageHide)
 
     return () => {
@@ -136,7 +133,6 @@ export function useLessonStudyHeartbeat({
       window.clearInterval(intervalId)
       document.removeEventListener("visibilitychange", onVisibility)
       window.removeEventListener("focus", onFocus)
-      window.removeEventListener("blur", onBlur)
       window.removeEventListener("pagehide", onPageHide)
       void flush("unmount")
     }
