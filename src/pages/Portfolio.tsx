@@ -4,51 +4,34 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GameBadge } from "@/components/learning/GameBadge";
-import { EvidenceCard } from "@/components/learning/EvidenceCard";
 import { CertificateEvidenceCard } from "@/components/learning/CertificateEvidenceCard";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { useAuth } from "@/hooks/use-auth";
 import { usePortfolioEvidences } from "@/hooks/queries/usePortfolioEvidences";
 import type { LearningEvidence } from "@/types/learningEvidence";
-import { Award, BookOpen, Folder, GraduationCap, Users } from "lucide-react";
+import { Award, BookOpen, GraduationCap } from "lucide-react";
 
-type FilterType = LearningEvidence["type"];
+/** Abas ativas no MVP — Projetos/Participações sem schema (não exibir). */
+type ActiveFilter = Extract<LearningEvidence["type"], "badge" | "certificate">;
 
-const filterConfig: Record<FilterType, { label: string; icon: React.ElementType }> = {
+const filterConfig: Record<ActiveFilter, { label: string; icon: React.ElementType }> = {
   badge: { label: "Badges", icon: Award },
   certificate: { label: "Certificados", icon: GraduationCap },
-  project: { label: "Projetos", icon: Folder },
-  participation: { label: "Participação", icon: Users },
 };
 
-const TAB_QUERY_BY_FILTER: Record<FilterType, string | null> = {
+const TAB_QUERY_BY_FILTER: Record<ActiveFilter, string | null> = {
   badge: null,
   certificate: "certificados",
-  project: "projetos",
-  participation: "participacao",
 };
 
-function filterFromTabParam(tab: string | null): FilterType {
-  switch (tab?.toLowerCase()) {
-    case "certificados":
-    case "certificate":
-    case "certificado":
-      return "certificate";
-    case "badges":
-    case "badge":
-      return "badge";
-    case "projetos":
-    case "project":
-    case "projeto":
-      return "project";
-    case "participacao":
-    case "participação":
-    case "participation":
-      return "participation";
-    default:
-      return "badge";
+function filterFromTabParam(tab: string | null): ActiveFilter {
+  const key = tab?.toLowerCase() ?? "";
+  if (["certificados", "certificate", "certificado"].includes(key)) {
+    return "certificate";
   }
+  // badges (default) — também redireciona abas sem schema (projetos / participação)
+  return "badge";
 }
 
 const rarityOrder: Record<string, number> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
@@ -58,14 +41,14 @@ const Portfolio = () => {
   const { data, isLoading, error, refetch } = usePortfolioEvidences(profile?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const [filter, setFilter] = useState<FilterType>(() => filterFromTabParam(tabParam));
+  const [filter, setFilter] = useState<ActiveFilter>(() => filterFromTabParam(tabParam));
 
   useEffect(() => {
     setFilter(filterFromTabParam(tabParam));
   }, [tabParam]);
 
   const syncTabToUrl = useCallback(
-    (next: FilterType) => {
+    (next: ActiveFilter) => {
       const slug = TAB_QUERY_BY_FILTER[next];
       if (!slug) {
         setSearchParams({}, { replace: true });
@@ -78,7 +61,7 @@ const Portfolio = () => {
 
   const handleFilterChange = useCallback(
     (v: string) => {
-      const next = v as FilterType;
+      const next = v as ActiveFilter;
       setFilter(next);
       syncTabToUrl(next);
     },
@@ -87,9 +70,11 @@ const Portfolio = () => {
 
   const evidences = useMemo(() => data ?? [], [data]);
 
-  const filtered = useMemo(() => evidences.filter((e) => e.type === filter), [evidences, filter]);
+  const filtered = useMemo(
+    () => evidences.filter((e) => e.type === filter),
+    [evidences, filter],
+  );
 
-  // Sort badges by rarity, others by date
   const sortedFiltered = useMemo(() => {
     return [...filtered].sort((a, b) => {
       if (filter === "badge") {
@@ -101,26 +86,33 @@ const Portfolio = () => {
     });
   }, [filtered, filter]);
 
-  const getCounts = (type: FilterType) => evidences.filter((e) => e.type === type).length;
+  const getCounts = (type: ActiveFilter) => evidences.filter((e) => e.type === type).length;
 
-  // Grid classes based on type
   const gridClasses =
     filter === "badge"
       ? "grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       : "grid sm:grid-cols-2 lg:grid-cols-3 gap-6";
+
+  const emptyTitle =
+    filter === "certificate"
+      ? "Nenhum certificado ainda"
+      : "Nenhuma badge ainda";
+  const emptyDescription =
+    filter === "certificate"
+      ? "Conclua disciplinas com vínculo de conteúdo para emitir certificados automaticamente."
+      : "Continue estudando — badges são liberadas conforme as regras de gamificação.";
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-up">
         <PageHeader
           title="Portfólio de Conquistas"
-          description="Suas conquistas, certificados e projetos em um só lugar."
+          description="Badges e certificados conquistados na plataforma."
         />
 
-        {/* Filter Tabs */}
         <Tabs value={filter} onValueChange={handleFilterChange}>
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-            {(Object.keys(filterConfig) as FilterType[]).map((type) => {
+          <TabsList className="grid grid-cols-2 w-full max-w-md">
+            {(Object.keys(filterConfig) as ActiveFilter[]).map((type) => {
               const config = filterConfig[type];
               const Icon = config.icon;
               return (
@@ -154,10 +146,8 @@ const Portfolio = () => {
               >
                 {filter === "badge" ? (
                   <GameBadge evidence={evidence} />
-                ) : filter === "certificate" ? (
-                  <CertificateEvidenceCard evidence={evidence} />
                 ) : (
-                  <EvidenceCard evidence={evidence} />
+                  <CertificateEvidenceCard evidence={evidence} />
                 )}
               </div>
             ))}
@@ -165,8 +155,8 @@ const Portfolio = () => {
         ) : (
           <QueryStateCard
             state="empty"
-            title="Seu portfólio ainda está vazio"
-            description="Conclua disciplinas e aulas para gerar certificados e badges automaticamente."
+            title={emptyTitle}
+            description={emptyDescription}
             icon={BookOpen}
           />
         )}

@@ -196,7 +196,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.totalHoursStudied}h</p>
-                <p className="text-xs text-muted-foreground">Horas Estudadas</p>
+                <p className="text-xs text-muted-foreground">Horas estimadas</p>
+                <p className="text-[10px] text-muted-foreground/80">0,5 h × aulas concluídas</p>
               </div>
             </CardContent>
           </Card>

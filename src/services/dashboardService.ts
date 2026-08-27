@@ -106,6 +106,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
 
   const completedTrails = (catalogResult.items ?? []).filter((item) => item.isComplete).length;
   const totalLessonsCompleted = lessonsCountResult.count ?? 0;
+  /** Estimativa provisória (M2) — não é tempo real de estudo. UI: “Horas estimadas”. */
   const totalHoursStudied = Number((totalLessonsCompleted * 0.5).toFixed(1));
   const streak = computeConsecutiveLoginStreak(accessDates);
 

@@ -158,7 +158,8 @@ const StudentFreeCoursesView = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">{stats?.hoursStudied ?? 0}h</div>
-              <p className="text-xs text-muted-foreground">Horas Cursadas</p>
+              <p className="text-xs text-muted-foreground">Horas cursadas</p>
+              <p className="text-[10px] text-muted-foreground/80">Carga × progresso</p>
             </CardContent>
           </Card>
           <Card>
