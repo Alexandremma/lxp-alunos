@@ -2,6 +2,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { computeConsecutiveLoginStreak } from "@/lib/accessDate";
 import { listStudentAccessDates } from "@/services/studentAccessService";
 import { getEnrolledLinkedDisciplinesCatalog } from "@/services/libraryAdapter";
+import {
+  secondsToStudyHours,
+  sumStudySecondsForProfile,
+} from "@/services/studyTimeService";
 import type { DashboardStats } from "@/types/dashboard";
 import type { SearchLibraryResponse } from "@/types/library";
 
@@ -67,6 +71,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
     lessonsCountResult,
     accessDatesResult,
     catalogResult,
+    studySecondsResult,
   ] = await Promise.all([
     supabase.from("lxp_student_xp_events").select("xp_delta").eq("student_profile_id", profileId),
     supabase
@@ -81,6 +86,7 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
       .eq("status", "completed"),
     listStudentAccessDates(profileId).catch(() => [] as string[]),
     getEnrolledLinkedDisciplinesCatalog(profileId).catch((): SearchLibraryResponse => ({ items: [], total: 0 })),
+    sumStudySecondsForProfile(profileId).catch(() => 0),
   ]);
 
   if (levelsResult.error) throw levelsResult.error;
@@ -106,8 +112,8 @@ export async function getDashboardStats(profileId: string): Promise<DashboardSta
 
   const completedTrails = (catalogResult.items ?? []).filter((item) => item.isComplete).length;
   const totalLessonsCompleted = lessonsCountResult.count ?? 0;
-  /** Estimativa provisória (M2) — não é tempo real de estudo. UI: “Horas estimadas”. */
-  const totalHoursStudied = Number((totalLessonsCompleted * 0.5).toFixed(1));
+  /** M2: soma dos heartbeats com a aula aberta e aba visível. */
+  const totalHoursStudied = secondsToStudyHours(studySecondsResult);
   const streak = computeConsecutiveLoginStreak(accessDates);
 
   return {
