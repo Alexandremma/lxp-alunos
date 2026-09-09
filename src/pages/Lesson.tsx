@@ -24,6 +24,7 @@ import { useTrailDetail } from "@/hooks/queries/useTrailDetail";
 import { useDisciplineAccess } from "@/hooks/queries/useDisciplineAccess";
 import { useAuth } from "@/hooks/use-auth";
 import { useTeamModeration } from "@/hooks/useTeamModeration";
+import { useLessonStudyHeartbeat } from "@/hooks/useLessonStudyHeartbeat";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { AliceLessonFrame } from "@/components/learning/AliceLessonFrame";
@@ -59,6 +60,18 @@ const Lesson = () => {
       : null;
   const completedLessons = allLessons.filter((item) => item.status === "completed").length;
   const progress = allLessons.length > 0 ? Math.round((completedLessons / allLessons.length) * 100) : 0;
+
+  useLessonStudyHeartbeat({
+    enabled:
+      !isModerator &&
+      !isLoading &&
+      !accessLoading &&
+      access?.allowed !== false &&
+      Boolean(profile?.id && trailId && lessonId && lesson),
+    studentProfileId: profile?.id,
+    trailId,
+    lessonId,
+  });
 
   if (isLoading || accessLoading) {
     return (
