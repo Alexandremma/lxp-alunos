@@ -85,7 +85,7 @@ export async function getProgressOverview(profileId: string): Promise<ProgressOv
       return {
         id: item.id,
         title: item.name,
-        thumbnail: "/placeholder.svg",
+        thumbnail: item.coverImageUrl?.trim() || "",
         completedLessons: snap?.completedLessons ?? 0,
         totalLessons: snap?.totalLessons ?? 0,
         progressPercent: snap?.progressPercent ?? 0,

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient"
 import { fetchDisciplineProgressFromDb } from "@/services/disciplineProgressService"
+import { getDisciplineCoverPublicUrl } from "@/services/disciplinePresentationService"
 import type {
   LibraryItem,
   SearchLibraryParams,
@@ -110,7 +111,7 @@ export async function getEnrolledLinkedDisciplinesCatalog(
 
   const { data: disciplines, error: e4 } = await supabase
     .from("lxp_course_disciplines")
-    .select("id, name, code, workload, credits, credits_enabled, professor, course_period_id, status")
+    .select("id, name, code, workload, credits, credits_enabled, professor, course_period_id, status, cover_image_path")
     .in("course_period_id", periodIds)
   if (e4) throw e4
 
@@ -163,6 +164,9 @@ export async function getEnrolledLinkedDisciplinesCatalog(
       isComplete: progress?.isComplete ?? false,
       disciplineInactive,
       enrollmentInactive,
+      coverImageUrl: getDisciplineCoverPublicUrl(
+        (d as { cover_image_path?: string | null }).cover_image_path,
+      ),
     })
   }
 

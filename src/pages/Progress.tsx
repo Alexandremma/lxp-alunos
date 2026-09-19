@@ -10,6 +10,7 @@ import { courseProgressFromCompletedCount } from "@/lib/progressPercent";
 import { QueryStateCard } from "@/components/states/QueryStateCard";
 import { LoadingLearning } from "@/components/states/LoadingLearning";
 import { BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Progress = () => {
   const { profile } = useAuth();
@@ -93,10 +94,29 @@ const Progress = () => {
               <div className="space-y-4">
                 {trails.map((trail) => (
                   <div key={trail.id} className="flex items-center gap-4">
-                    <img src={trail.thumbnail} alt={trail.title} className="w-12 h-12 rounded-lg object-cover" />
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{trail.title}</p>
-                      <p className="text-xs text-muted-foreground">{trail.completedLessons}/{trail.totalLessons} aulas</p>
+                    <div
+                      className={cn(
+                        "relative h-12 w-12 shrink-0 overflow-hidden rounded-lg",
+                        "bg-gradient-to-br from-primary/20 to-secondary/10",
+                      )}
+                    >
+                      {trail.thumbnail ? (
+                        <img
+                          src={trail.thumbnail}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-primary/50" aria-hidden />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{trail.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {trail.completedLessons}/{trail.totalLessons} aulas
+                      </p>
                     </div>
                     <ProgressRing progress={trail.progressPercent} size="sm" />
                   </div>
