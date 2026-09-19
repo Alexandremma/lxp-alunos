@@ -22,6 +22,8 @@ export type LibraryItem = {
   credits?: number
   courseId?: string
   courseName?: string
+  /** Capa pública (`cover_image_path` → bucket `discipline-covers`). */
+  coverImageUrl?: string | null
 }
 
 export type SearchLibraryParams = {
