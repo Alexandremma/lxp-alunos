@@ -1,6 +1,6 @@
 const DEFAULT_ALICE_BASE = "https://alice.eadstock.com.br"
 
-/** Extrai origin válida; ignora lixo colado acidentalmente (ex. diálogo do Cursor). */
+/** Extrai uma origin válida a partir do valor de ambiente. */
 export function resolveAliceBaseUrl(raw?: string): string {
   const trimmed = raw?.trim()
   if (!trimmed) return DEFAULT_ALICE_BASE

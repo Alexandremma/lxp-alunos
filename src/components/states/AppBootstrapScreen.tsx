@@ -7,7 +7,7 @@ type AppBootstrapScreenProps = {
   className?: string;
 };
 
-/** Bootstrap de rota (auth / permissões). Espelhar em lxp-backoffice. */
+/** Bootstrap de rota (auth / permissões). */
 export function AppBootstrapScreen({
   message = "Preparando sua área de estudo…",
   className,

@@ -4,7 +4,7 @@ type LoadingDotsProps = {
   className?: string;
 };
 
-/** Indicador de carregamento (três pontos) — identidade B42. Espelhar em lxp-backoffice. */
+/** Indicador de carregamento (três pontos). */
 export function LoadingDots({ className }: LoadingDotsProps) {
   return (
     <div className={cn("flex gap-1.5", className)} aria-hidden>

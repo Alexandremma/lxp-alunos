@@ -90,15 +90,12 @@ export const LessonSidebar = ({
 }: LessonSidebarProps) => {
   const navigate = useNavigate();
 
-  // Find which module the current lesson belongs to
   const currentModuleId = currentLesson.moduleId;
 
-  // Get lessons for a module
   const getLessonsForModule = (moduleId: string) => {
     return allLessons.filter((l) => l.moduleId === moduleId);
   };
 
-  // Calculate module completion
   const getModuleProgress = (moduleId: string) => {
     const moduleLessons = getLessonsForModule(moduleId);
     if (moduleLessons.length === 0) return 0;
