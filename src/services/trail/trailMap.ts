@@ -7,14 +7,11 @@ import {
 import { getDisciplinePresentation } from "@/services/disciplinePresentationService"
 import type { TrailContentStatus } from "@/types/trail"
 import type { Trail, TrailLesson, TrailModule } from "@/types/trail"
-import { ALICE_MODULE_ID, type ExternalDisciplineDetail, TRAIL_ID_UUID_RE } from "@/services/trail/trailCache"
+import { ALICE_MODULE_ID, TRAIL_ID_UUID_RE } from "@/services/trail/trailCache"
 import {
-  buildHeaders,
   courseDisciplineHasLibraryLink,
   getAliceRentsForTrail,
   getExternalDisciplineDetail,
-  isEadstockConfigured,
-  normalizeBaseUrl,
   resolveExternalDisciplineId,
 } from "@/services/trail/trailFetch"
 
@@ -121,9 +118,8 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
   }
 
   const aliceConfigured = isAliceConfigured()
-  const eadstockConfigured = isEadstockConfigured()
 
-  if (!aliceConfigured && !eadstockConfigured) {
+  if (!aliceConfigured) {
     return {
       state: "unavailable",
       reason: "no_integration",
@@ -146,24 +142,6 @@ export async function resolveTrailContentStatus(trailId: string): Promise<TrailC
       title: "Aulas indisponíveis no momento",
       description:
         "Não foi possível carregar as aulas desta disciplina agora. Tente novamente mais tarde ou entre em contato com a instituição.",
-    }
-  }
-
-  if (eadstockConfigured) {
-    const baseUrl = normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL)
-    try {
-      const response = await fetch(`${baseUrl}/disciplinas/get/${externalId}`, {
-        method: "GET",
-        headers: buildHeaders(),
-      })
-      if (!response.ok) {
-        externalError = true
-      } else {
-        const payload = (await response.json()) as ExternalDisciplineDetail
-        if ((payload.unidades ?? []).length > 0) foundLessons = true
-      }
-    } catch {
-      externalError = true
     }
   }
 
