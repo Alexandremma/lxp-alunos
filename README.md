@@ -21,4 +21,4 @@ npm run dev            # http://localhost:8080
 
 ## Deploy
 
-Homolog/produção via **Vercel** (branch `main`). Variáveis: ver `.env.example` e `docs-central/spec-kit/08_AMBIENTE_DEPLOY.md`.
+Homolog/produção via **Vercel** (branch `main`). Variáveis: ver `.env.example` e `docs/entrega/03-secrets-e-edges.md`.

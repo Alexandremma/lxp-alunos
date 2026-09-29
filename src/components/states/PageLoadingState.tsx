@@ -11,7 +11,7 @@ type PageLoadingStateProps = {
   className?: string;
 };
 
-/** Estado de carregamento de página/seção — espelhar em lxp-backoffice. */
+/** Estado de carregamento de página ou seção. */
 export function PageLoadingState({
   title,
   description,

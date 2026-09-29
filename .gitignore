@@ -23,9 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Documentation
+# Documentation (ship client handover under docs/entrega)
 docs/*
+!docs/entrega/
+!docs/entrega/**
 
 # Environment
 .env
 .env.*
+!.env.example

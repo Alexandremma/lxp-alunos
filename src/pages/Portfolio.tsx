@@ -12,7 +12,7 @@ import { usePortfolioEvidences } from "@/hooks/queries/usePortfolioEvidences";
 import type { LearningEvidence } from "@/types/learningEvidence";
 import { Award, BookOpen, GraduationCap } from "lucide-react";
 
-/** Abas ativas no MVP — Projetos/Participações sem schema (não exibir). */
+/** Abas exibidas: badges e certificados. */
 type ActiveFilter = Extract<LearningEvidence["type"], "badge" | "certificate">;
 
 const filterConfig: Record<ActiveFilter, { label: string; icon: React.ElementType }> = {

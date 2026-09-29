@@ -4,7 +4,7 @@ import { Clock, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type MyCourseSubject } from "@/types/myCourse";
 
-/** Disciplinas vindas do Supabase usam UUID; o mock antigo não — só linkamos quando for UUID. */
+/** Só cria link quando o id da disciplina é UUID. */
 const DISCIPLINE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const subjectStatusConfig = {

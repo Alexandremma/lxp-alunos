@@ -1,7 +1,4 @@
-/**
- * API Alice (EaDStock) — GET /api/rents + launch POST (?c= + HMAC).
- * @see INTEGRACAO_ALICE_EADSTOCK.md
- */
+/** API Alice — GET /api/rents e launch POST (?c= + HMAC). */
 
 import { resolveAliceBaseUrl } from "@/lib/resolveAliceBaseUrl"
 import type { AliceDisciplineRents, AliceRent } from "@/types/alice"

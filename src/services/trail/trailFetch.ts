@@ -12,26 +12,6 @@ import {
   TRAIL_ID_UUID_RE,
 } from "@/services/trail/trailCache"
 
-export function normalizeBaseUrl(baseUrl?: string): string {
-  if (!baseUrl) return ""
-  if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) return baseUrl
-  return `https://${baseUrl}`
-}
-
-export function isEadstockConfigured(): boolean {
-  return Boolean(normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL))
-}
-
-export function buildHeaders(): HeadersInit {
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  const apiKey = import.meta.env.VITE_EADSTOCK_API_KEY
-  const apiSecret = import.meta.env.VITE_EADSTOCK_API_SECRET
-  if (apiKey) headers["X-API-Key"] = apiKey
-  // TODO: Validar se X-API-Secret precisa hash SHA256 ou valor bruto.
-  if (apiSecret) headers["X-API-Secret"] = apiSecret
-  return headers
-}
-
 export async function getDisciplineLessonAccessMode(
   disciplineId: string,
 ): Promise<LessonAccessMode> {
@@ -135,31 +115,9 @@ export async function getExternalDisciplineDetail(trailId: string): Promise<Exte
     return null
   }
 
-  const baseUrl = normalizeBaseUrl(import.meta.env.VITE_EADSTOCK_BASE_URL)
-
-  if (!baseUrl) {
-    const metadata = await getDisciplineMetadataFromLxp(trailId, externalId)
-    if (metadata) detailCache.set(trailId, metadata)
-    return metadata
-  }
-
-  const response = await fetch(`${baseUrl}/disciplinas/get/${externalId}`, {
-    method: "GET",
-    headers: buildHeaders(),
-  })
-
-  if (!response.ok) {
-    const metadata = await getDisciplineMetadataFromLxp(trailId, externalId)
-    if (metadata) {
-      detailCache.set(trailId, metadata)
-      return metadata
-    }
-    throw new Error(`Falha ao carregar disciplina externa (${response.status}).`)
-  }
-
-  const payload = (await response.json()) as ExternalDisciplineDetail
-  detailCache.set(trailId, payload)
-  return payload
+  const metadata = await getDisciplineMetadataFromLxp(trailId, externalId)
+  if (metadata) detailCache.set(trailId, metadata)
+  return metadata
 }
 
 export async function getAliceRentsForTrail(trailId: string, searchHint?: string): Promise<AliceRent[]> {

@@ -12,7 +12,7 @@ type LoadingSpinnerProps = {
   className?: string;
 };
 
-/** Spinner padronizado (cor primary). Espelhar em lxp-backoffice. */
+/** Spinner padronizado (cor primary). */
 export function LoadingSpinner({ size = "md", className }: LoadingSpinnerProps) {
   return (
     <Loader2
