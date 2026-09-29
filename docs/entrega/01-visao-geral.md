@@ -56,3 +56,4 @@ Alunos estudam em jornada gamificada (conteúdo Alice); a equipe administra curs
 | Integração Alice (homolog)               | Hosts Alice + chaves no ambiente prod     |
 | Auth Hook + SMTP institucional           | Secrets SMTP / MAIA no Dashboard Supabase |
 | Roteiros em `docs/entrega/client-tests/` | Contas e dados reais de produção          |
+| Migrations em `supabase/migrations/`     | Projeto Supabase novo (sem copiar a homolog; sem rodar `supabase/seeds/`) |

@@ -62,12 +62,20 @@ supabase functions deploy auth-send-email --no-verify-jwt
 supabase functions deploy ai-tutor-chat
 ```
 
-## 5. Checklist rápido de URLs
+## 5. Checklist de publicação
 
-1. Criar/apontar projeto Supabase de produção (se for projeto novo).  
-2. Aplicar migrations na ordem canônica do repositório.  
+Este passo é da equipe que publica o ambiente. A homologação B42 não é copiada para produção: use um projeto Supabase novo.
+
+1. Criar o projeto Supabase de produção.  
+2. Aplicar somente `lxp-backoffice/supabase/migrations/` (até o STEP 43), na ordem dos arquivos.  
 3. Configurar secrets das Edges + Auth Hook.  
 4. Atualizar Site URL e Redirect URLs.  
 5. Setar envs Vercel dos dois apps (incluindo set-password e public origin).  
 6. Redeploy fronts + Edges.  
 7. Smoke: login, esqueci senha (aluno e equipe), convite, certificado QR, Tutor IA.
+
+## 6. Seeds de demonstração
+
+Os arquivos em `lxp-backoffice/supabase/seeds/` criam usuários e dados de teste. Eles **não** fazem parte das migrations e **não** entram num projeto novo que só recebe o passo 2.
+
+Não execute esses scripts em produção. Servem para montar ou resetar um ambiente de demonstração, e só depois das migrations.
